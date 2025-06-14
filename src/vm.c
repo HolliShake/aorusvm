@@ -339,8 +339,8 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
 
     ERROR:;
 }
-INTERNAL
-void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *_bytecode) {
+
+INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *_bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
     
     // Get bytecode size
