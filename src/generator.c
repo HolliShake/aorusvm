@@ -165,6 +165,8 @@ INTERNAL bool generator_is_constant_node(ast_node_t* _expression) {
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
+        case AstLogicalAnd:
+        case AstLogicalOr:
             return generator_is_constant_node(_expression->ast0) && generator_is_constant_node(_expression->ast1);
         default:
             return false;
@@ -250,6 +252,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             );
             break;
         case AstString:
+            if (_expression->str0 == NULL) {
+                PD("string expression must have a value");
+            }
             generator_emit_string(
                 _generator, 
                 _expression->str0
@@ -262,6 +267,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             );
             break;
         case AstBinaryMul: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression must have a left and right operand");
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -278,6 +286,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         }
         case AstBinaryDiv: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression must have a left and right operand");
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -294,6 +305,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         }
         case AstBinaryMod: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression must have a left and right operand");
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -310,6 +324,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         }
         case AstBinaryAdd: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression must have a left and right operand");
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -326,6 +343,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         }
         case AstBinarySub: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression must have a left and right operand");
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -339,6 +359,50 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SUB);
+            break;
+        }
+        case AstLogicalAnd: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("logical expression must have a left and right operand");
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_emit_byte(_generator, OPCODE_JUMP_IF_FALSE_OR_POP);
+            int jump_start = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            break;
+        }
+        case AstLogicalOr: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("logical expression must have a left and right operand");
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_emit_byte(_generator, OPCODE_JUMP_IF_TRUE_OR_POP);
+            int jump_start = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
             break;
         }
         default:
@@ -515,7 +579,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             current->is_returned = true;
             // Generate return value and return opcode
             ast_node_t* expr = _statement->ast0;
-            if (expr) {
+            if (expr != NULL) {
                 if (!generator_is_expression_type(expr)) {
                     PD("return value must be an expression");
                 }
@@ -530,6 +594,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             if (_statement->ast0 == NULL) {
                 PD("expression statement must have an expression");
             }
+            // TODO: Do not compile if the expression is a constant (No-op)
             generator_expression(_generator, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
             break;

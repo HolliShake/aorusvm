@@ -38,6 +38,35 @@ INTERNAL long eval_coerce_to_long(eval_result_t _result) {
     return 0;
 }
 
+INTERNAL bool eval_coerce_to_boolean(eval_result_t _result) {
+    switch (_result.type) {
+        case EvalInt:
+            return _result.value.i32 != 0;
+        case EvalLong:
+            return _result.value.i64 != 0;
+        case EvalFloat:
+            return _result.value.f32 != 0.0;
+        case EvalDouble:
+            return _result.value.f64 != 0.0;
+        case EvalBoolean:
+            return _result.value.i32 != 0;
+        case EvalString:
+            if (strcmp((char*) _result.value.ptr, "true") == 0 || 
+                strcmp((char*) _result.value.ptr, "1") == 0) {
+                return true;
+            }
+            if (strcmp((char*) _result.value.ptr, "false") == 0 || 
+                strcmp((char*) _result.value.ptr, "0") == 0) {
+                return false;
+            }
+            if (!string_is_number((char*) _result.value.ptr)) break;
+            return strtol((char*) _result.value.ptr, NULL, 10) != 0;
+        default:
+            PD("cannot coerce %d to boolean", _result.type);
+    }
+    return false;
+}
+
 INTERNAL bool eval_is_number(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
@@ -50,6 +79,35 @@ INTERNAL bool eval_is_number(eval_result_t _result) {
             return true;
         case EvalString:
             return string_is_number((char*) _result.value.ptr);
+        default:
+            return false;
+    }
+}
+
+INTERNAL bool eval_is_truthy(eval_result_t _result) {
+    switch (_result.type) {
+        case EvalInt:
+            return _result.value.i32 != 0;
+        case EvalLong:
+            return _result.value.i64 != 0;
+        case EvalFloat:
+            return _result.value.f32 != 0.0;
+        case EvalDouble:
+            return _result.value.f64 != 0.0;
+        case EvalBoolean:
+            return _result.value.i32 != 0;
+        case EvalString:
+            if (strcmp((char*) _result.value.ptr, "true") == 0 || 
+                strcmp((char*) _result.value.ptr, "1") == 0) {
+                return true;
+            }
+            if (strcmp((char*) _result.value.ptr, "false") == 0 || 
+                strcmp((char*) _result.value.ptr, "0") == 0) {
+                return false;
+            }
+            if (!string_is_number((char*) _result.value.ptr)) break;
+            return strtol((char*) _result.value.ptr, NULL, 10) != 0;
+        case EvalNull:
         default:
             return false;
     }
@@ -331,6 +389,39 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.value.f64 = diff;
             }
             return result;
+        }
+        case AstLogicalAnd:
+        case AstLogicalOr: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            if (l.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+
+            bool is_and = _expression->type == AstLogicalAnd;
+            bool l_truthy = eval_is_truthy(l);
+
+            // Short circuit evaluation
+            if ((!is_and && l_truthy) || (is_and && !l_truthy)) {
+                return l;
+            }
+
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+
+            // If either operand is boolean, coerce both to boolean
+            if (l.type == EvalBoolean || r.type == EvalBoolean) {
+                result.type = EvalBoolean;
+                result.value.i32 = is_and 
+                    ? (eval_coerce_to_boolean(l) && eval_coerce_to_boolean(r))
+                    : (eval_coerce_to_boolean(l) || eval_coerce_to_boolean(r));
+                return result;
+            }
+
+            return r;
         }
         default:
             result.type = EvalError;

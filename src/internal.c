@@ -49,6 +49,63 @@ bool string_is_number(char* _str) {
 #pragma endregion
 
 #pragma region NumberC
+int number_coerce_to_int(object_t* _obj) {
+    switch (_obj->type) {
+        case OBJECT_TYPE_INT:
+            return _obj->value.i32;
+        case OBJECT_TYPE_LONG:
+            return (int) _obj->value.i64;
+        case OBJECT_TYPE_FLOAT:
+            return (int) _obj->value.f32;
+        case OBJECT_TYPE_DOUBLE:
+            return (int) _obj->value.f64;
+        case OBJECT_TYPE_STRING:
+            if (!string_is_number((char*) _obj->value.opaque)) break;
+            return (int) strtol((char*) _obj->value.opaque, NULL, 10);
+        default:
+            break;
+    }
+    return 0;
+}
+
+long number_coerce_to_long(object_t* _obj) {
+    switch (_obj->type) {
+        case OBJECT_TYPE_INT:
+            return (long) _obj->value.i32;
+        case OBJECT_TYPE_LONG:
+            return _obj->value.i64;
+        case OBJECT_TYPE_FLOAT:
+            return (long) _obj->value.f32;
+        case OBJECT_TYPE_DOUBLE:
+            return (long) _obj->value.f64;
+        case OBJECT_TYPE_STRING:
+            if (!string_is_number((char*) _obj->value.opaque)) break;
+            return (long) strtol((char*) _obj->value.opaque, NULL, 10);
+        default:
+            break;
+    }
+    return 0;
+}
+
+float number_coerce_to_float(object_t* _obj) {
+    switch (_obj->type) {
+        case OBJECT_TYPE_INT:
+            return (float) _obj->value.i32;
+        case OBJECT_TYPE_LONG:
+            return (float) _obj->value.i64;
+        case OBJECT_TYPE_FLOAT:
+            return _obj->value.f32;
+        case OBJECT_TYPE_DOUBLE:
+            return (float) _obj->value.f64;
+        case OBJECT_TYPE_STRING:
+            if (!string_is_number((char*) _obj->value.opaque)) break;
+            return (float) strtod((char*) _obj->value.opaque, NULL);
+        default:
+            break;
+    }
+    return 0.0;
+}
+
 double number_coerce_to_double(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:

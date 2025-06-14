@@ -40,7 +40,6 @@ typedef struct ast_node_struct {
         long   i64;
         float  f32;
         double f64;
-        char*  str;
     } value;
     char*           str0;
     ast_node_t*     ast0;

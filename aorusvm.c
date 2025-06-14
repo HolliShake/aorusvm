@@ -6,8 +6,8 @@
 #include "test/if.test.c"
 
 int main(int argc, char *argv[]) {
-    // test_binary_add();
-    // test_variable();
+    test_binary_add();
+    test_variable();
     test_if_statement();
     // test_vm();
     return 0;

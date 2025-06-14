@@ -14,7 +14,7 @@ int test_if_statement() {
                 ast_logical_and_node(
                     position_from_line_and_colm(1, 1), 
                     ast_boolean_node(position_from_line_and_colm(1, 1), true),
-                    ast_boolean_node(position_from_line_and_colm(1, 1), true)
+                    ast_boolean_node(position_from_line_and_colm(1, 1), false)
                 ),
                 ast_statement_expression(position_from_line_and_colm(1, 1), ast_string_node(position_from_line_and_colm(1, 1), "Hello")),
                 ast_statement_expression(position_from_line_and_colm(1, 1), ast_string_node(position_from_line_and_colm(1, 1), "World"))

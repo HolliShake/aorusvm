@@ -38,7 +38,7 @@ typedef struct vm_struct {
 }
 
 #define PEEK() (instance->evaluation_stack[instance->sp - 1])
-#define POP() (instance->evaluation_stack[--instance->sp])
+#define POPP() (instance->evaluation_stack[--instance->sp])
 
 #define LENGTH_OF_MAGIC_NUMBER  4
 #define LENGTH_OF_BYTECODE_SIZE 8
@@ -169,27 +169,12 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
     }
 
     double_path:;
-    double lhs_value;
-    double rhs_value;
+    double lhs_value = number_coerce_to_double(_lhs);
+    double rhs_value = number_coerce_to_double(_rhs);
 
-    if (OBJECT_TYPE_INT(_lhs) || OBJECT_TYPE_LONG(_lhs) || 
-        OBJECT_TYPE_FLOAT(_lhs) || OBJECT_TYPE_DOUBLE(_lhs)) {
-        lhs_value = number_coerce_to_double(_lhs);
-    } else if (OBJECT_TYPE_STRING(_lhs)) {
-        if (!string_is_number((char*)_lhs->value.opaque)) goto ERROR;
-        lhs_value = number_coerce_to_double(_lhs);
-    } else {
-        goto ERROR;
-    }
-
-    if (OBJECT_TYPE_INT(_rhs) || OBJECT_TYPE_LONG(_rhs) ||
-        OBJECT_TYPE_FLOAT(_rhs) || OBJECT_TYPE_DOUBLE(_rhs)) {
-        rhs_value = number_coerce_to_double(_rhs);
-    } else if (OBJECT_TYPE_STRING(_rhs)) {
-        if (!string_is_number((char*)_rhs->value.opaque)) goto ERROR;
-        rhs_value = number_coerce_to_double(_rhs);
-    } else {
-        goto ERROR;
+    if (lhs_value == 0.0 || rhs_value == 0.0) {
+        PUSH_NEW(object_new_int(0));
+        return;
     }
 
     double result = lhs_value * rhs_value;
@@ -245,31 +230,14 @@ void do_add(object_t *_lhs, object_t *_rhs) {
         return;
     }
 
-    // Fallback path - convert to doubles
-    double lhs_value;
-    double rhs_value;
-
-    // Coerce left operand
-    if (OBJECT_TYPE_INT(_lhs) || OBJECT_TYPE_LONG(_lhs) || 
-        OBJECT_TYPE_FLOAT(_lhs) || OBJECT_TYPE_DOUBLE(_lhs)) {
-        lhs_value = number_coerce_to_double(_lhs);
-    } else if (OBJECT_TYPE_STRING(_lhs)) {
-        goto ERROR; // String + non-string not allowed
-    } else {
+    // Handle string + non-string case
+    if (OBJECT_TYPE_STRING(_lhs) || OBJECT_TYPE_STRING(_rhs)) {
         goto ERROR;
     }
 
-    // Coerce right operand
-    if (OBJECT_TYPE_INT(_rhs) || OBJECT_TYPE_LONG(_rhs) ||
-        OBJECT_TYPE_FLOAT(_rhs) || OBJECT_TYPE_DOUBLE(_rhs)) {
-        rhs_value = number_coerce_to_double(_rhs);
-    } else if (OBJECT_TYPE_STRING(_rhs)) {
-        if (!string_is_number((char*)_rhs->value.opaque)) goto ERROR;
-        rhs_value = number_coerce_to_double(_rhs);
-    } else {
-        goto ERROR;
-    }
-
+    // Fallback path using coercion
+    double lhs_value = number_coerce_to_double(_lhs);
+    double rhs_value = number_coerce_to_double(_rhs);
     double result = lhs_value + rhs_value;
     double intpart;
 
@@ -293,32 +261,35 @@ void do_add(object_t *_lhs, object_t *_rhs) {
 
 INTERNAL
 void do_sub(object_t *_lhs, object_t *_rhs) {
-    // Fallback path - convert to doubles
-    double lhs_value;
-    double rhs_value;
-
-    // Coerce left operand
-    if (OBJECT_TYPE_INT(_lhs) || OBJECT_TYPE_LONG(_lhs) ||
-        OBJECT_TYPE_FLOAT(_lhs) || OBJECT_TYPE_DOUBLE(_lhs)) {
-        lhs_value = number_coerce_to_double(_lhs);
-    } else if (OBJECT_TYPE_STRING(_lhs)) {
-        if (!string_is_number((char*)_lhs->value.opaque)) goto ERROR;
-        lhs_value = number_coerce_to_double(_lhs);
-    } else {
-        goto ERROR;
+    // Fast path for integers
+    if (OBJECT_TYPE_INT(_lhs) && OBJECT_TYPE_INT(_rhs)) {
+        int32_t a = _lhs->value.i32;
+        int32_t b = _rhs->value.i32;
+        int32_t diff = a - b;
+        if (((a ^ b) & (a ^ diff)) < 0) {
+            PUSH_NEW(object_new_double((double)a - (double)b));
+        } else {
+            PUSH_NEW(object_new_int(diff));
+        }
+        return;
     }
 
-    // Coerce right operand
-    if (OBJECT_TYPE_INT(_rhs) || OBJECT_TYPE_LONG(_rhs) ||
-        OBJECT_TYPE_FLOAT(_rhs) || OBJECT_TYPE_DOUBLE(_rhs)) {
-        rhs_value = number_coerce_to_double(_rhs);
-    } else if (OBJECT_TYPE_STRING(_rhs)) {
-        if (!string_is_number((char*)_rhs->value.opaque)) goto ERROR;
-        rhs_value = number_coerce_to_double(_rhs);
-    } else {
-        goto ERROR;
+    // Fast path for longs
+    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
+        int64_t a = _lhs->value.i64;
+        int64_t b = _rhs->value.i64;
+        int64_t diff = a - b;
+        if (((a ^ b) & (a ^ diff)) < 0) {
+            PUSH_NEW(object_new_double((double)a - (double)b));
+        } else {
+            PUSH_NEW(object_new_long(diff));
+        }
+        return;
     }
 
+    // Fallback path using coercion
+    double lhs_value = number_coerce_to_double(_lhs);
+    double rhs_value = number_coerce_to_double(_rhs);
     double result = lhs_value - rhs_value;
     double intpart;
 
@@ -431,25 +402,25 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             }
             case OPCODE_STORE_NAME: {
                 char* name = get_string(bytecode, ip);
-                env_put(_env, name, POP());
+                env_put(_env, name, POPP());
                 FORWARD(strlen(name) + 1);
                 break;
             }
             case OPCODE_ADD: {
-                object_t *obj1 = POP();
-                object_t *obj2 = POP();
+                object_t *obj1 = POPP();
+                object_t *obj2 = POPP();
                 do_add(obj1, obj2);
                 break;
             }
             case OPCODE_SUB: {
-                object_t *obj1 = POP();
-                object_t *obj2 = POP();
+                object_t *obj1 = POPP();
+                object_t *obj2 = POPP();
                 do_sub(obj1, obj2);
                 break;
             }
             case OPCODE_POP_JUMP_IF_FALSE: {
                 int jump_offset = get_int(bytecode, ip);
-                if (!object_is_truthy(POP())) {
+                if (!object_is_truthy(POPP())) {
                     ip += jump_offset;
                 } else {
                     FORWARD(4);
@@ -458,9 +429,31 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             }
             case OPCODE_POP_JUMP_IF_TRUE: {
                 int jump_offset = get_int(bytecode, ip);
-                if (object_is_truthy(POP())) {
+                if (object_is_truthy(POPP())) {
                     ip += jump_offset;
                 } else {
+                    FORWARD(4);
+                }
+                break;
+            }
+            case OPCODE_JUMP_IF_FALSE_OR_POP: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t *obj = PEEK();
+                if (!object_is_truthy(obj)) {
+                    ip += jump_offset;
+                } else {
+                    POPP();
+                    FORWARD(4);
+                }
+                break;
+            }
+            case OPCODE_JUMP_IF_TRUE_OR_POP: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t *obj = PEEK();
+                if (object_is_truthy(obj)) {
+                    ip += jump_offset;
+                } else {
+                    POPP();
                     FORWARD(4);
                 }
                 break;
@@ -471,7 +464,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
                 break;
             }
             case OPCODE_POPTOP: {
-                printf("TOP: %s\n", object_to_string(POP()));
+                printf("TOP: %s\n", object_to_string(POPP()));
                 break;
             }
             case OPCODE_RETURN: {
