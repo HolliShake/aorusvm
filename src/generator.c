@@ -283,7 +283,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         case AstBinaryMul: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression must have a left and right operand");
+                PD("binary expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -303,7 +303,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryDiv: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression must have a left and right operand");
+                PD("binary expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -323,7 +323,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryMod: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression must have a left and right operand");
+                PD("binary expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -343,7 +343,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryAdd: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression must have a left and right operand");
+                PD("binary expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -363,7 +363,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinarySub: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression must have a left and right operand");
+                PD("binary expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -383,7 +383,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstLogicalAnd: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("logical expression must have a left and right operand");
+                PD("logical expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -406,7 +406,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstLogicalOr: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("logical expression must have a left and right operand");
+                PD("logical expression requires both left and right operands, but received NULL");
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -439,10 +439,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         case AstLocalStatement: {
             // Validate scope
             if (_statement->type == AstVarStatement && !scope_is_global(_scope)) {
-                PD("global variable declaration must be at the top level");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "global variable declaration must be in the global scope"
+                );
             }
             if (_statement->type == AstLocalStatement && !scope_is_local(_scope)) {
-                PD("local variable declaration must be at the top level");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "local variable declaration must be in a function or block"
+                );
             }
             
             ast_node_list_t names  = _statement->array0;
@@ -454,16 +464,31 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 
                 // Validate name and value
                 if (!name || name->type != AstName) {
-                    PD("variable name must be a valid identifier");
+                    if (!name) PD("variable name must be a valid identifier, but received NULL");
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        name->position, 
+                        "variable name must be a valid identifier"
+                    );
                 }
                 if (value && !generator_is_expression_type(value)) {
-                    PD("variable value must be an expression");
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        value->position, 
+                        "variable value must be an expression"
+                    );
                 }
                 if (scope_has(_scope, name->str0, true)) {
-                    PD("symbol %s is already defined", name->str0);
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        name->position, 
+                        "symbol %s is already defined", name->str0
+                    );
                     return;
                 }
-
                 // Generate value code
                 if (value) {
                     generator_expression(_generator, value);
@@ -495,9 +520,13 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             ast_node_t* tvalue = _statement->ast1;
             ast_node_t* fvalue = _statement->ast2;
             if (!cond || !tvalue || !generator_is_expression_type(cond)) {
-                PD(!cond ? "if statement must have a condition" :
-                   !tvalue ? "if statement must have a true value" :
-                   "condition must be an expression");
+                if (!cond || !tvalue) PD(!cond ? "if statement must have a condition, but received NULL" : "if statement must have a true value, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    cond->position, 
+                    "condition must be an expression"
+                );
             }
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 if (generator_is_constant_node(cond)) {
@@ -532,9 +561,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 ast_node_t* cond_l = cond->ast0;
                 ast_node_t* cond_r = cond->ast1;
                 if (!cond_l || !cond_r) {
-                    PD(!cond_l ? "logical expression must have a left operand" :
-                       !cond_r ? "logical expression must have a right operand" :
-                       "logical expression must have two operands");
+                    PD(!cond_l ? "logical expression must have a left operand, but received NULL" :
+                       !cond_r ? "logical expression must have a right operand, but received NULL" :
+                       "logical expression must have two operands, but received NULL");
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
@@ -607,7 +636,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         }
         case AstReturn: {
             if (!scope_is_function(_scope)) {
-                PD("return statement must be in a function");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "return statement must be in a function"
+                );
             }
             // Find function scope and set returned flag
             scope_t* current;
@@ -617,7 +651,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             ast_node_t* expr = _statement->ast0;
             if (expr != NULL) {
                 if (!generator_is_expression_type(expr)) {
-                    PD("return value must be an expression");
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        expr->position, 
+                        "return value must be an expression"
+                    );
                 }
                 generator_expression(_generator, expr);
                 free(expr);
@@ -630,16 +669,15 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         }
         case AstStatementExpression: {
             if (_statement->ast0 == NULL) {
-                PD("expression statement must have an expression");
+                PD("expression statement must have an expression, but received NULL");
             }
-            // TODO: Do not compile if the expression is a constant (No-op)
             generator_expression(_generator, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
             free(_statement);
             break;
         }
         default:
-            PD("unsupported statement type %d", _statement->type);
+            PD("unsupported statement type %d, but received %d", _statement->type, _statement->type);
     }
 }
 
