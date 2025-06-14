@@ -1,0 +1,56 @@
+#include "api/ast/node.h"
+#include "api/ast/position.h"
+#include "api/core/global.h"
+
+#ifndef NODE_H
+#define NODE_H
+
+typedef enum ast_node_type_struct {
+    // Expressions
+    AstName,
+    AstInt,
+    AstLong,
+    AstFloat,
+    AstDouble,
+    AstBoolean,
+    AstString,
+    AstNull,
+    // Binary operators
+    AstBinaryMul,
+    AstBinaryDiv,
+    AstBinaryMod,
+    AstBinaryAdd,
+    AstBinarySub,
+    AstLogicalAnd,
+    AstLogicalOr,
+    // Statements
+    AstVarStatement,
+    AstConstStatement,
+    AstLocalStatement,
+    AstIfStatement,
+    AstReturn,
+    AstStatementExpression,
+    AstProgram,
+} ast_node_type_t;
+
+typedef struct ast_node_struct {
+    ast_node_type_t type;
+    union value_union {
+        int    i32;
+        long   i64;
+        float  f32;
+        double f64;
+        char*  str;
+    } value;
+    char*           str0;
+    ast_node_t*     ast0;
+    ast_node_t*     ast1;
+    ast_node_t*     ast2;
+    ast_node_t*     ast3;
+    ast_node_t**    array0;
+    ast_node_t**    array1;
+    ast_node_t**    array2;
+    position_t*     position;
+} ast_node_t;
+
+#endif

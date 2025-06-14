@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "global.h": "c",
+        "vm.h": "c",
+        "object.h": "c",
+        "assert.h": "c",
+        "type_traits": "c",
+        "error.h": "c",
+        "ctype.h": "c",
+        "position.h": "c",
+        "type.h": "c",
+        "internal.h": "c",
+        "opcode.h": "c",
+        "node.h": "c",
+        "optional": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "utility": "c",
+        "generator.h": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "errno.h": "c",
+        "random": "c"
+    }
+}

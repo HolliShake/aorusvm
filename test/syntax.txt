@@ -1,0 +1,18 @@
+
+
+namespace Dog {
+    func bark() {
+        println("Arf!!");
+    }
+}
+
+class Dog extends Animal {
+    func init() {
+    }
+
+    func bark() {
+        this
+    }
+}
+
+Dog::bark();
