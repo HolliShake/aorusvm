@@ -27,6 +27,20 @@ char* string_append(char* _dst, char* _src) {
     return _dst;
 }
 
+char* string_format(char* _format, ...) {
+    va_list args;
+    va_start(args, _format);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int size = vsnprintf(NULL, 0, _format, args);
+    va_end(args);
+    char* str = (char*) malloc(sizeof(char) * (size + 1));
+    ASSERTNULL(str, ERROR_ALLOCATING_STRING);
+    vsnprintf(str, size + 1, _format, args_copy);
+    va_end(args_copy);
+    return str;
+}
+
 bool string_is_number(char* _str) {
     if (_str == NULL) return false;
 

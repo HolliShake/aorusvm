@@ -46,9 +46,9 @@ typedef struct ast_node_struct {
     ast_node_t*     ast1;
     ast_node_t*     ast2;
     ast_node_t*     ast3;
-    ast_node_t**    array0;
-    ast_node_t**    array1;
-    ast_node_t**    array2;
+    ast_node_list_t array0;
+    ast_node_list_t array1;
+    ast_node_list_t array2;
     position_t*     position;
 } ast_node_t;
 

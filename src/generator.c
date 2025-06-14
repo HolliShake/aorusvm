@@ -223,30 +223,35 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _generator, 
                 _expression->str0
             );
+            free(_expression);
             break;
         case AstInt:
             generator_emit_int(
                 _generator, 
                 _expression->value.i32
             );
+            free(_expression);
             break;
         case AstLong:
             generator_emit_long(
                 _generator, 
                 _expression->value.i64
             );
+            free(_expression);
             break;
         case AstFloat:
             generator_emit_float(
                 _generator, 
                 _expression->value.f32
             );
+            free(_expression);
             break;
         case AstDouble:
             generator_emit_double(
                 _generator, 
                 _expression->value.f64
             );
+            free(_expression);
             break;
         case AstBoolean:
             generator_emit_byte(
@@ -257,6 +262,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _generator, 
                 _expression->value.i32 == 1
             );
+            free(_expression);
             break;
         case AstString:
             if (_expression->str0 == NULL) {
@@ -266,12 +272,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _generator, 
                 _expression->str0
             );
+            free(_expression);
             break;
         case AstNull:
             generator_emit_byte(
                 _generator, 
                 OPCODE_LOAD_NULL
             );
+            free(_expression);
             break;
         case AstBinaryMul: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
@@ -290,6 +298,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_MUL);
+            free(_expression);
             break;
         }
         case AstBinaryDiv: {
@@ -309,6 +318,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_DIV);
+            free(_expression);
             break;
         }
         case AstBinaryMod: {
@@ -328,6 +338,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_MOD);
+            free(_expression);
             break;
         }
         case AstBinaryAdd: {
@@ -347,6 +358,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_ADD);
+            free(_expression);
             break;
         }
         case AstBinarySub: {
@@ -366,6 +378,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SUB);
+            free(_expression);
             break;
         }
         case AstLogicalAnd: {
@@ -388,6 +401,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            free(_expression);
             break;
         }
         case AstLogicalOr: {
@@ -410,6 +424,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            free(_expression);
             break;
         }
         default:
@@ -430,8 +445,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 PD("local variable declaration must be at the top level");
             }
             
-            ast_node_t** names = _statement->array0;
-            ast_node_t** values = _statement->array1;
+            ast_node_list_t names  = _statement->array0;
+            ast_node_list_t values = _statement->array1;
 
             for (size_t i = 0; names[i] != NULL; i++) {
                 ast_node_t* name = names[i];
@@ -468,7 +483,11 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     .position  = name->position
                 };
                 scope_put(_scope, name->str0, symbol);
+                free(name);
             }
+            free(names);
+            free(values);
+            free(_statement);
             break;
         }
         case AstIfStatement: {
@@ -506,6 +525,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_allocate_nbytes(_generator, 4);
                 generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
                 generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                free(cond);
+                free(_statement);
                 break;
             } else {
                 ast_node_t* cond_l = cond->ast0;
@@ -544,6 +565,10 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_allocate_nbytes(_generator, 4);
                     generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
                     generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    free(cond);
+                    free(cond_l);
+                    free(cond_r);
+                    free(_statement);
                 } else {
                     generator_expression(_generator, cond_l);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
@@ -572,6 +597,10 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_allocate_nbytes(_generator, 4);
                     generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
                     generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    free(cond);
+                    free(cond_l);
+                    free(cond_r);
+                    free(_statement);
                 }
             }
             break;
@@ -591,10 +620,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     PD("return value must be an expression");
                 }
                 generator_expression(_generator, expr);
+                free(expr);
             } else {
                 generator_emit_byte(_generator, OPCODE_LOAD_NULL);
             }
             generator_emit_byte(_generator, OPCODE_RETURN);
+            free(_statement);
             break;
         }
         case AstStatementExpression: {
@@ -604,6 +635,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // TODO: Do not compile if the expression is a constant (No-op)
             generator_expression(_generator, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
+            free(_statement);
             break;
         }
         default:
@@ -612,7 +644,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 }
 
 INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
-    ast_node_t** children = _program->array0;
+    ast_node_list_t children = _program->array0;
     // Reserve 4 bytes for the magic number
     generator_emit_magic_bytes(_generator);
     // Reserve 4 bytes for the version
@@ -628,6 +660,8 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
     for (size_t i = 0; children[i] != NULL; i++) {
         if (children[i] != NULL) generator_statement(_generator, scope, children[i]);
     }
+    free(children);
+    free(_program);
     scope_free(scope);
     // write the bytecode to the file
     generator_emit_byte(_generator, OPCODE_LOAD_NULL);

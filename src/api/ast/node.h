@@ -20,6 +20,11 @@
 typedef struct ast_node_struct ast_node_t;
 
 /*
+ * AST node list.
+ */
+typedef ast_node_t** ast_node_list_t;
+
+/*
  * Name node.
  * 
  * @param _position The position of the node.
@@ -166,7 +171,7 @@ DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lh
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_t** _names, ast_node_t** _values);
+DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * Constant statement node (Global|Local constant declaration).
@@ -174,7 +179,7 @@ DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_t** _nam
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_t** _names, ast_node_t** _values);
+DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * Local variable statement node (Local variable declaration).
@@ -182,7 +187,7 @@ DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_t** _n
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_local_statement(position_t* _position, ast_node_t** _names, ast_node_t** _values);
+DLLEXPORT ast_node_t* ast_local_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * If statement node.
@@ -220,6 +225,6 @@ DLLEXPORT ast_node_t* ast_statement_expression(position_t* _position, ast_node_t
  * @param _children The children of the node.
  * @return The program node.
  */
-DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_t** _children);
+DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_list_t _children);
 
 #endif
