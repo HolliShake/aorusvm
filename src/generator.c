@@ -211,7 +211,13 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
             break; \
         case EvalError: \
         default: \
-            PD("[%s:%d]: unsupported eval result type %d", _generator->fpath, expression->position->line_start, result.type); \
+            __THROW_ERROR( \
+                _generator->fpath, \
+                _generator->fdata, \
+                expression->position, \
+                "unsupported type for expression", \
+                result.type \
+            ); \
     } \
 }
 
@@ -266,7 +272,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         case AstString:
             if (_expression->str0 == NULL) {
-                PD("string expression must have a value");
+                PD("string expression must have a value, but received NULL");
             }
             generator_emit_string(
                 _generator, 
@@ -428,7 +434,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         }
         default:
-            PD("unsupported expression type %d", _expression->type);
+            PD("unsupported expression type %d, but received %d", _expression->type, _expression->type);
     }
 }
 
