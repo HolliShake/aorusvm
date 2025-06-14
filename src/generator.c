@@ -41,6 +41,13 @@ INTERNAL void generator_emit_magic_bytes(generator_t* _generator) {
     }
 }
 
+INTERNAL void generator_emit_version_bytes(generator_t* _generator) {
+    generator_resize_bytecode_by(_generator, 4);
+    for (size_t i = 0; i < 4; i++) {
+        _generator->bytecode[_generator->bsize++] = (VERSION >> (i * 8)) & 0xFF;
+    }
+}
+
 INTERNAL void generator_emit_bytecode_size(generator_t* _generator) {
     generator_resize_bytecode_by(_generator, 8);
     for (size_t i = 0; i < 8; i++) {
@@ -608,6 +615,8 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
     ast_node_t** children = _program->array0;
     // Reserve 4 bytes for the magic number
     generator_emit_magic_bytes(_generator);
+    // Reserve 4 bytes for the version
+    generator_emit_version_bytes(_generator);
     // Reserve 8 bytes for the bytecode size
     generator_emit_bytecode_size(_generator);
     // Reserve n bytes for the file name
@@ -624,7 +633,7 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
     generator_emit_byte(_generator, OPCODE_LOAD_NULL);
     generator_emit_byte(_generator, OPCODE_RETURN);
     // Set the bytecode size
-    generator_set_8bytes(_generator, 4, _generator->bsize);
+    generator_set_8bytes(_generator, 8, _generator->bsize);
 }
 
 // -----------------------------

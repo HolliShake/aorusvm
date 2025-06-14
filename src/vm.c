@@ -41,19 +41,28 @@ typedef struct vm_struct {
 #define POPP() (instance->evaluation_stack[--instance->sp])
 
 #define LENGTH_OF_MAGIC_NUMBER  4
+#define LENGTH_OF_VERSION       4
 #define LENGTH_OF_BYTECODE_SIZE 8
 
 // Bytecode verification (bytes 0 - 3)
 #define VERIFY_MAGIC_NUMBER(bytecode) { \
     int magic_value = get_int(bytecode, 0); \
     if (magic_value != MAGIC_NUMBER) { \
-        PD("magic number is invalid"); \
+        PD("invalid magic number: expected 0x%08X but got 0x%08X", MAGIC_NUMBER, magic_value); \
     } \
 }
 
-// Get bytecode size (bytes 4 - 11)
+// Bytecode version (bytes 4 - 7)
+#define VERIFY_VERSION(bytecode) { \
+    int version = get_int(bytecode, 4); \
+    if (version != VERSION) { \
+        PD("incompatible bytecode version: bytecode was compiled with version %d but runtime expects version %d", version, VERSION); \
+    } \
+}
+
+// Get bytecode size (bytes 8 - 15)
 #define VERIFY_BYTECODE_SIZE(bytecode, outvariable) { \
-    long size = get_long(bytecode, 4); \
+    long size = get_long(bytecode, 8); \
     if (size == 0) { \
         PD("bytecode size is 0"); \
     } \
@@ -514,9 +523,10 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     ASSERTNULL(instance, ERROR_VM_NOT_INITIALIZED);
     // Verify magic number
     VERIFY_MAGIC_NUMBER(_bytecode);
-
+    // Verify version
+    VERIFY_VERSION(_bytecode);
     // Skip magic number
     env_t* env = env_new(NULL);
-    vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_BYTECODE_SIZE, 0, _bytecode);
+    vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, _bytecode);
     printf("VM executed\n");
 }

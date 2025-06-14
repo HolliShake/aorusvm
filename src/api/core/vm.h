@@ -15,6 +15,7 @@
 #ifndef API_CORE_VM_H
 #define API_CORE_VM_H
 
+#define VERSION 0x001 // 0.0.1
 #define EVALUATION_STACK_SIZE 1024
 #define SLICE_INT(value) (value & 0xFF), ((value >> 8) & 0xFF), ((value >> 16) & 0xFF), ((value >> 24) & 0xFF)
 #define SLICE_LONG(value) (value & 0xFF), ((value >> 8) & 0xFF), ((value >> 16) & 0xFF), ((value >> 24) & 0xFF), ((value >> 32) & 0xFF), ((value >> 40) & 0xFF), ((value >> 48) & 0xFF), ((value >> 56) & 0xFF)
