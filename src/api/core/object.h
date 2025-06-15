@@ -86,4 +86,11 @@ DLLEXPORT char* object_to_string(object_t* _obj);
  */
 DLLEXPORT bool object_is_truthy(object_t* _obj);
 
+/*
+ * Check if an object is a number.
+ * @param _obj The object.
+ * @return True if the object is a number, false otherwise.
+ */
+DLLEXPORT bool object_is_number(object_t* _obj);
+
 #endif

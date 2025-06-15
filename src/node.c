@@ -103,6 +103,83 @@ DLLEXPORT ast_node_t* ast_binary_sub_node(position_t* _position, ast_node_t* _lh
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_binary_shl_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstBinaryShl, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_binary_shr_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstBinaryShr, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_lt_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpLt, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_lte_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpLte, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_gt_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpGt, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_gte_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpGte, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_eq_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpEq, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_cmp_ne_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstCmpNe, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_binary_and_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstBinaryAnd, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_binary_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstBinaryOr, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_binary_xor_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstBinaryXor, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_logical_and_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
     ast_node_t* node = ast_node_new(AstLogicalAnd, _position);
     node->ast0 = _lhs;

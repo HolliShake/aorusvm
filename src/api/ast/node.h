@@ -146,6 +146,116 @@ DLLEXPORT ast_node_t* ast_binary_add_node(position_t* _position, ast_node_t* _lh
 DLLEXPORT ast_node_t* ast_binary_sub_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
+ * Binary shift left node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The binary shift left node.
+ */
+DLLEXPORT ast_node_t* ast_binary_shl_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Binary shift right node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The binary shift right node.
+ */
+DLLEXPORT ast_node_t* ast_binary_shr_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare less than node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare less than node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_lt_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare less than or equal to node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare less than or equal to node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_lte_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare greater than node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare greater than node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_gt_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare greater than or equal to node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare greater than or equal to node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_gte_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare equal to node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare equal to node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_eq_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Compare not equal to node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The compare not equal to node.
+ */
+DLLEXPORT ast_node_t* ast_cmp_ne_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Binary and node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The binary and node.
+ */
+DLLEXPORT ast_node_t* ast_binary_and_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Binary or node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The binary or node.
+ */
+DLLEXPORT ast_node_t* ast_binary_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Binary xor node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The binary xor node.
+ */
+DLLEXPORT ast_node_t* ast_binary_xor_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
  * Logical and node.
  *
  * @param _position The position of the node.

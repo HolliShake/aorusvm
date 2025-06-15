@@ -158,10 +158,10 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             }
 
             if (l.type == EvalInt && r.type == EvalInt) {
-                int64_t product = (int64_t)l.value.i32 * r.value.i32;
+                long product = (long)l.value.i32 * r.value.i32;
                 if (product <= INT32_MAX && product >= INT32_MIN) {
                     result.type = EvalInt;
-                    result.value.i32 = (int32_t)product;
+                    result.value.i32 = (int)product;
                 } else {
                     result.type = EvalLong;
                     result.value.i64 = product;
@@ -176,7 +176,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             double intpart;
             if (modf(product, &intpart) == 0.0 && product <= INT32_MAX && product >= INT32_MIN) {
                 result.type = EvalInt;
-                result.value.i32 = (int32_t)product;
+                result.value.i32 = (int)product;
             } else {
                 result.type = EvalDouble;
                 result.value.f64 = product;
@@ -196,9 +196,16 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 return result;
             }
 
+            // Catch zero division for integer types
+            if ((r.type == EvalInt && r.value.i32 == 0) ||
+                (r.type == EvalLong && r.value.i64 == 0)) {
+                result.type = EvalZeroDivision;
+                return result;
+            }
+
             double rvalue = eval_coerce_to_double(r);
             if (rvalue == 0.0) {
-                result.type = EvalError;
+                result.type = EvalZeroDivision;
                 return result;
             }
 
@@ -208,7 +215,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             double intpart;
             if (modf(quotient, &intpart) == 0.0 && quotient <= INT32_MAX && quotient >= INT32_MIN) {
                 result.type = EvalInt;
-                result.value.i32 = (int32_t)quotient;
+                result.value.i32 = (int)quotient;
             } else {
                 result.type = EvalDouble;
                 result.value.f64 = quotient;
@@ -228,11 +235,14 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 return result;
             }
 
+            // Catch zero division for integer types
+            if ((r.type == EvalInt && r.value.i32 == 0) ||
+                (r.type == EvalLong && r.value.i64 == 0)) {
+                result.type = EvalZeroDivision;
+                return result;
+            }
+
             if (l.type == EvalInt && r.type == EvalInt) {
-                if (r.value.i32 == 0) {
-                    result.type = EvalError;
-                    return result;
-                }
                 result.type = EvalInt;
                 result.value.i32 = l.value.i32 % r.value.i32;
                 return result;
@@ -240,7 +250,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
 
             double rvalue = eval_coerce_to_double(r);
             if (rvalue == 0.0) {
-                result.type = EvalError;
+                result.type = EvalZeroDivision;
                 return result;
             }
 
@@ -250,7 +260,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             double intpart;
             if (modf(remainder, &intpart) == 0.0 && remainder <= INT32_MAX && remainder >= INT32_MIN) {
                 result.type = EvalInt;
-                result.value.i32 = (int32_t)remainder;
+                result.value.i32 = (int)remainder;
             } else {
                 result.type = EvalDouble;
                 result.value.f64 = remainder;
@@ -269,9 +279,9 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             if (l.type == EvalInt) {
                 if (r.type == EvalInt) {
                     // Check for overflow using unsigned arithmetic
-                    int32_t a = l.value.i32;
-                    int32_t b = r.value.i32;
-                    int32_t sum = a + b;
+                    int a = l.value.i32;
+                    int b = r.value.i32;
+                    int sum = a + b;
                     
                     if (((a ^ sum) & (b ^ sum)) < 0) {
                         // Overflow occurred, promote to double
@@ -289,9 +299,9 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             }
 
             if (l.type == EvalLong && r.type == EvalLong) {
-                int64_t a = l.value.i64;
-                int64_t b = r.value.i64;
-                int64_t sum = a + b;
+                long a = l.value.i64;
+                long b = r.value.i64;
+                long sum = a + b;
                 
                 if (((a ^ sum) & (b ^ sum)) < 0) {
                     result.type = EvalDouble;
@@ -326,7 +336,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             double intpart;
             if (modf(sum, &intpart) == 0.0 && sum <= INT32_MAX && sum >= INT32_MIN) {
                 result.type = EvalInt;
-                result.value.i32 = (int32_t)sum;
+                result.value.i32 = (int)sum;
             } else {
                 result.type = EvalDouble;
                 result.value.f64 = sum;
@@ -347,9 +357,9 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             }
 
             if (l.type == EvalInt && r.type == EvalInt) {
-                int32_t a = l.value.i32;
-                int32_t b = r.value.i32;
-                int32_t diff = a - b;
+                int a = l.value.i32;
+                int b = r.value.i32;
+                int diff = a - b;
                 
                 if (((a ^ b) & (a ^ diff)) < 0) {
                     result.type = EvalDouble;
@@ -362,9 +372,9 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             }
 
             if (l.type == EvalLong && r.type == EvalLong) {
-                int64_t a = l.value.i64;
-                int64_t b = r.value.i64;
-                int64_t diff = a - b;
+                long a = l.value.i64;
+                long b = r.value.i64;
+                long diff = a - b;
                 
                 if (((a ^ b) & (a ^ diff)) < 0) {
                     result.type = EvalDouble;
@@ -383,10 +393,305 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             double intpart;
             if (modf(diff, &intpart) == 0.0 && diff <= INT32_MAX && diff >= INT32_MIN) {
                 result.type = EvalInt;
-                result.value.i32 = (int32_t)diff;
+                result.value.i32 = (int)diff;
             } else {
                 result.type = EvalDouble;
                 result.value.f64 = diff;
+            }
+            return result;
+        }
+        case AstBinaryShl: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                int value = l.value.i32 << r.value.i32;
+                if (value <= INT32_MAX && value >= INT32_MIN) {
+                    result.type = EvalInt;
+                    result.value.i32 = value;
+                } else {
+                    result.type = EvalLong;
+                    result.value.i64 = (long)value;
+                }
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            long value = lhs_value << rhs_value;
+            if (value <= INT32_MAX && value >= INT32_MIN) {
+                result.type = EvalInt;
+                result.value.i32 = (int)value;
+            } else {
+                result.type = EvalLong;
+                result.value.i64 = value;
+            }
+            return result;
+        }
+        case AstBinaryShr: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                int value = l.value.i32 >> r.value.i32;
+                if (value <= INT32_MAX && value >= INT32_MIN) {
+                    result.type = EvalInt;
+                    result.value.i32 = value;
+                } else {
+                    result.type = EvalLong;
+                    result.value.i64 = (long)value;
+                }
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            long value = lhs_value >> rhs_value;
+            if (value <= INT32_MAX && value >= INT32_MIN) {
+                result.type = EvalInt;
+                result.value.i32 = (int)value;
+            } else {
+                result.type = EvalLong;
+                result.value.i64 = value;
+            }
+            return result;
+        }
+        case AstCmpLt: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalBoolean;
+                result.value.i32 = l.value.i32 < r.value.i32;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            result.type = EvalBoolean;
+            result.value.i32 = lhs_value < rhs_value;
+            return result;
+        }
+        case AstCmpLte: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalBoolean;
+                result.value.i32 = l.value.i32 <= r.value.i32;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            result.type = EvalBoolean;
+            result.value.i32 = lhs_value <= rhs_value;
+            return result;
+        }
+        case AstCmpGt: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalBoolean;
+                result.value.i32 = l.value.i32 > r.value.i32;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            result.type = EvalBoolean;
+            result.value.i32 = lhs_value > rhs_value;
+            return result;
+        }
+        case AstCmpGte: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (!eval_is_number(l) || !eval_is_number(r)) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalBoolean;
+                result.value.i32 = l.value.i32 >= r.value.i32;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            result.type = EvalBoolean;
+            result.value.i32 = lhs_value >= rhs_value;
+            return result;
+        }
+        case AstCmpEq: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (eval_is_number(l) && eval_is_number(r)) {
+                long lhs_value = eval_coerce_to_long(l);
+                long rhs_value = eval_coerce_to_long(r);
+                result.type = EvalBoolean;
+                result.value.i32 = lhs_value == rhs_value;
+                return result;
+            }
+            if (l.type == EvalString && r.type == EvalString) {
+                result.type = EvalBoolean;
+                result.value.i32 = strcmp((char*) l.value.ptr, (char*) r.value.ptr) == 0;
+                return result;
+            }
+            if (l.type == EvalNull && r.type == EvalNull) {
+                result.type = EvalBoolean;
+                result.value.i32 = 1;
+            }
+            result.type = EvalBoolean;
+            result.value.i32 = 0;
+            return result;
+        }
+        case AstCmpNe: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (eval_is_number(l) && eval_is_number(r)) {
+                long lhs_value = eval_coerce_to_long(l);
+                long rhs_value = eval_coerce_to_long(r);
+                result.type = EvalBoolean;
+                result.value.i32 = lhs_value != rhs_value;
+                return result;
+            }
+            if (l.type == EvalString && r.type == EvalString) {
+                result.type = EvalBoolean;
+                result.value.i32 = strcmp((char*) l.value.ptr, (char*) r.value.ptr) != 0;
+                return result;
+            }
+            if (l.type == EvalNull || r.type == EvalNull) {
+                result.type = EvalBoolean;
+                result.value.i32 = 1;
+            }
+            result.type = EvalBoolean;
+            result.value.i32 = 0;
+            return result;
+        }
+        case AstBinaryAnd: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalInt;
+                result.value.i32 = l.value.i32 & r.value.i32;
+                return result;
+            }
+            if (l.type == EvalLong && r.type == EvalLong) {
+                result.type = EvalLong;
+                result.value.i64 = l.value.i64 & r.value.i64;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            long value = lhs_value & rhs_value;
+            if (value <= INT32_MAX && value >= INT32_MIN) {
+                result.type = EvalInt;
+                result.value.i32 = (int)value;
+            } else {
+                result.type = EvalLong;
+                result.value.i64 = value;
+            }
+            return result;
+        }
+        case AstBinaryOr: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalInt;
+                result.value.i32 = l.value.i32 | r.value.i32;
+                return result;
+            }
+            if (l.type == EvalLong && r.type == EvalLong) {
+                result.type = EvalLong;
+                result.value.i64 = l.value.i64 | r.value.i64;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            long value = lhs_value | rhs_value;
+            if (value <= INT32_MAX && value >= INT32_MIN) {
+                result.type = EvalInt;
+                result.value.i32 = (int)value;
+            } else {
+                result.type = EvalLong;
+                result.value.i64 = value;
+            }
+            return result;
+        }
+        case AstBinaryXor: {
+            eval_result_t l = eval_eval_expression(_expression->ast0);
+            eval_result_t r = eval_eval_expression(_expression->ast1);
+            if (l.type == EvalError || r.type == EvalError) {
+                result.type = EvalError;
+                return result;
+            }
+            if (l.type == EvalInt && r.type == EvalInt) {
+                result.type = EvalInt;
+                result.value.i32 = l.value.i32 ^ r.value.i32;
+                return result;
+            }
+            if (l.type == EvalLong && r.type == EvalLong) {
+                result.type = EvalLong;
+                result.value.i64 = l.value.i64 ^ r.value.i64;
+                return result;
+            }
+            long lhs_value = eval_coerce_to_long(l);
+            long rhs_value = eval_coerce_to_long(r);
+            long value = lhs_value ^ rhs_value;
+            if (value <= INT32_MAX && value >= INT32_MIN) {
+                result.type = EvalInt;
+                result.value.i32 = (int)value;
+            } else {
+                result.type = EvalLong;
+                result.value.i64 = value;
             }
             return result;
         }

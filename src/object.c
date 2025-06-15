@@ -106,3 +106,17 @@ DLLEXPORT bool object_is_truthy(object_t *_obj) {
             return false;
     }
 }
+
+DLLEXPORT bool object_is_number(object_t *_obj) {
+    switch (_obj->type) {
+        case OBJECT_TYPE_INT:
+        case OBJECT_TYPE_LONG:
+        case OBJECT_TYPE_FLOAT:
+        case OBJECT_TYPE_DOUBLE:
+            return true;
+        case OBJECT_TYPE_STRING:
+            return string_is_number((char*) _obj->value.opaque);
+        default:
+            return false;
+    }
+}

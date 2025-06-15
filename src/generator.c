@@ -149,6 +149,8 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBinaryMod:
         case AstBinaryAdd:
         case AstBinarySub:
+        case AstBinaryShl:
+        case AstBinaryShr:
         case AstLogicalAnd:
         case AstLogicalOr:
             return true;
@@ -167,11 +169,13 @@ INTERNAL bool generator_is_constant_node(ast_node_t* _expression) {
         case AstString:
         case AstNull:
             return true;
-        case AstBinaryAdd:
-        case AstBinarySub:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
+        case AstBinaryAdd:
+        case AstBinarySub:
+        case AstBinaryShl:
+        case AstBinaryShr:
         case AstLogicalAnd:
         case AstLogicalOr:
             return generator_is_constant_node(_expression->ast0) && generator_is_constant_node(_expression->ast1);
@@ -209,6 +213,13 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
         case EvalNull: \
             generator_emit_byte(_generator, OPCODE_LOAD_NULL); \
             break; \
+        case EvalZeroDivision: \
+            __THROW_ERROR( \
+                _generator->fpath, \
+                _generator->fdata, \
+                expression->position, \
+                "division by zero" \
+            ); \
         case EvalError: \
         default: \
             __THROW_ERROR( \
@@ -384,6 +395,46 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SUB);
+            free(_expression);
+            break;
+        }
+        case AstBinaryShl: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression requires both left and right operands, but received NULL");
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_SHL);
+            free(_expression);
+            break;
+        }
+        case AstBinaryShr: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                PD("binary expression requires both left and right operands, but received NULL");
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_SHR);
             free(_expression);
             break;
         }

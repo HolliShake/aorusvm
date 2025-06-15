@@ -14,6 +14,7 @@ typedef enum eval_result_type_enum {
     EvalString,
     EvalBoolean,
     EvalNull,
+    EvalZeroDivision,
     EvalError,
 } eval_result_type_t;
 
