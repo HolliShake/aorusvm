@@ -702,7 +702,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             // Find function scope and set returned flag
             scope_t* current;
-            for (current = _scope; current->type != ScopeTypeFunction; current = current->parent) {}
+            for (current = _scope; current->type != ScopeTypeFunction; current = current->parent);
             current->is_returned = true;
             // Generate return value and return opcode
             ast_node_t* expr = _statement->ast0;
