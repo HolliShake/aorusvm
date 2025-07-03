@@ -194,28 +194,28 @@ DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lh
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
+DLLEXPORT ast_node_t* ast_var_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
     ast_node_t* node = ast_node_new(AstVarStatement, _position);
     node->array0 = _names;
     node->array1 = _values;
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
+DLLEXPORT ast_node_t* ast_const_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
     ast_node_t* node = ast_node_new(AstConstStatement, _position);
     node->array0 = _names;
     node->array1 = _values;
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_local_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
+DLLEXPORT ast_node_t* ast_local_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
     ast_node_t* node = ast_node_new(AstLocalStatement, _position);
     node->array0 = _names;
     node->array1 = _values;
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_if_statement(position_t* _position, ast_node_t* _cond, ast_node_t* tvalue, ast_node_t* fvalue) {
+DLLEXPORT ast_node_t* ast_if_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* tvalue, ast_node_t* fvalue) {
     ast_node_t* node = ast_node_new(AstIfStatement, _position);
     node->ast0 = _cond;
     node->ast1 = tvalue;
@@ -229,9 +229,17 @@ DLLEXPORT ast_node_t* ast_return_node(position_t* _position, ast_node_t* _expr) 
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_statement_expression(position_t* _position, ast_node_t* _expr) {
+DLLEXPORT ast_node_t* ast_statement_expression_node(position_t* _position, ast_node_t* _expr) {
     ast_node_t* node = ast_node_new(AstStatementExpression, _position);
     node->ast0 = _expr;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body) {
+    ast_node_t* node = ast_node_new(AstFunctionNode, _position);
+    node->ast0 = _name;
+    node->array0 = _parameters;
+    node->array1 = _body;
     return node;
 }
 

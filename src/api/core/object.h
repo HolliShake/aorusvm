@@ -38,20 +38,6 @@ DLLEXPORT object_t *object_new(object_type_t _type);
 DLLEXPORT object_t *object_new_int(int _value);
 
 /*
- * Create a new long object.
- * @param _value The value.
- * @return The new object.
- */
-DLLEXPORT object_t *object_new_long(long _value);
-
-/*
- * Create a new float object.
- * @param _value The value.
- * @return The new object.
- */
-DLLEXPORT object_t *object_new_float(float _value);
-
-/*
  * Create a new double object.
  * @param _value The value.
  * @return The new object.

@@ -8,7 +8,7 @@ int test_binary_add() {
 
 
     ast_node_t** statements = malloc(sizeof(ast_node_t*) * 4);
-    statements[0] = ast_statement_expression(
+    statements[0] = ast_statement_expression_node(
         position_from_line_and_colm(1, 1),
         ast_binary_add_node(
             position_from_line_and_colm(1, 1),
@@ -16,7 +16,7 @@ int test_binary_add() {
             ast_string_node(position_from_line_and_colm(2, 1), "World")
         )
     );
-    statements[1] = ast_statement_expression(
+    statements[1] = ast_statement_expression_node(
         position_from_line_and_colm(1, 7),
         ast_binary_add_node(
             position_from_line_and_colm(1, 7),
@@ -24,9 +24,9 @@ int test_binary_add() {
             ast_double_node(position_from_line_and_colm(1, 11), 3.14)
         )
     );
-    statements[2] = ast_statement_expression(
+    statements[2] = ast_statement_expression_node(
         position_from_line_and_colm(1, 7),
-        ast_logical_or_node(
+        ast_logical_and_node(
             position_from_line_and_colm(1, 7),
             ast_int_node(position_from_line_and_colm(1, 7), 0),
             ast_int_node(position_from_line_and_colm(1, 11), 3)

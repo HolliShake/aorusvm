@@ -72,33 +72,6 @@ INTERNAL void generator_emit_int(generator_t* _generator, int _value) {
     _generator->bytecode[_generator->bsize++] = (_value >> 24) & 0xFF;
 }
 
-INTERNAL void generator_emit_long(generator_t* _generator, long _value) {
-    generator_resize_bytecode_by(_generator, 9);
-    _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_LONG;
-    _generator->bytecode[_generator->bsize++] = _value & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >>  8) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 16) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 24) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 32) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 40) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 48) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 56) & 0xFF;
-}
-
-INTERNAL void generator_emit_float(generator_t* _generator, float _value) {
-    generator_resize_bytecode_by(_generator, 5);
-    union float_bytes_t {
-        float f32;
-        uint8_t bytes[4];
-    } float_bytes = {
-        .f32 = _value,
-    };
-    _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_FLOAT;
-    for (size_t i = 0; i < 4; i++) {
-        _generator->bytecode[_generator->bsize++] = float_bytes.bytes[i];
-    }
-}
-
 INTERNAL void generator_emit_double(generator_t* _generator, double _value) {
     generator_resize_bytecode_by(_generator, 9);
     union double_bytes_t {
@@ -194,12 +167,6 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
         case EvalInt: \
             generator_emit_int(_generator, result.value.i32); \
             break; \
-        case EvalLong: \
-            generator_emit_long(_generator, result.value.i64); \
-            break; \
-        case EvalFloat: \
-            generator_emit_float(_generator, result.value.f32); \
-            break; \
         case EvalDouble: \
             generator_emit_double(_generator, result.value.f64); \
             break; \
@@ -246,20 +213,6 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             generator_emit_int(
                 _generator, 
                 _expression->value.i32
-            );
-            free(_expression);
-            break;
-        case AstLong:
-            generator_emit_long(
-                _generator, 
-                _expression->value.i64
-            );
-            free(_expression);
-            break;
-        case AstFloat:
-            generator_emit_float(
-                _generator, 
-                _expression->value.f32
             );
             free(_expression);
             break;

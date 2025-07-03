@@ -4,10 +4,6 @@ INTERNAL double eval_coerce_to_double(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
             return (double) _result.value.i32;
-        case EvalLong:
-            return (double) _result.value.i64;
-        case EvalFloat:
-            return (double) _result.value.f32;
         case EvalDouble:
             return _result.value.f64;
         case EvalString:
@@ -23,10 +19,6 @@ INTERNAL long eval_coerce_to_long(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
             return (long) _result.value.i32;
-        case EvalLong:
-            return _result.value.i64;
-        case EvalFloat:
-            return (long) _result.value.f32;
         case EvalDouble:
             return (long) _result.value.f64;
         case EvalString:
@@ -42,10 +34,6 @@ INTERNAL bool eval_coerce_to_boolean(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
             return _result.value.i32 != 0;
-        case EvalLong:
-            return _result.value.i64 != 0;
-        case EvalFloat:
-            return _result.value.f32 != 0.0;
         case EvalDouble:
             return _result.value.f64 != 0.0;
         case EvalBoolean:
@@ -71,10 +59,6 @@ INTERNAL bool eval_is_number(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
             return true;
-        case EvalLong:
-            return true;
-        case EvalFloat:
-            return true;
         case EvalDouble:
             return true;
         case EvalString:
@@ -88,10 +72,6 @@ INTERNAL bool eval_is_truthy(eval_result_t _result) {
     switch (_result.type) {
         case EvalInt:
             return _result.value.i32 != 0;
-        case EvalLong:
-            return _result.value.i64 != 0;
-        case EvalFloat:
-            return _result.value.f32 != 0.0;
         case EvalDouble:
             return _result.value.f64 != 0.0;
         case EvalBoolean:
@@ -119,14 +99,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
         case AstInt:
             result.type = EvalInt;
             result.value.i32 = _expression->value.i32;
-            break;
-        case AstLong:
-            result.type = EvalLong;
-            result.value.i64 = _expression->value.i64;
-            break;
-        case AstFloat:
-            result.type = EvalFloat;
-            result.value.f32 = _expression->value.f32;
             break;
         case AstDouble:
             result.type = EvalDouble;
@@ -163,8 +135,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                     result.type = EvalInt;
                     result.value.i32 = (int)product;
                 } else {
-                    result.type = EvalLong;
-                    result.value.i64 = product;
+                    result.type = EvalDouble;
+                    result.value.f64 = (double)product;
                 }
                 return result;
             }
@@ -197,8 +169,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
             }
 
             // Catch zero division for integer types
-            if ((r.type == EvalInt && r.value.i32 == 0) ||
-                (r.type == EvalLong && r.value.i64 == 0)) {
+            if ((r.type == EvalInt && r.value.i32 == 0)) {
                 result.type = EvalZeroDivision;
                 return result;
             }
@@ -237,7 +208,7 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
 
             // Catch zero division for integer types
             if ((r.type == EvalInt && r.value.i32 == 0) ||
-                (r.type == EvalLong && r.value.i64 == 0)) {
+                (r.type == EvalDouble && r.value.f64 == 0.0)) {
                 result.type = EvalZeroDivision;
                 return result;
             }
@@ -298,21 +269,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 l.type = EvalDouble;
             }
 
-            if (l.type == EvalLong && r.type == EvalLong) {
-                long a = l.value.i64;
-                long b = r.value.i64;
-                long sum = a + b;
-                
-                if (((a ^ sum) & (b ^ sum)) < 0) {
-                    result.type = EvalDouble;
-                    result.value.f64 = (double)a + (double)b;
-                } else {
-                    result.type = EvalLong;
-                    result.value.i64 = sum;
-                }
-                return result;
-            }
-
             if (l.type == EvalString && r.type == EvalString) {
                 char* str = string_allocate("");
                 str = string_append(str, (char*) l.value.ptr);
@@ -371,21 +327,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 return result;
             }
 
-            if (l.type == EvalLong && r.type == EvalLong) {
-                long a = l.value.i64;
-                long b = r.value.i64;
-                long diff = a - b;
-                
-                if (((a ^ b) & (a ^ diff)) < 0) {
-                    result.type = EvalDouble;
-                    result.value.f64 = (double)a - (double)b;
-                } else {
-                    result.type = EvalLong;
-                    result.value.i64 = diff;
-                }
-                return result;
-            }
-
             double lvalue = eval_coerce_to_double(l);
             double rvalue = eval_coerce_to_double(r);
             double diff = lvalue - rvalue;
@@ -416,8 +357,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                     result.type = EvalInt;
                     result.value.i32 = value;
                 } else {
-                    result.type = EvalLong;
-                    result.value.i64 = (long)value;
+                    result.type = EvalDouble;
+                    result.value.f64 = (double)value;
                 }
                 return result;
             }
@@ -428,8 +369,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.type = EvalInt;
                 result.value.i32 = (int)value;
             } else {
-                result.type = EvalLong;
-                result.value.i64 = value;
+                result.type = EvalDouble;
+                result.value.f64 = (double)value;
             }
             return result;
         }
@@ -450,8 +391,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                     result.type = EvalInt;
                     result.value.i32 = value;
                 } else {
-                    result.type = EvalLong;
-                    result.value.i64 = (long)value;
+                    result.type = EvalDouble;
+                    result.value.f64 = (double)value;
                 }
             }
             long lhs_value = eval_coerce_to_long(l);
@@ -461,8 +402,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.type = EvalInt;
                 result.value.i32 = (int)value;
             } else {
-                result.type = EvalLong;
-                result.value.i64 = value;
+                result.type = EvalDouble;
+                result.value.f64 = (double)value;
             }
             return result;
         }
@@ -620,11 +561,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.value.i32 = l.value.i32 & r.value.i32;
                 return result;
             }
-            if (l.type == EvalLong && r.type == EvalLong) {
-                result.type = EvalLong;
-                result.value.i64 = l.value.i64 & r.value.i64;
-                return result;
-            }
             long lhs_value = eval_coerce_to_long(l);
             long rhs_value = eval_coerce_to_long(r);
             long value = lhs_value & rhs_value;
@@ -632,8 +568,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.type = EvalInt;
                 result.value.i32 = (int)value;
             } else {
-                result.type = EvalLong;
-                result.value.i64 = value;
+                result.type = EvalDouble;
+                result.value.f64 = (double)value;
             }
             return result;
         }
@@ -649,11 +585,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.value.i32 = l.value.i32 | r.value.i32;
                 return result;
             }
-            if (l.type == EvalLong && r.type == EvalLong) {
-                result.type = EvalLong;
-                result.value.i64 = l.value.i64 | r.value.i64;
-                return result;
-            }
             long lhs_value = eval_coerce_to_long(l);
             long rhs_value = eval_coerce_to_long(r);
             long value = lhs_value | rhs_value;
@@ -661,8 +592,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.type = EvalInt;
                 result.value.i32 = (int)value;
             } else {
-                result.type = EvalLong;
-                result.value.i64 = value;
+                result.type = EvalDouble;
+                result.value.f64 = (double)value;
             }
             return result;
         }
@@ -678,11 +609,6 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.value.i32 = l.value.i32 ^ r.value.i32;
                 return result;
             }
-            if (l.type == EvalLong && r.type == EvalLong) {
-                result.type = EvalLong;
-                result.value.i64 = l.value.i64 ^ r.value.i64;
-                return result;
-            }
             long lhs_value = eval_coerce_to_long(l);
             long rhs_value = eval_coerce_to_long(r);
             long value = lhs_value ^ rhs_value;
@@ -690,8 +616,8 @@ INTERNAL eval_result_t eval_eval_expression(ast_node_t* _expression) {
                 result.type = EvalInt;
                 result.value.i32 = (int)value;
             } else {
-                result.type = EvalLong;
-                result.value.i64 = value;
+                result.type = EvalDouble;
+                result.value.f64 = (double)value;
             }
             return result;
         }

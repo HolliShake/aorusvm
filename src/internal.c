@@ -67,10 +67,6 @@ int number_coerce_to_int(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return _obj->value.i32;
-        case OBJECT_TYPE_LONG:
-            return (int) _obj->value.i64;
-        case OBJECT_TYPE_FLOAT:
-            return (int) _obj->value.f32;
         case OBJECT_TYPE_DOUBLE:
             return (int) _obj->value.f64;
         case OBJECT_TYPE_STRING:
@@ -86,10 +82,6 @@ long number_coerce_to_long(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return (long) _obj->value.i32;
-        case OBJECT_TYPE_LONG:
-            return _obj->value.i64;
-        case OBJECT_TYPE_FLOAT:
-            return (long) _obj->value.f32;
         case OBJECT_TYPE_DOUBLE:
             return (long) _obj->value.f64;
         case OBJECT_TYPE_STRING:
@@ -105,10 +97,6 @@ float number_coerce_to_float(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return (float) _obj->value.i32;
-        case OBJECT_TYPE_LONG:
-            return (float) _obj->value.i64;
-        case OBJECT_TYPE_FLOAT:
-            return _obj->value.f32;
         case OBJECT_TYPE_DOUBLE:
             return (float) _obj->value.f64;
         case OBJECT_TYPE_STRING:
@@ -124,10 +112,6 @@ double number_coerce_to_double(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return (double) _obj->value.i32;
-        case OBJECT_TYPE_LONG:
-            return (double) _obj->value.i64;
-        case OBJECT_TYPE_FLOAT:
-            return (double) _obj->value.f32;
         case OBJECT_TYPE_DOUBLE:
             return (double) _obj->value.f64;
         case OBJECT_TYPE_STRING:

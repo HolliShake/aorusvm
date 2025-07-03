@@ -18,7 +18,7 @@ int test_variable() {
     values[1] = NULL;
 
     ast_node_t** statements = malloc(sizeof(ast_node_t*) * 2);
-    statements[0] = ast_var_statement(
+    statements[0] = ast_var_statement_node(
         position_from_line_and_colm(1, 1),
         names,
         values

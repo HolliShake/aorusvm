@@ -132,60 +132,22 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
             PUSH(object_new_int((int)result));
             return;
         }
-        if (result >= INT64_MIN && result <= INT64_MAX) {
-            PUSH(object_new_long(result)); 
-            return;
-        }
         PUSH(object_new_double((double)result));
         return;
     }
 
-    // Fast path for longs
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        // Check if multiplication would overflow
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        if (a == 0 || b == 0) {
-            PUSH(object_new_long(0));
-            return;
-        }
-        if (a > 0) {
-            if (b > 0) {
-                if (a > INT64_MAX / b) goto double_path;
-            } else {
-                if (b < INT64_MIN / a) goto double_path;
-            }
-        } else {
-            if (b > 0) {
-                if (a < INT64_MIN / b) goto double_path;
-            } else {
-                if (a != 0 && b < INT64_MAX / a) goto double_path;
-            }
-        }
-        PUSH(object_new_long(a * b));
-        return;
-    }
-
-    double_path:;
+    // Fallback path using coercion
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
-
-    if (lhs_value == 0.0 || rhs_value == 0.0) {
-        PUSH(object_new_int(0));
-        return;
-    }
-
     double result = lhs_value * rhs_value;
 
-    if (result == (double)(int)result) {
+    // Try to preserve integer types if possible
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
         PUSH(object_new_int((int)result));
-    } else if (result == (double)(long)result) {
-        PUSH(object_new_long((long)result));
-    } else {
-        PUSH(object_new_double(result));
+        return;
     }
+    PUSH(object_new_double(result));
     return;
-
     ERROR:;
 }
 
@@ -200,23 +162,10 @@ void do_add(object_t *_lhs, object_t *_rhs) {
         if (((a ^ sum) & (b ^ sum)) < 0) {
             // Overflow occurred, promote to double
             PUSH(object_new_double((double)a + (double)b));
-        } else {
-            PUSH(object_new_int(sum));
+            return;
         }
-        return;
-    }
-
-    // Fast path for longs 
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long sum = a + b;
-        if (((a ^ sum) & (b ^ sum)) < 0) {
-            PUSH(object_new_double((double)a + (double)b));
-        } else {
-            PUSH(object_new_long(sum));
-        }
-        return;
+        PUSH(object_new_int(sum));
+        return; 
     }
 
     // Fast path for strings
@@ -237,23 +186,14 @@ void do_add(object_t *_lhs, object_t *_rhs) {
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
     double result = lhs_value + rhs_value;
-    double intpart;
 
     // Try to preserve integer types if possible
-    if (modf(result, &intpart) == 0.0) {
-        if (result <= INT32_MAX && result >= INT32_MIN) {
-            PUSH(object_new_int((int)result));
-            return;
-        }
-        if (result <= INT64_MAX && result >= INT64_MIN) {
-            PUSH(object_new_long((long)result));
-            return;
-        }
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
     }
-
     PUSH(object_new_double(result));
     return;
-
     ERROR:;
 }
 
@@ -266,22 +206,9 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
         int diff = a - b;
         if (((a ^ b) & (a ^ diff)) < 0) {
             PUSH(object_new_double((double)a - (double)b));
-        } else {
-            PUSH(object_new_int(diff));
+            return;
         }
-        return;
-    }
-
-    // Fast path for longs
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long diff = a - b;
-        if (((a ^ b) & (a ^ diff)) < 0) {
-            PUSH(object_new_double((double)a - (double)b));
-        } else {
-            PUSH(object_new_long(diff));
-        }
+        PUSH(object_new_int(diff));
         return;
     }
 
@@ -289,23 +216,14 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
     double result = lhs_value - rhs_value;
-    double intpart;
 
     // Try to preserve integer types if possible
-    if (modf(result, &intpart) == 0.0) {
-        if (result <= INT32_MAX && result >= INT32_MIN) {
-            PUSH(object_new_int((int)result));
-            return;
-        }
-        if (result <= INT64_MAX && result >= INT64_MIN) {
-            PUSH(object_new_long((long)result));
-            return;
-        }
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
     }
-
     PUSH(object_new_double(result));
     return;
-
     ERROR:;
 }
 
@@ -317,22 +235,18 @@ INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long result = a << b;
-        PUSH(object_new_long(result));
-        return;
-    }
+
+    // Fallback path using coercion
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value << rhs_value;
+
     // Check if result can be represented as an int
     if (result >= INT32_MIN && result <= INT32_MAX) {
         PUSH(object_new_int((int)result));
-    } else {
-        PUSH(object_new_long(result));
+        return;
     }
+    PUSH(object_new_double((double)result));
     return;
     ERROR:;
 }
@@ -345,22 +259,18 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long result = a >> b;
-        PUSH(object_new_long(result));
-        return;
-    }
+
+    // Fallback path using coercion
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value >> rhs_value;
-    // Check if result can be represented as an int
+
+    // Try to preserve integer types if possible
     if (result >= INT32_MIN && result <= INT32_MAX) {
         PUSH(object_new_int((int)result));
-    } else {
-        PUSH(object_new_long(result));
+        return;
     }
+    PUSH(object_new_double((double)result));
     return;
     ERROR:;
 }
@@ -369,13 +279,15 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
         goto ERROR;
     }
+    // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
+    // Compare the long values
     if (lhs_value < rhs_value) {
         PUSH(instance->tobj);
-    } else {
-        PUSH(instance->fobj);
+        return;
     }
+    PUSH(instance->fobj);
     return;
     ERROR:;
 }
@@ -384,13 +296,15 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
     if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
         goto ERROR;
     }
+    // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
+    // Compare the long values
     if (lhs_value <= rhs_value) {
         PUSH(instance->tobj);
-    } else {
-        PUSH(instance->fobj);
+        return;
     }
+    PUSH(instance->fobj);
     return;
     ERROR:;
 }
@@ -399,13 +313,15 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
     if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
         goto ERROR;
     }
+    // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
+    // Compare the long values
     if (lhs_value > rhs_value) {
         PUSH(instance->tobj);
-    } else {
-        PUSH(instance->fobj);
+        return;
     }
+    PUSH(instance->fobj);
     return;
     ERROR:;
 }
@@ -414,13 +330,15 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
     if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
         goto ERROR;
     }
+    // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
+    // Compare the long values
     if (lhs_value >= rhs_value) {
         PUSH(instance->tobj);
-    } else {
-        PUSH(instance->fobj);
+        return;
     }
+    PUSH(instance->fobj);
     return;
     ERROR:;
 }
@@ -431,9 +349,9 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value == rhs_value) {
             PUSH(instance->tobj);
-        } else {
-            PUSH(instance->fobj);
+            return;
         }
+        PUSH(instance->fobj);
         return;
     }
 
@@ -442,9 +360,9 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
         char* rhs_str = (char*)_rhs->value.opaque;
         if (strcmp(lhs_str, rhs_str) == 0) {
             PUSH(instance->tobj);
-        } else {
-            PUSH(instance->fobj);
+            return;
         }
+        PUSH(instance->fobj);
         return;
     }
 
@@ -464,9 +382,9 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value != rhs_value) {
             PUSH(instance->tobj);
-        } else {
-            PUSH(instance->fobj);
+            return;
         }
+        PUSH(instance->fobj);
         return;
     }
 
@@ -475,9 +393,9 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         char* rhs_str = (char*)_rhs->value.opaque;
         if (strcmp(lhs_str, rhs_str) != 0) {
             PUSH(instance->tobj);
-        } else {
-            PUSH(instance->fobj);
+            return;
         }
+        PUSH(instance->fobj);
         return;
     }
 
@@ -499,13 +417,6 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long result = a & b;
-        PUSH(object_new_long(result));
-        return;
-    }
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value & rhs_value;
@@ -513,7 +424,7 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
     if (result >= INT32_MIN && result <= INT32_MAX) {
         PUSH(object_new_int((int)result));
     } else {
-        PUSH(object_new_long(result));
+        PUSH(object_new_double((double)result));
     }
     return;
     ERROR:;
@@ -527,13 +438,6 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-        long a = _lhs->value.i64;
-        long b = _rhs->value.i64;
-        long result = a | b;
-        PUSH(object_new_long(result));
-        return;
-    }
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value | rhs_value;
@@ -541,7 +445,7 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
     if (result >= INT32_MIN && result <= INT32_MAX) {
         PUSH(object_new_int((int)result));
     } else {
-        PUSH(object_new_long(result));
+        PUSH(object_new_double((double)result));
     }
     return;
     ERROR:;
@@ -555,8 +459,6 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
-    if (OBJECT_TYPE_LONG(_lhs) && OBJECT_TYPE_LONG(_rhs)) {
-    }
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value ^ rhs_value;
@@ -564,7 +466,7 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     if (result >= INT32_MIN && result <= INT32_MAX) {
         PUSH(object_new_int((int)result));
     } else {
-        PUSH(object_new_long(result));
+        PUSH(object_new_double((double)result));
     }
     return;
     ERROR:;
@@ -616,20 +518,6 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             case OPCODE_LOAD_INT: {
                 PUSH(object_new_int(
                     get_int(bytecode, ip)
-                ));
-                FORWARD(4);
-                break;
-            }
-            case OPCODE_LOAD_LONG: {
-                PUSH(object_new_long(
-                    get_long(bytecode, ip)
-                ));
-                FORWARD(8);
-                break;
-            }
-            case OPCODE_LOAD_FLOAT: {
-                PUSH(object_new_float(
-                    get_float(bytecode, ip)
                 ));
                 FORWARD(4);
                 break;

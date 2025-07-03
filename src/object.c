@@ -19,18 +19,6 @@ DLLEXPORT object_t *object_new_int(int _value) {
     return obj;
 }
 
-DLLEXPORT object_t *object_new_long(long _value) {
-    object_t *obj = object_new(OBJECT_TYPE_LONG);
-    obj->value.i64 = _value;
-    return obj;
-}
-
-DLLEXPORT object_t *object_new_float(float _value) {
-    object_t *obj = object_new(OBJECT_TYPE_FLOAT);
-    obj->value.f32 = _value;
-    return obj;
-}
-
 DLLEXPORT object_t *object_new_double(double _value) {
     object_t *obj = object_new(OBJECT_TYPE_DOUBLE);
     obj->value.f64 = _value;
@@ -58,16 +46,15 @@ DLLEXPORT char* object_to_string(object_t *_obj) {
     char str[255];
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
-        case OBJECT_TYPE_LONG: {
-            sprintf(str, "%ld", _obj->value.i64);
+            sprintf(str, "%d", _obj->value.i32);
             return string_allocate(str);
-        }
-        case OBJECT_TYPE_FLOAT: {
-            sprintf(str, "%f", _obj->value.f32);
-            return string_allocate(str);
-        }
         case OBJECT_TYPE_DOUBLE: {
-            sprintf(str, "%lf", _obj->value.f64);
+            double intpart;
+            if (modf(_obj->value.f64, &intpart) == 0.0) {
+                sprintf(str, "%d", (int) _obj->value.f64);
+            } else {
+                sprintf(str, "%.2lf", (double) _obj->value.f64);
+            }
             return string_allocate(str);
         }
         case OBJECT_TYPE_STRING: {
@@ -91,9 +78,6 @@ DLLEXPORT char* object_to_string(object_t *_obj) {
 DLLEXPORT bool object_is_truthy(object_t *_obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
-        case OBJECT_TYPE_FLOAT:
-            return (float) _obj->value.f32 != 0;
-        case OBJECT_TYPE_LONG:
         case OBJECT_TYPE_DOUBLE:
             return (double) _obj->value.f64 != 0;
         case OBJECT_TYPE_STRING:
@@ -110,8 +94,6 @@ DLLEXPORT bool object_is_truthy(object_t *_obj) {
 DLLEXPORT bool object_is_number(object_t *_obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
-        case OBJECT_TYPE_LONG:
-        case OBJECT_TYPE_FLOAT:
         case OBJECT_TYPE_DOUBLE:
             return true;
         case OBJECT_TYPE_STRING:

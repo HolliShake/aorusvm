@@ -43,24 +43,6 @@ DLLEXPORT ast_node_t* ast_name_node(position_t* _position, char* _value);
 DLLEXPORT ast_node_t* ast_int_node(position_t* _position, int _value);
 
 /*
- * Long node.
- *
- * @param _position The position of the node.
- * @param _value The value of the node.
- * @return The long node.
- */
-DLLEXPORT ast_node_t* ast_long_node(position_t* _position, long _value);
-
-/*
- * Float node.
- *
- * @param _position The position of the node.
- * @param _value The value of the node.
- * @return The long node.
- */
-DLLEXPORT ast_node_t* ast_float_node(position_t* _position, float _value);
-
-/*
  * Double node.
  *
  * @param _position The position of the node.
@@ -281,7 +263,7 @@ DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lh
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
+DLLEXPORT ast_node_t* ast_var_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * Constant statement node (Global|Local constant declaration).
@@ -289,7 +271,7 @@ DLLEXPORT ast_node_t* ast_var_statement(position_t* _position, ast_node_list_t _
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
+DLLEXPORT ast_node_t* ast_const_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * Local variable statement node (Local variable declaration).
@@ -297,7 +279,7 @@ DLLEXPORT ast_node_t* ast_const_statement(position_t* _position, ast_node_list_t
  * @param _position The position of the node.
  * @return The variable statement node.
  */
-DLLEXPORT ast_node_t* ast_local_statement(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
+DLLEXPORT ast_node_t* ast_local_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values);
 
 /*
  * If statement node.
@@ -308,7 +290,7 @@ DLLEXPORT ast_node_t* ast_local_statement(position_t* _position, ast_node_list_t
  * @param _fvalue The false value of the node.
  * @return The if statement node.
  */
-DLLEXPORT ast_node_t* ast_if_statement(position_t* _position, ast_node_t* _cond, ast_node_t* tvalue, ast_node_t* fvalue);
+DLLEXPORT ast_node_t* ast_if_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* tvalue, ast_node_t* fvalue);
 
 /*
  * Return node.
@@ -326,7 +308,18 @@ DLLEXPORT ast_node_t* ast_return_node(position_t* _position, ast_node_t* _expr);
  * @param _expr The expression of the node.
  * @return The statement expression node.
  */
-DLLEXPORT ast_node_t* ast_statement_expression(position_t* _position, ast_node_t* _expr);
+DLLEXPORT ast_node_t* ast_statement_expression_node(position_t* _position, ast_node_t* _expr);
+
+/*
+ * Function node.
+ *
+ * @param _position The position of the node.
+ * @param _name The name of the function.
+ * @param _parameters The parameters of the function.
+ * @param _body The body of the function.
+ * @return The function node.
+ */
+DLLEXPORT ast_node_t* ast_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body);
 
 /*
  * Program node.

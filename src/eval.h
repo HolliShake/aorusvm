@@ -8,8 +8,6 @@
 
 typedef enum eval_result_type_enum {
     EvalInt,
-    EvalLong,
-    EvalFloat,
     EvalDouble,
     EvalString,
     EvalBoolean,
@@ -22,8 +20,6 @@ typedef struct eval_result_struct {
     eval_result_type_t type;
     union eval_result_union {
         int    i32;
-        long   i64;
-        float  f32;
         double f64;
         void*  ptr;
     } value;
