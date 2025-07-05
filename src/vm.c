@@ -2,8 +2,8 @@
 #include "api/core/vm.h"
 #include "code.h"
 #include "error.h"
-#include "internal.h"
 #include "gc.h"
+#include "internal.h"
 #include "object.h"
 #include "opcode.h"
 #include "type.h"
@@ -710,14 +710,15 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             case OPCODE_RETURN: {
                 return;
             }
-            case OPCODE_MAKE_FUNCTION: {
+            case OPCODE_MAKE_FUNCTION: 
+            case OPCODE_MAKE_ASYNC_FUNCTION: {
                 int param_count = get_int(bytecode, ip);
                 size_t function_size = get_long(bytecode, ip + 4);
                 char* module_name = get_string(bytecode, ip + 8);
                 char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
                 uint8_t* function_bytecode = malloc(function_size);
                 memcpy(function_bytecode, bytecode + ip, function_size);
-                PUSH(object_new_function(param_count, function_bytecode, function_size));
+                PUSH(object_new_function(opcode == OPCODE_MAKE_ASYNC_FUNCTION, param_count, function_bytecode, function_size));
                 FORWARD(function_size);
                 break;
             }

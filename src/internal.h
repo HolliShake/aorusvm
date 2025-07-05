@@ -1,19 +1,12 @@
-#include <ctype.h>
-#include <errno.h>
-#include <math.h>
-#include <string.h>
 #include "api/core/global.h"
+#include "api/core/internal.h"
 #include "api/core/object.h"
 
 #ifndef INTERNAL_H
 #define INTERNAL_H
 
 #pragma region StringH
-char* string_allocate(const char* _str);
-char* string_append_char(char* _dst, char _c);
-char* string_append(char* _dst, char* _src);
-char* string_format(char* _format, ...);
-bool string_is_number(char* _str);
+// Handled in api/core/internal.h
 #pragma endregion
 
 #pragma region NumberH

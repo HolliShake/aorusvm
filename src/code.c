@@ -1,7 +1,8 @@
 #include "code.h"
 
-code_t* code_new_function(size_t _param_count, uint8_t* _bytecode, size_t _size) {
+code_t* code_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size) {
     code_t* code = malloc(sizeof(code_t));
+    code->is_async = _is_async;
     code->param_count = _param_count;
     code->size = _size;
     code->bytecode = _bytecode;

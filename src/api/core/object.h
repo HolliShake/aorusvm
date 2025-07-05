@@ -28,35 +28,35 @@ typedef struct object_struct object_t;
  * @param _type The type of the object.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new(object_type_t _type);
+DLLEXPORT object_t* object_new(object_type_t _type);
 
 /*
  * Create a new int object.
  * @param _value The value.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new_int(int _value);
+DLLEXPORT object_t* object_new_int(int _value);
 
 /*
  * Create a new double object.
  * @param _value The value.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new_double(double _value);
+DLLEXPORT object_t* object_new_double(double _value);
 
 /*
  * Create a new bool object.
  * @param _value The value.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new_bool(bool _value);
+DLLEXPORT object_t* object_new_bool(bool _value);
 
 /*
  * Create a new string object.
  * @param _value The value.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new_string(char* _value);
+DLLEXPORT object_t* object_new_string(char* _value);
 
 /*
  * Create a new function object.
@@ -65,7 +65,7 @@ DLLEXPORT object_t *object_new_string(char* _value);
  * @param _size The size of the bytecode.
  * @return The new object.
  */
-DLLEXPORT object_t *object_new_function(size_t _param_count, uint8_t* _bytecode, size_t _size);
+DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size);
 
 /*
  * Convert an object to a string.

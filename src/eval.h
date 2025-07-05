@@ -1,5 +1,5 @@
-#include "api/core/global.h"
 #include "api/ast/node.h"
+#include "api/core/global.h"
 #include "internal.h"
 #include "node.h"
 

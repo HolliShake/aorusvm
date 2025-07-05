@@ -8,15 +8,17 @@
  * @note This file is part of the aorusvm project.
  */
 
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
-#include <stdarg.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
-#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 
 #ifndef API_CORE_GLOBAL_H
 #define API_CORE_GLOBAL_H

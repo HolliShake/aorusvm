@@ -1,3 +1,14 @@
+/**
+ * @file env.h
+ * @brief Environment API (Do not modify this file).
+ * @author Philipp Andrew Redondo
+ * @date 2025-06-13
+ * @version 0.1.0
+ * @copyright MIT License
+ * @note This file is part of the aorusvm project.
+ */
+
+
 #include "global.h"
 #include "object.h"
 

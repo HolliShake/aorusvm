@@ -4,8 +4,8 @@
 #include "object.h"
 #include "type.h"
 
-DLLEXPORT object_t *object_new(object_type_t _type) {
-    object_t *obj = (object_t *) malloc(sizeof(object_t));
+DLLEXPORT object_t* object_new(object_type_t _type) {
+    object_t* obj = (object_t* ) malloc(sizeof(object_t));
     ASSERTNULL(obj, ERROR_ALLOCATING_OBJECT);
     obj->type = _type;
     obj->next = NULL;
@@ -13,42 +13,42 @@ DLLEXPORT object_t *object_new(object_type_t _type) {
     return obj;
 }
 
-DLLEXPORT object_t *object_new_int(int _value) {
-    object_t *obj = object_new(OBJECT_TYPE_INT);
+DLLEXPORT object_t* object_new_int(int _value) {
+    object_t* obj = object_new(OBJECT_TYPE_INT);
     obj->value.i32 = _value;
     return obj;
 }
 
-DLLEXPORT object_t *object_new_double(double _value) {
-    object_t *obj = object_new(OBJECT_TYPE_DOUBLE);
+DLLEXPORT object_t* object_new_double(double _value) {
+    object_t* obj = object_new(OBJECT_TYPE_DOUBLE);
     obj->value.f64 = _value;
     return obj;
 }
 
-DLLEXPORT object_t *object_new_bool(bool _value) {
-    object_t *obj = object_new(OBJECT_TYPE_BOOL);
+DLLEXPORT object_t* object_new_bool(bool _value) {
+    object_t* obj = object_new(OBJECT_TYPE_BOOL);
     obj->value.i32 = _value;
     return obj;
 }
 
-DLLEXPORT object_t *object_new_string(char *_value) {
-    object_t *obj = object_new(OBJECT_TYPE_STRING);
+DLLEXPORT object_t* object_new_string(char *_value) {
+    object_t* obj = object_new(OBJECT_TYPE_STRING);
     obj->value.opaque = string_allocate((const char*) _value);
     return obj;
 }
 
-DLLEXPORT object_t *object_new_null() {
-    object_t *obj = object_new(OBJECT_TYPE_NULL);
+DLLEXPORT object_t* object_new_null() {
+    object_t* obj = object_new(OBJECT_TYPE_NULL);
     return obj;
 }
 
-DLLEXPORT object_t *object_new_function(size_t _param_count, uint8_t* _bytecode, size_t _size) {
-    object_t *obj = object_new(OBJECT_TYPE_FUNCTION);
-    obj->value.opaque = code_new_function(_param_count, _bytecode, _size);
+DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size) {
+    object_t* obj = object_new(OBJECT_TYPE_FUNCTION);
+    obj->value.opaque = code_new_function(_is_async, _param_count, _bytecode, _size);
     return obj;
 }
 
-DLLEXPORT char* object_to_string(object_t *_obj) {
+DLLEXPORT char* object_to_string(object_t* _obj) {
     char str[255];
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
@@ -81,7 +81,7 @@ DLLEXPORT char* object_to_string(object_t *_obj) {
     }
 }
 
-DLLEXPORT bool object_is_truthy(object_t *_obj) {
+DLLEXPORT bool object_is_truthy(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
         case OBJECT_TYPE_DOUBLE:
@@ -97,7 +97,7 @@ DLLEXPORT bool object_is_truthy(object_t *_obj) {
     }
 }
 
-DLLEXPORT bool object_is_number(object_t *_obj) {
+DLLEXPORT bool object_is_number(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
         case OBJECT_TYPE_DOUBLE:

@@ -1,3 +1,4 @@
+#include "api/core/error.h"
 #include "api/core/global.h"
 #include "internal.h"
 #include "position.h"
@@ -20,10 +21,5 @@
 #define ERROR_ALLOCATING_STRING "failed to allocate memory for string"
 #define ERROR_ALLOCATING_VM "failed to allocate memory for vm"
 #define ERROR_VM_NOT_INITIALIZED "VM is not initialized"
-
-#define __THROW_ERROR(fpath, fdata, position, message, ...) \
-    throw_error(__FILE__, __func__, __LINE__, fpath, fdata, string_format(message, ##__VA_ARGS__), position);
-
-void throw_error(const char* _caller_file, const char* _caller_func, int _caller_line, char* _fpath, char* _fdata, char* _message, position_t* _position);
 
 #endif

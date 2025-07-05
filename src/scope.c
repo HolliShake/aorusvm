@@ -1,5 +1,5 @@
-#include "scope.h"
 #include "internal.h"
+#include "scope.h"
 
 #define SCOPE_BUCKET_COUNT 16
 #define LOAD_FACTOR_THRESHOLD 0.75

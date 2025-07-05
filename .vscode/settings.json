@@ -23,6 +23,7 @@
         "initializer_list": "c",
         "errno.h": "c",
         "random": "c",
-        "code.h": "c"
+        "code.h": "c",
+        "stdio.h": "c"
     }
 }
