@@ -7,10 +7,10 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # Compile the C files
-gcc -o example *.c ../src/*.c -lm -ldl -g
+gcc -o example.exe *.c ../src/*.c -lm -ldl -g
 
 # Run the example
-./example
+./example.exe
 
 # Change back to original directory
 cd - > /dev/null
