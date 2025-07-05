@@ -644,7 +644,22 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             
             ast_node_list_t names  = _statement->array0;
             ast_node_list_t values = _statement->array1;
-
+            if (names == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "variable declaration must have names"
+                );
+            }
+            if (values == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "variable declaration must have values"
+                );
+            }
             for (size_t i = 0; names[i] != NULL; i++) {
                 ast_node_t* name = names[i];
                 ast_node_t* value = values[i];
@@ -877,9 +892,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             break;
         }
         case AstFunctionNode: {
-            ast_node_t* name = _statement->ast0;
+            ast_node_t* name       = _statement->ast0;
             ast_node_list_t params = _statement->array0;
-            ast_node_list_t body = _statement->array1;
+            ast_node_list_t body   = _statement->array1;
             // Validate scope
             if (!scope_is_global(_scope)) {
                 __THROW_ERROR(
@@ -977,7 +992,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             scope_value_t symbol = {
                 .name      = name->str0,
                 .is_const  = false,
-                .is_global = false,
+                .is_global = true,
                 .position  = name->position
             };
             scope_put(_scope, name->str0, symbol);
