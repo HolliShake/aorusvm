@@ -302,15 +302,16 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             ast_node_list_t arguments = _expression->array0;
             int param_count = 0;
             for (param_count = 0; arguments[param_count] != NULL; param_count++) {
-                if (!generator_is_expression_type(arguments[param_count])) {
+                ast_node_t* argument = arguments[param_count];
+                if (!generator_is_expression_type(argument)) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
-                        _expression->position, 
-                        "call expression must be an expression, but received %d", arguments[param_count]->type
+                        argument->position,
+                        "call expression must be an expression, but received %d", argument->type
                     );
                 }
-                generator_expression(_generator, arguments[param_count]);
+                generator_expression(_generator, argument);
             }
             generator_expression(_generator, _expression->ast0);
             generator_emit_byte(_generator, OPCODE_CALL);
@@ -325,6 +326,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -350,6 +359,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -402,6 +419,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     "binary expression requires both left and right operands, but received NULL"
                 );
             }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
+                );
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -425,6 +450,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -452,6 +485,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     "binary expression requires both left and right operands, but received NULL"
                 );
             }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
+                );
+            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -470,7 +511,20 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryShr: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -495,6 +549,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     _generator->fdata, 
                     _expression->position, 
                     "logical expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -523,6 +585,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                     _generator->fdata, 
                     _expression->position, 
                     "logical expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
