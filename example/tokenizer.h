@@ -1,4 +1,6 @@
+#include "../src/api/core/error.h"
 #include "../src/api/core/global.h"
+#include "position.h"
 #include "token.h"
 
 #ifndef TOKENIZER_H

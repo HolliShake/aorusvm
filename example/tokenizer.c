@@ -127,7 +127,7 @@ token_t* tokenizer_string(tokenizer_t* _tokenizer) {
         is_closed = tokenizer_is_str(_tokenizer->look);
     }
     if (!(is_open && is_closed)) {
-        __THROW
+        __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "Unclosed string");
     }
 
 }
@@ -143,7 +143,9 @@ token_t* tokenizer_next(tokenizer_t* _tokenizer) {
             return tokenizer_number(_tokenizer);
         } else if (tokenizer_is_str(c)) {
             return tokenizer_string(_tokenizer);
+        } else {
+            tokenizer_forward(_tokenizer);
         }
     }
-    return
+    return token_new(TTEOF, NULL, position_from_line_and_colm(_tokenizer->line, _tokenizer->colm));
 }
