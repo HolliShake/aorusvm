@@ -6,7 +6,7 @@
 #define KEY_VAR "var"
 #define KEY_CONST "const"
 #define KEY_LOCAL "local"
-#define KEY_FUN "fun"
+#define KEY_FUNC "func"
 #define KEY_ASYNC "async"
 #define KEY_RETURN "return"
 #define KEY_IF "if"

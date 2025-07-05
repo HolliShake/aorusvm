@@ -93,21 +93,6 @@ long number_coerce_to_long(object_t* _obj) {
     return 0;
 }
 
-float number_coerce_to_float(object_t* _obj) {
-    switch (_obj->type) {
-        case OBJECT_TYPE_INT:
-            return (float) _obj->value.i32;
-        case OBJECT_TYPE_DOUBLE:
-            return (float) _obj->value.f64;
-        case OBJECT_TYPE_STRING:
-            if (!string_is_number((char*) _obj->value.opaque)) break;
-            return (float) strtod((char*) _obj->value.opaque, NULL);
-        default:
-            break;
-    }
-    return 0.0;
-}
-
 double number_coerce_to_double(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:

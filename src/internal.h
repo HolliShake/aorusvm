@@ -12,7 +12,6 @@
 #pragma region NumberH
 int number_coerce_to_int(object_t* _obj);
 long number_coerce_to_long(object_t* _obj);
-float number_coerce_to_float(object_t* _obj);
 double number_coerce_to_double(object_t* _obj);
 #pragma endregion
 

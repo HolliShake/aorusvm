@@ -913,7 +913,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 int jump_endif_from_true = _generator->bsize;
                 generator_allocate_nbytes(_generator, 4);
                 // false?
-                generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
+                generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
                 if (fvalue != NULL) {
                     generator_statement(_generator, _scope, fvalue);
                 }
@@ -921,8 +921,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                 int jump_endif_from_false = _generator->bsize;
                 generator_allocate_nbytes(_generator, 4);
-                generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
-                generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
+                generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true);
+                generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
                 free(_statement);
                 break;
             } else {
@@ -954,8 +954,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l - _generator->reset_base);
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -963,8 +963,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
                     free(cond);
                     free(_statement);
                 } else {
@@ -978,14 +978,14 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // true
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     generator_statement(_generator, _scope, tvalue);
                     // Jump to endif from true
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -993,8 +993,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
                     free(cond);
                     free(_statement);
                 }

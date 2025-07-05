@@ -759,7 +759,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             case OPCODE_POP_JUMP_IF_FALSE: {
                 int jump_offset = get_int(bytecode, ip);
                 if (!object_is_truthy(POPP())) {
-                    ip += jump_offset;
+                    FORWARD(jump_offset);
                 } else {
                     FORWARD(4);
                 }

@@ -1,9 +1,24 @@
 
 
-var x = 100, y = 10.323;
+var x = 100, y = 10.323, z;
 y * x;
+z;
 
-if (3 <2) 
+if (3 < 2) 
     2 + 2;
 else 
     3 + 6;
+
+func add(a, b) {
+   return a + b;
+}
+
+func fact(n) {
+    if (n <= 1) 
+        return 1;
+    return n * fact(n - 1);
+}
+
+add(69, 420);
+
+fact(5);

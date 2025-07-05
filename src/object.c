@@ -85,7 +85,7 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
         case OBJECT_TYPE_DOUBLE:
-            return (double) _obj->value.f64 != 0;
+            return number_coerce_to_double(_obj) != 0;
         case OBJECT_TYPE_STRING:
             return strlen((char*) _obj->value.opaque) > 0;
         case OBJECT_TYPE_BOOL:
