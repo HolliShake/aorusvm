@@ -1,5 +1,6 @@
 #include "../src/api/ast/node.h"
 #include "../src/api/ast/position.h"
+#include "keyword.h"
 #include "token.h"
 #include "tokenizer.h"
 
