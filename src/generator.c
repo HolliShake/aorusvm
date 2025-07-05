@@ -644,7 +644,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             
             ast_node_list_t names  = _statement->array0;
             ast_node_list_t values = _statement->array1;
-            
+
             if (names == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -892,7 +892,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(_statement);
             break;
         }
-        case AstFunctionNode: {
+        case AstFunctionNode: 
+        case AstAsyncFunctionNode: {
+            bool is_async = _statement->type == AstAsyncFunctionNode;
             ast_node_t* name       = _statement->ast0;
             ast_node_list_t params = _statement->array0;
             ast_node_list_t body   = _statement->array1;
@@ -941,7 +943,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // Save the current bytecode size
             SAVEBASE(reset_address);
             // Make function
-            generator_emit_byte(_generator, OPCODE_MAKE_FUNCTION);
+            generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
             // Reserve n bytes for the parameter count
             size_t param_count;
             for (param_count = 0; params[param_count] != NULL; param_count++);

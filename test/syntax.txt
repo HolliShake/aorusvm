@@ -1,18 +1,6 @@
 
 
-namespace Dog {
-    func bark() {
-        println("Arf!!");
-    }
+func add(a, b) {
+    return a + b;
 }
 
-class Dog extends Animal {
-    func init() {
-    }
-
-    func bark() {
-        this
-    }
-}
-
-Dog::bark();

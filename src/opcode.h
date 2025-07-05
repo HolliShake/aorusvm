@@ -34,7 +34,8 @@ typedef enum opcode_enum {
     OPCODE_POPTOP                = 104,  // No following bytes
     OPCODE_NOP                   = 105,  // No following bytes
     OPCODE_MAKE_FUNCTION         = 106,  // Followed by 4 bytes (aka parameter count) + 8 bytes (aka bytecode size)
-    OPCODE_RETURN                = 107   // No following bytes
+    OPCODE_MAKE_ASYNC_FUNCTION   = 107,  // Followed by 4 bytes (aka parameter count) + 8 bytes (aka bytecode size)
+    OPCODE_RETURN                = 108   // No following bytes
 } opcode_t;
 
 #endif

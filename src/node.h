@@ -43,6 +43,7 @@ typedef enum ast_node_type_struct {
     AstReturn,
     AstStatementExpression,
     AstFunctionNode,
+    AstAsyncFunctionNode,
     AstProgram,
 } ast_node_type_t;
 

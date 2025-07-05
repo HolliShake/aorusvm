@@ -250,6 +250,14 @@ DLLEXPORT ast_node_t* ast_function_node(position_t* _position, ast_node_t* _name
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body) {
+    ast_node_t* node = ast_node_new(AstAsyncFunctionNode, _position);
+    node->ast0 = _name;
+    node->array0 = _parameters;
+    node->array1 = _body;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_list_t _children) {
     ast_node_t* node = ast_node_new(AstProgram, _position);
     node->array0 = _children;

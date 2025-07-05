@@ -332,6 +332,17 @@ DLLEXPORT ast_node_t* ast_statement_expression_node(position_t* _position, ast_n
 DLLEXPORT ast_node_t* ast_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body);
 
 /*
+ * Async function node.
+ *
+ * @param _position The position of the node.
+ * @param _name The name of the function.
+ * @param _parameters The parameters of the function.
+ * @param _body The body of the function.
+ * @return The async function node.
+ */
+DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body);
+
+/*
  * Program node.
  *
  * @param _position The position of the node.
