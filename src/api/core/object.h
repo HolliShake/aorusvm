@@ -59,6 +59,15 @@ DLLEXPORT object_t *object_new_bool(bool _value);
 DLLEXPORT object_t *object_new_string(char* _value);
 
 /*
+ * Create a new function object.
+ * @param _param_count The number of parameters.
+ * @param _bytecode The bytecode.
+ * @param _size The size of the bytecode.
+ * @return The new object.
+ */
+DLLEXPORT object_t *object_new_function(size_t _param_count, uint8_t* _bytecode, size_t _size);
+
+/*
  * Convert an object to a string.
  * @param _obj The object.
  * @return The string.

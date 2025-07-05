@@ -19,5 +19,6 @@ typedef enum object_type_enum {
 #define OBJECT_TYPE_BOOL(object) (object->type == OBJECT_TYPE_BOOL)
 #define OBJECT_TYPE_STRING(object) (object->type == OBJECT_TYPE_STRING)
 #define OBJECT_TYPE_NULL(object) (object->type == OBJECT_TYPE_NULL)
+#define OBJECT_TYPE_FUNCTION(object) (object->type == OBJECT_TYPE_FUNCTION)
 
 #endif

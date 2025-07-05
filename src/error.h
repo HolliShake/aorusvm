@@ -6,6 +6,7 @@
 #define ERROR_H
 
 #define ERROR_ALLOCATING_AST_NODE "failed to allocate memory for ast node"
+#define ERROR_ALLOCATING_AST_NODE_LIST "failed to allocate memory for ast node list"
 #define ERROR_ALLOCATING_BUCKETS "failed to allocate memory for buckets"
 #define ERROR_ALLOCATING_BYTECODE "failed to allocate memory for bytecode"
 #define ERROR_ALLOCATING_ENV "failed to allocate memory for env"

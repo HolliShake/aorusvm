@@ -114,6 +114,7 @@ void env_free(env_t* _env) {
         env_node_t* node = _env->buckets[i];
         while (node) {
             env_node_t* next = node->next;
+            free(node->name);
             free(node);
             node = next;
         }

@@ -68,6 +68,13 @@ DLLEXPORT ast_node_t* ast_null_node(position_t* _position) {
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments) {
+    ast_node_t* node = ast_node_new(AstCall, _position);
+    node->ast0 = _function;
+    node->array0 = _arguments;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_binary_mul_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
     ast_node_t* node = ast_node_new(AstBinaryMul, _position);
     node->ast0 = _lhs;

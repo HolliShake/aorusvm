@@ -78,6 +78,16 @@ DLLEXPORT ast_node_t* ast_string_node(position_t* _position, char* _value);
 DLLEXPORT ast_node_t* ast_null_node(position_t* _position);
 
 /*
+ * Call node.
+ *
+ * @param _position The position of the node.
+ * @param _function The function of the node.
+ * @param _arguments The arguments of the node.
+ * @return The call node.
+ */
+DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments);
+
+/*
  * Binary mul node.
  *
  * @param _position The position of the node.

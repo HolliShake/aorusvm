@@ -42,6 +42,12 @@ DLLEXPORT object_t *object_new_null() {
     return obj;
 }
 
+DLLEXPORT object_t *object_new_function(size_t _param_count, uint8_t* _bytecode, size_t _size) {
+    object_t *obj = object_new(OBJECT_TYPE_FUNCTION);
+    obj->value.opaque = code_new_function(_param_count, _bytecode, _size);
+    return obj;
+}
+
 DLLEXPORT char* object_to_string(object_t *_obj) {
     char str[255];
     switch (_obj->type) {

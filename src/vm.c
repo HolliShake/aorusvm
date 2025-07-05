@@ -1,5 +1,6 @@
 #include "api/core/object.h"
 #include "api/core/vm.h"
+#include "code.h"
 #include "error.h"
 #include "internal.h"
 #include "gc.h"
@@ -66,6 +67,8 @@
 }
 
 vm_t *instance = NULL;
+
+INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code);
 
 INTERNAL
 int get_int(uint8_t *bytecode, size_t ip) {
@@ -403,7 +406,7 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         PUSH(instance->fobj);
         return;
     }
-
+    
     PUSH(instance->tobj);
     return;
     ERROR:;
@@ -472,32 +475,42 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     ERROR:;
 }
 
-INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *_bytecode) {
+INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
+    code_t *code = (code_t *) _function->value.opaque;
+    if (code->param_count != _argc) {
+        PD("expected %d arguments, got %d", code->param_count, _argc);
+    }
+    env_t* env = env_new(_parent_env);
+    vm_execute(env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
+    env_free(env);
+}
+
+INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
     
     // Get bytecode size
     size_t bytecode_size;
-    VERIFY_BYTECODE_SIZE(_bytecode, bytecode_size);
+    VERIFY_BYTECODE_SIZE(_code->bytecode, bytecode_size);
 
     char* file_path = 
-        get_string(_bytecode, _header_size);
+        get_string(_code->bytecode, _header_size);
 
     // Add 1 to skip the null terminator of file_path string
-    char* file_name = 
-        get_string(_bytecode, _header_size + strlen(file_path) + 1);
+    char* exec_name = 
+        get_string(_code->bytecode, _header_size + strlen(file_path) + 1);
 
-    // printf("file_path: '%s'\n", file_path);
-    // printf("file_name: '%s'\n", file_name);
+    printf("file_path: '%s'\n", file_path);
+    printf("exec_name: '%s'\n", exec_name);
 
     // Calculate the starting IP
     size_t ip = 
         _header_size + 
         (strlen(file_path) + 1) + 
-        (strlen(file_name) + 1) + 
+        (strlen(exec_name) + 1) + 
         _ip;
 
     // Shallow copy the bytecode
-    uint8_t *bytecode = _bytecode;
+    uint8_t *bytecode = _code->bytecode;
 
     while (ip < bytecode_size) {
         opcode_t opcode = bytecode[ip++];
@@ -550,8 +563,19 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
                 PUSH(instance->null);
                 break;
             }
+            case OPCODE_CALL: {
+                int argc = get_int(bytecode, ip);
+                object_t *function = POPP();
+                if (!OBJECT_TYPE_FUNCTION(function)) {
+                    PD("expected function, got %s", object_to_string(function));
+                }
+                do_call(_env, function, argc);
+                FORWARD(4);
+                break;
+            }
             case OPCODE_STORE_NAME: {
                 char* name = get_string(bytecode, ip);
+                printf("name: %s\n", name);
                 env_put(_env, name, POPP());
                 FORWARD(strlen(name) + 1);
                 break;
@@ -646,7 +670,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             case OPCODE_POP_JUMP_IF_TRUE: {
                 int jump_offset = get_int(bytecode, ip);
                 if (object_is_truthy(POPP())) {
-                    ip += jump_offset;
+                    FORWARD(jump_offset);
                 } else {
                     FORWARD(4);
                 }
@@ -656,7 +680,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = PEEK();
                 if (!object_is_truthy(obj)) {
-                    ip += jump_offset;
+                    FORWARD(jump_offset);
                 } else {
                     POPP();
                     FORWARD(4);
@@ -667,7 +691,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = PEEK();
                 if (object_is_truthy(obj)) {
-                    ip += jump_offset;
+                    FORWARD(jump_offset);
                 } else {
                     POPP();
                     FORWARD(4);
@@ -676,7 +700,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             }
             case OPCODE_JUMP_FORWARD: {
                 int jump_offset = get_int(bytecode, ip);
-                ip += jump_offset;
+                FORWARD(jump_offset)
                 break;
             }
             case OPCODE_POPTOP: {
@@ -685,6 +709,17 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, uint8_t *
             }
             case OPCODE_RETURN: {
                 return;
+            }
+            case OPCODE_MAKE_FUNCTION: {
+                int param_count = get_int(bytecode, ip);
+                size_t function_size = get_long(bytecode, ip + 4);
+                char* module_name = get_string(bytecode, ip + 8);
+                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
+                uint8_t* function_bytecode = malloc(function_size);
+                memcpy(function_bytecode, bytecode + ip, function_size);
+                PUSH(object_new_function(param_count, function_bytecode, function_size));
+                FORWARD(function_size);
+                break;
             }
             default: {
                 DUMP_BYTECODE(bytecode, bytecode_size);
@@ -723,7 +758,7 @@ DLLEXPORT void vm_set_name_resolver(vm_t* _vm, vm_name_resolver_t _resolver) {
 
 DLLEXPORT void vm_name_resolver(vm_t* _vm, env_t* _env, char* _name) {
     if (!env_has(_env, _name, true)) {
-        PD("variable %s not found", _name);   
+        PD("variable %s not found", _name);
     }
     PUSH(env_get(_env, _name));
 }
@@ -736,6 +771,13 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     VERIFY_VERSION(_bytecode);
     // Skip magic number
     env_t* env = env_new(NULL);
-    vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, _bytecode);
+
+    code_t code = {
+        .param_count = 0,
+        .size = get_long(_bytecode, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION),
+        .bytecode = _bytecode
+    };
+
+    vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, &code);
     printf("VM executed\n");
 }

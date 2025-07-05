@@ -1,4 +1,5 @@
 #include "api/core/object.h"
+#include "code.h"
 #include "type.h"
 
 #ifndef OBJECT_H

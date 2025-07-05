@@ -17,11 +17,28 @@ typedef struct generator_struct {
     size_t   fsize;
     uint8_t* bytecode;
     size_t   bsize;
+    size_t   reset_base;
 } generator_t;
+
+
+#define SAVEBASE(out) \
+    size_t out = _generator->reset_base; \
+    { _generator->reset_base = _generator->bsize; } \
+
+#define RESTOREBASE(out) \
+    _generator->reset_base = out; \
 
 INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size) {
     _generator->bytecode = (uint8_t*) realloc(_generator->bytecode, sizeof(uint8_t) * ((_generator->bsize + 1) + _size));
     ASSERTNULL(_generator->bytecode, ERROR_ALLOCATING_BYTECODE);
+}
+
+
+INTERNAL void generator_emit_raw_int(generator_t* _generator, size_t _value) {
+    generator_resize_bytecode_by(_generator, 4);
+    for (size_t i = 0; i < 4; i++) {
+        _generator->bytecode[_generator->bsize++] = (_value >> (i * 8)) & 0xFF;
+    }
 }
 
 INTERNAL void generator_allocate_nbytes(generator_t* _generator, size_t _nbytes) {
@@ -117,6 +134,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBoolean:
         case AstString:
         case AstNull:
+        case AstCall:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
@@ -236,7 +254,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             break;
         case AstString:
             if (_expression->str0 == NULL) {
-                PD("string expression must have a value, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "string expression must have a value, but received NULL"
+                );
             }
             generator_emit_string(
                 _generator, 
@@ -251,9 +274,58 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             );
             free(_expression);
             break;
+        case AstCall: {
+            if (_expression->ast0 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "call expression must have a function, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "call expression must have a function, but received %d", _expression->ast0->type
+                );
+            }
+            if (_expression->array0 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "call expression must have arguments, but received NULL"
+                );
+            }
+            ast_node_list_t arguments = _expression->array0;
+            int param_count = 0;
+            for (param_count = 0; arguments[param_count] != NULL; param_count++) {
+                if (!generator_is_expression_type(arguments[param_count])) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        _expression->position, 
+                        "call expression must be an expression, but received %d", arguments[param_count]->type
+                    );
+                }
+                generator_expression(_generator, arguments[param_count]);
+            }
+            generator_expression(_generator, _expression->ast0);
+            generator_emit_byte(_generator, OPCODE_CALL);
+            generator_emit_raw_int(_generator, param_count);
+            free(_expression);
+            break;
+        }
         case AstBinaryMul: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -273,7 +345,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryDiv: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -293,7 +370,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryMod: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -313,7 +395,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryAdd: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -333,7 +420,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinarySub: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -353,7 +445,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstBinaryShl: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("binary expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -393,7 +490,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         }
         case AstLogicalAnd: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("logical expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "logical expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -410,13 +512,18 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _generator, 
                 _expression->ast1
             );
-            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
             free(_expression);
             break;
         }
         case AstLogicalOr: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
-                PD("logical expression requires both left and right operands, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "logical expression requires both left and right operands, but received NULL"
+                );
             }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
@@ -433,7 +540,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                 _generator, 
                 _expression->ast1
             );
-            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
             free(_expression);
             break;
         }
@@ -473,20 +580,19 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 ast_node_t* value = values[i];
 
                 // Validate name and value
-                if (!name || name->type != AstName) {
-                    if (!name) PD("variable name must be a valid identifier, but received NULL");
+                if (name && name->type != AstName) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
-                        name->position, 
-                        "variable name must be a valid identifier"
+                        _statement->position, 
+                        "variable name must be a valid identifier, but received %d", name->type
                     );
                 }
                 if (value && !generator_is_expression_type(value)) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
-                        value->position, 
+                        _statement->position, 
                         "variable value must be an expression"
                     );
                 }
@@ -494,7 +600,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
-                        name->position, 
+                        _statement->position, 
                         "symbol %s is already defined", name->str0
                     );
                     return;
@@ -530,12 +636,11 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             ast_node_t* tvalue = _statement->ast1;
             ast_node_t* fvalue = _statement->ast2;
             if (!cond || !tvalue || !generator_is_expression_type(cond)) {
-                if (!cond || !tvalue) PD(!cond ? "if statement must have a condition, but received NULL" : "if statement must have a true value, but received NULL");
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
-                    cond->position, 
-                    "condition must be an expression"
+                    _statement->position, 
+                    "if statement must have a condition, a true value, and a false value"
                 );
             }
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
@@ -554,7 +659,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 int jump_endif_from_true = _generator->bsize;
                 generator_allocate_nbytes(_generator, 4);
                 // false?
-                generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+                generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
                 if (fvalue != NULL) {
                     generator_statement(_generator, _scope, fvalue);
                 }
@@ -562,18 +667,21 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                 int jump_endif_from_false = _generator->bsize;
                 generator_allocate_nbytes(_generator, 4);
-                generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
-                generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
+                generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
                 free(cond);
                 free(_statement);
                 break;
             } else {
                 ast_node_t* cond_l = cond->ast0;
                 ast_node_t* cond_r = cond->ast1;
-                if (!cond_l || !cond_r) {
-                    PD(!cond_l ? "logical expression must have a left operand, but received NULL" :
-                       !cond_r ? "logical expression must have a right operand, but received NULL" :
-                       "logical expression must have two operands, but received NULL");
+                if (!cond_l || !cond_r || !generator_is_logical_expression(cond_l) || !generator_is_constant_node(cond_r)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have a left and right operand"
+                    );
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
@@ -593,8 +701,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r - _generator->reset_base);
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -602,8 +710,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
                     free(cond);
                     free(cond_l);
                     free(cond_r);
@@ -619,14 +727,14 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // true
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l - _generator->reset_base);
                     generator_statement(_generator, _scope, tvalue);
                     // Jump to endif from true
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r - _generator->reset_base);
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -634,8 +742,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
                     free(cond);
                     free(cond_l);
                     free(cond_r);
@@ -659,17 +767,16 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             current->is_returned = true;
             // Generate return value and return opcode
             ast_node_t* expr = _statement->ast0;
+            if (expr != NULL && !generator_is_expression_type(expr)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position,
+                    "return value must be an expression"
+                );
+            }
             if (expr != NULL) {
-                if (!generator_is_expression_type(expr)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        expr->position, 
-                        "return value must be an expression"
-                    );
-                }
                 generator_expression(_generator, expr);
-                free(expr);
             } else {
                 generator_emit_byte(_generator, OPCODE_LOAD_NULL);
             }
@@ -679,15 +786,147 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         }
         case AstStatementExpression: {
             if (_statement->ast0 == NULL) {
-                PD("expression statement must have an expression, but received NULL");
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "expression statement must have an expression, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_statement->ast0)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "expression statement must be an expression, but received %d", _statement->ast0->type
+                );
             }
             generator_expression(_generator, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
             free(_statement);
             break;
         }
+        case AstFunctionNode: {
+            ast_node_t* name = _statement->ast0;
+            ast_node_list_t params = _statement->array0;
+            ast_node_list_t body = _statement->array1;
+            // Validate scope
+            if (!scope_is_global(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "function declaration must be in the global scope"
+                );
+            }
+            // Validate name
+            if (name->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "function name must be a valid identifier"
+                );
+            }
+            if (params == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "function must have parameters, but received NULL"
+                );
+            }
+            if (body == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "function must have a body, but received NULL"
+                );
+            }
+            if (scope_has(_scope, name->str0, true)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "function %s is already defined", name->str0
+                );
+            }
+            // Save the current bytecode size
+            SAVEBASE(reset_address);
+            // Make function
+            generator_emit_byte(_generator, OPCODE_MAKE_FUNCTION);
+            // Reserve n bytes for the parameter count
+            size_t param_count;
+            for (param_count = 0; params[param_count] != NULL; param_count++);
+            // Reserve n bytes for the parameter count
+            size_t function_start = _generator->bsize;
+            generator_emit_raw_int(_generator, param_count);
+            // Reserve 8 bytes for the bytecode size
+            size_t size_address = _generator->bsize;
+            // Reserve 8 bytes for the bytecode size
+            generator_emit_bytecode_size(_generator);
+            // Reserve n bytes for the file name
+            generator_emit_raw_string(_generator, _generator->fpath);
+            // Reserve n bytes for the module name
+            generator_emit_raw_string(_generator, name->str0);
+            // Create function scope
+            scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
+            // Compile parameters
+            for (size_t i = 0; params[i] != NULL; i++) {
+                ast_node_t* param = params[i];
+                if (param->type != AstName) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        param->position, 
+                        "function parameter must be a valid identifier, but received %d", param->type
+                    );
+                }
+                generator_emit_byte(_generator, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, param->str0);
+                free(param);
+            }
+            // Compile body
+            for (size_t i = 0; body[i] != NULL; i++) {
+                ast_node_t* statement = body[i];
+                if (generator_is_expression_type(statement)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        statement->position, 
+                        "function body must contain statement only, but received %d", statement->type
+                    );
+                }
+                generator_statement(_generator, function_scope, statement);
+            }
+            // Emit the return opcode
+            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+            generator_emit_byte(_generator, OPCODE_RETURN);
+            // Save into symbol table
+            scope_value_t symbol = {
+                .name      = name->str0,
+                .is_const  = false,
+                .is_global = false,
+                .position  = name->position
+            };
+            scope_put(_scope, name->str0, symbol);
+            // Restore the bytecode size
+            RESTOREBASE(reset_address);
+            // Set the bytecode size
+            generator_set_8bytes(_generator, size_address, _generator->bsize - function_start);
+            generator_emit_byte(_generator, OPCODE_STORE_NAME);
+            generator_emit_raw_string(_generator, name->str0);
+            // Free the function scope
+            scope_free(function_scope);
+            free(name);
+            free(params);
+            free(body);
+            free(_statement);
+            break;
+        }
         default:
-            PD("unsupported statement type %d, but received %d", _statement->type, _statement->type);
+            PD("unsupported statement type %d.", _statement->type);
     }
 }
 
@@ -706,16 +945,26 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
     // Emit the bytecode
     scope_t* scope = scope_new(NULL, ScopeTypeGlobal);
     for (size_t i = 0; children[i] != NULL; i++) {
-        if (children[i] != NULL) generator_statement(_generator, scope, children[i]);
+        ast_node_t* child = children[i];
+        if (generator_is_expression_type(child)) {
+            __THROW_ERROR(
+                _generator->fpath, 
+                _generator->fdata, 
+                child->position, 
+                "program must contain statements only, but received %d", child->type
+            );
+        }
+        generator_statement(_generator, scope, child);
     }
-    free(children);
-    free(_program);
-    scope_free(scope);
     // write the bytecode to the file
     generator_emit_byte(_generator, OPCODE_LOAD_NULL);
     generator_emit_byte(_generator, OPCODE_RETURN);
     // Set the bytecode size
     generator_set_8bytes(_generator, 8, _generator->bsize);
+    // Free the children and the program
+    free(children);
+    free(_program);
+    scope_free(scope);
 }
 
 // -----------------------------
@@ -727,6 +976,7 @@ DLLEXPORT generator_t* generator_new(char* _fpath, char* _fdata) {
     generator->fdata = string_allocate(_fdata);
     generator->fsize = strlen(_fdata);
     generator->bsize = 0;
+    generator->reset_base = 0;
     generator->bytecode = (uint8_t*) malloc(sizeof(uint8_t) * 1);
     ASSERTNULL(generator->bytecode, ERROR_ALLOCATING_BYTECODE);
     // Return instance
