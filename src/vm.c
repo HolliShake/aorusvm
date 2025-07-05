@@ -61,7 +61,7 @@
 
 #define DUMP_BYTECODE(bytecode, size) { \
     for (size_t i = 0; i < size; i++) { \
-        printf("[%02zu]: %02X = %d\n", i, bytecode[i], bytecode[i]); \
+        printf("[%02zu]: 0x%02X = %d\n", i, bytecode[i], bytecode[i]); \
     } \
     printf("\n"); \
 }
@@ -152,6 +152,73 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
+    PD("error in do_mul");
+}
+
+INTERNAL
+void do_div(object_t *_lhs, object_t *_rhs) {
+    // Fast path for integers
+    if (OBJECT_TYPE_INT(_lhs) && OBJECT_TYPE_INT(_rhs)) {
+        int a = _lhs->value.i32;
+        int b = _rhs->value.i32;
+        if (b == 0) {
+            PD("division by zero");
+        }
+        int result = a / b;
+        PUSH(object_new_int(result));
+        return;
+    }
+
+    // Fallback path using coercion
+    double lhs_value = number_coerce_to_double(_lhs);
+    double rhs_value = number_coerce_to_double(_rhs);
+    if (rhs_value == 0) {
+        PD("division by zero");
+    }
+    double result = lhs_value / rhs_value;
+
+    // Try to preserve integer types if possible
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    PD("error in do_div");
+}
+
+INTERNAL
+void do_mod(object_t *_lhs, object_t *_rhs) {
+    // Fast path for integers
+    if (OBJECT_TYPE_INT(_lhs) && OBJECT_TYPE_INT(_rhs)) {
+        int a = _lhs->value.i32;
+        int b = _rhs->value.i32;
+        if (b == 0) {
+            PD("division by zero");
+        }
+        int result = a % b;
+        PUSH(object_new_int(result));
+        return;
+    }
+
+    // Fallback path using coercion
+    double lhs_value = number_coerce_to_double(_lhs);
+    double rhs_value = number_coerce_to_double(_rhs);
+    if (rhs_value == 0) {
+        PD("division by zero");
+    }
+    double result = fmod(lhs_value, rhs_value);
+
+    // Try to preserve integer types if possible
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    PD("error in do_mod");
 }
 
 INTERNAL
@@ -198,6 +265,7 @@ void do_add(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
+    PD("error in do_add");
 }
 
 INTERNAL
@@ -228,6 +296,7 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
+    PD("error in do_sub");
 }
 
 INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
@@ -252,6 +321,7 @@ INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double((double)result));
     return;
     ERROR:;
+    PD("error in do_shl");
 }
 
 INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
@@ -276,6 +346,7 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double((double)result));
     return;
     ERROR:;
+    PD("error in do_shr");
 }
 
 INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
@@ -293,6 +364,7 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->fobj);
     return;
     ERROR:;
+    PD("error in do_cmp_lt");
 }
 
 INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
@@ -310,6 +382,7 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->fobj);
     return;
     ERROR:;
+    PD("error in do_cmp_lte");
 }
 
 INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
@@ -327,6 +400,7 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->fobj);
     return;
     ERROR:;
+    PD("error in do_cmp_gt");
 }
 
 INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
@@ -344,6 +418,7 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->fobj);
     return;
     ERROR:;
+    PD("error in do_cmp_gte");
 }
 
 INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
@@ -377,6 +452,7 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->fobj);
     return;
     ERROR:;
+    PD("error in do_cmp_eq");
 }
 
 INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
@@ -410,6 +486,7 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
     PUSH(instance->tobj);
     return;
     ERROR:;
+    PD("error in do_cmp_ne");
 }
 
 INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
@@ -431,6 +508,7 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
+    PD("error in do_and");
 }
 
 INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
@@ -452,6 +530,7 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
+    PD("error in do_or");
 }
 
 INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
@@ -473,6 +552,7 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
+    PD("error in do_xor");
 }
 
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
@@ -580,81 +660,99 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 FORWARD(strlen(name) + 1);
                 break;
             }
-            case OPCODE_ADD: {
-                object_t *obj1 = POPP();
+            case OPCODE_MUL: {
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
+                do_mul(obj1, obj2);
+                break;
+            }
+            case OPCODE_DIV: {
+                object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
+                do_div(obj1, obj2);
+                break;
+            }
+            case OPCODE_MOD: {
+                object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
+                do_mod(obj1, obj2);
+                break;
+            }
+            case OPCODE_ADD: {
+                object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_add(obj1, obj2);
                 break;
             }
             case OPCODE_SUB: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_sub(obj1, obj2);
                 break;
             }
             case OPCODE_SHL: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_shl(obj1, obj2);
                 break;
             }
             case OPCODE_SHR: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_shr(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_LT: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_lt(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_LTE: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_lte(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_GT: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_gt(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_GTE: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_gte(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_EQ: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_eq(obj1, obj2);
                 break;
             }
             case OPCODE_CMP_NE: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_cmp_ne(obj1, obj2);
                 break;
             }
             case OPCODE_AND: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_and(obj1, obj2);
                 break;
             }
             case OPCODE_OR: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_or(obj1, obj2);
                 break;
             }
             case OPCODE_XOR: {
-                object_t *obj1 = POPP();
                 object_t *obj2 = POPP();
+                object_t *obj1 = POPP();
                 do_xor(obj1, obj2);
                 break;
             }
@@ -724,7 +822,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             }
             default: {
                 DUMP_BYTECODE(bytecode, bytecode_size);
-                PD("unknown opcode %02X at %02zu", opcode, ip);
+                PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
             }
         }
     }

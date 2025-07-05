@@ -354,18 +354,154 @@ ast_node_t* parser_mandatory_expression(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_variable_declaration(parser_t* _parser);
+ast_node_t* parser_if_statement(parser_t* _parser);
+
 ast_node_t* parser_statement(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    if (CHECKV(KEY_VAR)) {
+        return parser_variable_declaration(_parser);
+    } else if (CHECKV(KEY_IF)) {
+        return parser_if_statement(_parser);
+    }
     /************************************/
     ast_node_t* node = parser_logical(_parser);
     if (node == NULL) {
         return NULL;
     }
+    ended = _parser->current->position;
+    ACCEPTV(";");
     ast_node_t* expr = ast_statement_expression_node(
-        position_merge(ast_position(node), ast_position(node)),
+        position_merge(start, ended),
         node
     );
-    ACCEPTV(";");
     return expr;
+}
+
+ast_node_t* parser_variable_declaration(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    size_t index0 = 0, index1 = 0;
+    ast_node_list_t names = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    ast_node_list_t valus = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    names[0] = NULL;
+    valus[0] = NULL;
+
+    ACCEPTV(KEY_VAR);
+    ast_node_t* nameN = parser_terminal(_parser);
+    ast_node_t* valueN = NULL;
+
+    if (nameN == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "variable name expected"
+        );
+    }
+
+    names[index0++] = nameN;
+    names = (ast_node_list_t) realloc(names, (sizeof(ast_node_t*) * (index0 + 2)));
+    names[index0] = NULL;
+
+    if (CHECKV("=")) {
+        ACCEPTV("=");
+        valueN = parser_expression(_parser);
+        if (valueN == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "variable value expected"
+            );
+        }
+        valus[index1++] = valueN;
+        valus = (ast_node_list_t) realloc(valus, (sizeof(ast_node_t*) * (index1 + 2)));
+        valus[index1] = NULL;
+    } else {
+        valus[index1++] = NULL;
+        valus = (ast_node_list_t) realloc(valus, (sizeof(ast_node_t*) * (index1 + 2)));
+        valus[index1] = NULL;
+    }
+
+    while (CHECKV(",")) {
+        ACCEPTV(",");
+        nameN = parser_terminal(_parser);
+        if (nameN == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "variable name expected"
+            );
+        }
+        names[index0++] = nameN;
+        names = (ast_node_list_t) realloc(names, (sizeof(ast_node_t*) * (index0 + 2)));
+        names[index0] = NULL;
+
+        if (CHECKV("=")) {
+            ACCEPTV("=");
+            valueN = parser_expression(_parser);
+            if (valueN == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "variable value expected"
+                );
+            }
+            valus[index1++] = valueN;
+            valus = (ast_node_list_t) realloc(valus, (sizeof(ast_node_t*) * (index1 + 2)));
+            valus[index1] = NULL;
+        } else {
+            valus[index1++] = NULL;
+            valus = (ast_node_list_t) realloc(valus, (sizeof(ast_node_t*) * (index1 + 2)));
+            valus[index1] = NULL;
+        }
+    }
+    ended = _parser->current->position;
+    ACCEPTV(";");
+
+    return ast_var_statement_node(position_merge(start, ended), names, valus);
+}
+
+ast_node_t* parser_if_statement(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_IF);
+    ACCEPTV("(");
+    ast_node_t* expr = parser_expression(_parser);
+    if (expr == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "if condition expected"
+        );
+    }
+    ACCEPTV(")");
+    ast_node_t* trueNode = parser_statement(_parser);
+    if (trueNode == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "if statement expected"
+        );
+    }
+    ast_node_t* falseNode = NULL;
+    if (CHECKV(KEY_ELSE)) {
+        ACCEPTV(KEY_ELSE);
+        falseNode = parser_statement(_parser);
+        if (falseNode == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "else statement expected"
+            );
+        }
+        ended = ast_position(falseNode);
+    }
+    return ast_if_statement_node(position_merge(start, ended), expr, trueNode, falseNode);
 }
 
 ast_node_t* parser_program(parser_t* _parser) {
@@ -376,11 +512,13 @@ ast_node_t* parser_program(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
 
     ast_node_t* nodeN = parser_statement(_parser);
-    ended = ast_position(nodeN);
+    if (nodeN != NULL) {
+        ended = ast_position(nodeN);
+    }
     while (nodeN != NULL) {
         list[index++] = nodeN;
-        list[index] = NULL;
         list = (ast_node_list_t) realloc(list, (sizeof(ast_node_t*) * (index + 2)));
+        list[index] = NULL;
         nodeN = parser_statement(_parser);
         if (nodeN != NULL) {
             ended = ast_position(nodeN);

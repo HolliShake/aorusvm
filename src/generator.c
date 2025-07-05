@@ -142,6 +142,15 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBinarySub:
         case AstBinaryShl:
         case AstBinaryShr:
+        case AstCmpLt:
+        case AstCmpLte:
+        case AstCmpGt:
+        case AstCmpGte:
+        case AstCmpEq:
+        case AstCmpNe:
+        case AstBinaryAnd:
+        case AstBinaryOr:
+        case AstBinaryXor:
         case AstLogicalAnd:
         case AstLogicalOr:
             return true;
@@ -542,6 +551,164 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             free(_expression);
             break;
         }
+        case AstCmpLt: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands to be expressions"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_LT);
+            free(_expression);
+            break;
+        }
+        case AstCmpLte: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_LTE);
+            free(_expression);
+            break;
+        }
+        case AstCmpGt: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_GT);
+            free(_expression);
+            break;
+        }
+        case AstCmpGte: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_GTE);
+            free(_expression);
+            break;
+        }
+        case AstCmpEq: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_EQ);
+            free(_expression);
+            break;
+        }
+        case AstCmpNe: {
+            if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "binary expression requires both left and right operands, but received NULL"
+                );
+            }
+            if (generator_is_constant_node(_expression)) {
+                FOLD_CONSTANT_EXPRESSION(_expression);
+                return;
+            }
+            generator_expression(
+                _generator, 
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _expression->ast1
+            );
+            generator_emit_byte(_generator, OPCODE_CMP_NE);
+            free(_expression);
+            break;
+        }
         case AstLogicalAnd: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
                 __THROW_ERROR(
@@ -732,6 +899,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 if (generator_is_constant_node(cond)) {
                     FOLD_CONSTANT_EXPRESSION(cond);
+                    free(cond);
                 } else {
                     generator_expression(_generator, cond);
                 }
@@ -755,7 +923,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_allocate_nbytes(_generator, 4);
                 generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
                 generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
-                free(cond);
                 free(_statement);
                 break;
             } else {
@@ -799,8 +966,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
                     generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
                     free(cond);
-                    free(cond_l);
-                    free(cond_r);
                     free(_statement);
                 } else {
                     generator_expression(_generator, cond_l);
@@ -831,8 +996,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true  - _generator->reset_base);
                     generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false - _generator->reset_base);
                     free(cond);
-                    free(cond_l);
-                    free(cond_r);
                     free(_statement);
                 }
             }
