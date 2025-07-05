@@ -644,6 +644,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             
             ast_node_list_t names  = _statement->array0;
             ast_node_list_t values = _statement->array1;
+            
             if (names == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
