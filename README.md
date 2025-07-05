@@ -1,4 +1,4 @@
-# Open Language VM/Interpreter
+# AorusVM Open Language VM/Interpreter
 
 This project provides a basic example of implementing a programming language in C. The example directory demonstrates:
 
