@@ -23,7 +23,7 @@ ast_node_t* ast_node_new(ast_node_type_t type, position_t* position) {
 
 DLLEXPORT ast_node_t* ast_name_node(position_t* _position, char* _value) {
     ast_node_t* node = ast_node_new(AstName, _position);
-    node->str0 = _value;
+    node->str0 = string_allocate((const char*) _value);
     return node;
 }
 
