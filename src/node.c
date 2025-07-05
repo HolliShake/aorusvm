@@ -263,3 +263,7 @@ DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_list_t _c
     node->array0 = _children;
     return node;
 }
+
+DLLEXPORT position_t* ast_position(ast_node_t* _node) {
+    return _node->position;
+}

@@ -71,7 +71,7 @@ void throw_error(const char* _caller_file, const char* _caller_func, int _caller
         if (i < line_end - 1) format = string_append(format, "\n");
     }
     fprintf(stderr, 
-        "DEBUG(%s::%s:%d)[%s:%d:%d]: %s\n%s", 
+        "DEBUG(%s::%s:%d)[%s:%d:%d]: %s\n%s\n", 
         _caller_file, 
         _caller_func,
         _caller_line, 

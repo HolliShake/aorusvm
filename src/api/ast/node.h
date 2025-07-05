@@ -351,4 +351,12 @@ DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t*
  */
 DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_list_t _children);
 
+/*
+ * Get the position of the node.
+ *
+ * @param _node The node.
+ * @return The position of the node.
+ */
+DLLEXPORT position_t* ast_position(ast_node_t* _node);
+
 #endif

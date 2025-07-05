@@ -2,13 +2,16 @@
 
 tokenizer_t* tokenizer_new(char* _path, char* _data) {
     tokenizer_t* tokenizer = (tokenizer_t*) malloc(sizeof(tokenizer_t));
+    if (tokenizer == NULL) {
+        PD("Failed to allocate memory for tokenizer");
+    }
     tokenizer->fpath = _path;
     tokenizer->fdata = _data;
-    tokenizer->look = (strlen(_data) > 0) ? _data[0] : '\0';
-    tokenizer->fsize = strlen(_data);
+    tokenizer->look  = (strlen(_data) > 0) ? _data[0] : '\0';
+    tokenizer->fsize = (strlen(_data));
     tokenizer->index = 0;
-    tokenizer->line = 1;
-    tokenizer->colm = 1;
+    tokenizer->line  = 1;
+    tokenizer->colm  = 1;
     return tokenizer;
 }
 
@@ -53,41 +56,51 @@ void tokenizer_skip_whitespace(tokenizer_t* _tokenizer) {
     }
 }
 
-#define init_str(value) \
-    char* value = (char*) malloc(strlen(value) + 1); \
-    { \
-        value[0] = '\0'; \
-        strcpy(value, value); \
-    } \
+#define init_str(outvar, _value) \
+    char* outvar = (char*) malloc(strlen(_value) + 1); \
+    strcpy(outvar, _value);
 
-#define append_str(value, c) \
-    value = (char*) realloc(value, strlen(value) + 2); \
-    value[strlen(value)] = c; \
-    value[strlen(value) + 1] = '\0'; \
+#define append_str(outvar, c) \
+    { \
+        size_t len = strlen(outvar); \
+        outvar = (char*) realloc(outvar, len + 2); \
+        outvar[len] = c; \
+        outvar[len + 1] = '\0'; \
+    } \
 
 
 token_t* tokenizer_identifier(tokenizer_t* _tokenizer) {
-    init_str(value);
+    init_str(value, "");
     position_t* pos = position_from_line_and_colm(_tokenizer->line, _tokenizer->colm);
     while (!tokenizer_is_eof(_tokenizer) && tokenizer_is_identifier_char(_tokenizer->look)) {
-        tokenizer_forward(_tokenizer);
         append_str(value, _tokenizer->look);
+        tokenizer_forward(_tokenizer);
     }
-    return token_new(TTIDN, value, pos);
+    return token_new(is_keyword(value) ? TTKEY : TTIDN, value, pos);
 }
 
 token_t* tokenizer_number(tokenizer_t* _tokenizer) {
-    init_str(value);
+    init_str(value, "");
     position_t* pos = position_from_line_and_colm(_tokenizer->line, _tokenizer->colm);
     while (!tokenizer_is_eof(_tokenizer) && tokenizer_is_digit(_tokenizer->look)) {
-        tokenizer_forward(_tokenizer);
         append_str(value, _tokenizer->look);
+        tokenizer_forward(_tokenizer);
     }
-    return token_new(TTNUM, value, pos);
+    token_type_t type = TTINT;
+    if (_tokenizer->look == '.') {
+        type = TTNUM;
+        append_str(value, _tokenizer->look);
+        tokenizer_forward(_tokenizer);
+        while (!tokenizer_is_eof(_tokenizer) && tokenizer_is_digit(_tokenizer->look)) {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+        }
+    }
+    return token_new(type, value, pos);
 }
 
 token_t* tokenizer_string(tokenizer_t* _tokenizer) {
-    init_str(value);
+    init_str(value, "");
     position_t* pos = position_from_line_and_colm(_tokenizer->line, _tokenizer->colm);
     bool is_open = tokenizer_is_str(_tokenizer->look), is_closed = false;
     tokenizer_forward(_tokenizer);
@@ -127,9 +140,162 @@ token_t* tokenizer_string(tokenizer_t* _tokenizer) {
         is_closed = tokenizer_is_str(_tokenizer->look);
     }
     if (!(is_open && is_closed)) {
-        __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "Unclosed string");
+        __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "unclosed string");
     }
+    tokenizer_forward(_tokenizer);
+    return token_new(TTSTR, value, pos);
+}
 
+token_t* tokenizer_symbol(tokenizer_t* _tokenizer) {
+    init_str(value, "");
+    position_t* pos = position_from_line_and_colm(_tokenizer->line, _tokenizer->colm);
+    switch (_tokenizer->look) {
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case '[':
+        case ']':
+        case ',':
+        case ':':
+        case ';': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            break;
+        }
+        case '.': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '.') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+                if (_tokenizer->look != '.') {
+                    __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "invalid symbol");
+                }
+            }
+            break;
+        }
+        case '!': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '=': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '*': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '%': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '/': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '+': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '+' || _tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '-': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '-' || _tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '<': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '<') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '>': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '>') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '&': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '&' || _tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '|': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '|' || _tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        case '^': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
+        default: {
+            __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "invalid symbol");
+        }
+    }
+    return token_new(TTSYM, value, pos);
 }
 
 token_t* tokenizer_next(tokenizer_t* _tokenizer) {
@@ -144,8 +310,12 @@ token_t* tokenizer_next(tokenizer_t* _tokenizer) {
         } else if (tokenizer_is_str(c)) {
             return tokenizer_string(_tokenizer);
         } else {
-            tokenizer_forward(_tokenizer);
+            return tokenizer_symbol(_tokenizer);
         }
     }
-    return token_new(TTEOF, NULL, position_from_line_and_colm(_tokenizer->line, _tokenizer->colm));
+    return token_new(TTEOF, "EOF", position_from_line_and_colm(_tokenizer->line, _tokenizer->colm));
+}
+
+void tokenizer_free(tokenizer_t* _tokenizer) {
+    free(_tokenizer);
 }

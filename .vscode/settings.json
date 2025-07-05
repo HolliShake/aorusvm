@@ -24,6 +24,10 @@
         "errno.h": "c",
         "random": "c",
         "code.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "tokenizer.h": "c",
+        "file.h": "c"
     }
 }

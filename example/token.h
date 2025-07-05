@@ -1,5 +1,5 @@
-#include "../src/api/core/global.h"
 #include "../src/api/ast/position.h"
+#include "../src/api/core/global.h"
 
 #ifndef TOKEN_H
 #define TOKEN_H
@@ -21,5 +21,7 @@ typedef struct token_struct {
 } token_t;
 
 token_t* token_new(token_type_t _type, char* _value, position_t* _position);
+
+void token_free(token_t* _token);
 
 #endif

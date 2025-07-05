@@ -26,7 +26,6 @@
 #define __THROW_ERROR(fpath, fdata, position, message, ...) \
     throw_error(__FILE__, __func__, __LINE__, fpath, fdata, string_format(message, ##__VA_ARGS__), position);
 
-
 /*
  * Throw an error.
  * @param _caller_file The file that called the function.
