@@ -230,14 +230,14 @@ DLLEXPORT ast_node_t* ast_if_statement_node(position_t* _position, ast_node_t* _
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_return_node(position_t* _position, ast_node_t* _expr) {
-    ast_node_t* node = ast_node_new(AstReturn, _position);
+DLLEXPORT ast_node_t* ast_return_statement_node(position_t* _position, ast_node_t* _expr) {
+    ast_node_t* node = ast_node_new(AstReturnStatement, _position);
     node->ast0 = _expr;
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_statement_expression_node(position_t* _position, ast_node_t* _expr) {
-    ast_node_t* node = ast_node_new(AstStatementExpression, _position);
+DLLEXPORT ast_node_t* ast_expression_statement_node(position_t* _position, ast_node_t* _expr) {
+    ast_node_t* node = ast_node_new(AstExpressionStatement, _position);
     node->ast0 = _expr;
     return node;
 }
@@ -255,6 +255,12 @@ DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t*
     node->ast0 = _name;
     node->array0 = _parameters;
     node->array1 = _body;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_block_statement_node(position_t* _position, ast_node_list_t _statements) {
+    ast_node_t* node = ast_node_new(AstBlockStatement, _position);
+    node->array0 = _statements;
     return node;
 }
 

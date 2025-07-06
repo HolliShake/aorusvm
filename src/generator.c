@@ -1001,7 +1001,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             break;
         }
-        case AstReturn: {
+        case AstReturnStatement: {
             if (!scope_is_function(_scope)) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -1033,7 +1033,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(_statement);
             break;
         }
-        case AstStatementExpression: {
+        case AstExpressionStatement: {
             if (_statement->ast0 == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -1103,8 +1103,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "function %s is already defined", name->str0
                 );
             }
-            // Save the current bytecode size
-            SAVEBASE(reset_address);
             // Make function
             generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
             // Reserve n bytes for the parameter count
@@ -1163,8 +1161,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 .position  = name->position
             };
             scope_put(_scope, name->str0, symbol);
-            // Restore the bytecode size
-            RESTOREBASE(reset_address);
             // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - function_start);
             generator_emit_byte(_generator, OPCODE_STORE_NAME);
@@ -1175,6 +1171,29 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(name);
             free(params);
             free(body);
+            free(_statement);
+            break;
+        }
+        case AstBlockStatement: {
+            ast_node_list_t statements = _statement->array0;
+            scope_t* block_scope = scope_new(_scope, ScopeTypeLocal);
+            // Setup block and reserve space for metadata
+            generator_emit_byte(_generator, OPCODE_SETUP_BLOCK);
+            size_t size_address = _generator->bsize;
+            generator_emit_bytecode_size(_generator);
+            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, "block");
+            // Compile all statements in block
+            for (ast_node_t** stmt = statements; *stmt; stmt++) {
+                generator_statement(_generator, block_scope, *stmt);
+            }
+            // Emit return and finalize
+            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+            generator_emit_byte(_generator, OPCODE_RETURN);
+            generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
+            // Cleanup
+            scope_free(block_scope);
+            free(statements);
             free(_statement);
             break;
         }

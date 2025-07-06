@@ -11,7 +11,6 @@ int main(int argc, char** argv) {
     ast_node_t* node = parser_parse(parser);
     generator_t* generator = generator_new(fpath, content);
     uint8_t* bytecode = generator_generate(generator, node);
-    
     generator_free(generator);
     vm_init();
     vm_run_main(bytecode);

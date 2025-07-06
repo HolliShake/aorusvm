@@ -406,6 +406,7 @@ ast_node_t* parser_mandatory_expression(parser_t* _parser) {
 ast_node_t* parser_function_declaration(parser_t* _parser);
 ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool _is_local);
 ast_node_t* parser_if_statement(parser_t* _parser);
+ast_node_t* parser_block_statement(parser_t* _parser);
 ast_node_t* parser_return_statement(parser_t* _parser);
 
 ast_node_t* parser_statement(parser_t* _parser) {
@@ -420,6 +421,8 @@ ast_node_t* parser_statement(parser_t* _parser) {
         return parser_variable_declaration(_parser, false, true);
     } else if (CHECKV(KEY_IF)) {
         return parser_if_statement(_parser);
+    } else if (CHECKV("{")) {
+        return parser_block_statement(_parser);
     } else if (CHECKV(KEY_RETURN)) {
         return parser_return_statement(_parser);
     }
@@ -430,7 +433,7 @@ ast_node_t* parser_statement(parser_t* _parser) {
     }
     ended = _parser->current->position;
     ACCEPTV(";");
-    ast_node_t* expr = ast_statement_expression_node(
+    ast_node_t* expr = ast_expression_statement_node(
         position_merge(start, ended),
         node
     );
@@ -648,13 +651,31 @@ ast_node_t* parser_if_statement(parser_t* _parser) {
     return ast_if_statement_node(position_merge(start, ended), expr, trueNode, falseNode);
 }
 
+ast_node_t* parser_block_statement(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV("{");
+    size_t index = 0;
+    ast_node_list_t statements = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    statements[0] = NULL;
+    ast_node_t* statement = parser_statement(_parser);
+    while (statement != NULL) {
+        statements[index++] = statement;
+        statements = (ast_node_list_t) realloc(statements, (sizeof(ast_node_t*) * (index + 2)));
+        statements[index] = NULL;
+        statement = parser_statement(_parser);
+    }
+    ended = _parser->current->position;
+    ACCEPTV("}");
+    return ast_block_statement_node(position_merge(start, ended), statements);
+}
+
 ast_node_t* parser_return_statement(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
     ACCEPTV(KEY_RETURN);
     ast_node_t* expr = parser_expression(_parser);
     ended = _parser->current->position;
     ACCEPTV(";");
-    return ast_return_node(position_merge(start, ended), expr);
+    return ast_return_statement_node(position_merge(start, ended), expr);
 }
 
 ast_node_t* parser_program(parser_t* _parser) {

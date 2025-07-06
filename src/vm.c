@@ -555,14 +555,28 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     PD("error in do_xor");
 }
 
+/**
+ * We will convert block into function and execute it.
+ * 
+ * @param _env The environment.
+ * @param _closure The closure.
+ */
+INTERNAL void do_block(env_t* _env, object_t* _closure) {
+    // _closure is a short lived object here, we will convert it into function and execute it.
+    code_t *code = (code_t *) _closure->value.opaque;
+    env_t* block_env = env_new(_env);
+    vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    env_free(block_env);
+}
+
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     code_t *code = (code_t *) _function->value.opaque;
     if (code->param_count != _argc) {
         PD("expected %d arguments, got %d", code->param_count, _argc);
     }
-    env_t* env = env_new(_parent_env);
-    vm_execute(env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
-    env_free(env);
+    env_t* func_env = env_new(_parent_env);
+    vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
+    env_free(func_env);
 }
 
 INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
@@ -655,7 +669,6 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             }
             case OPCODE_STORE_NAME: {
                 char* name = get_string(bytecode, ip);
-                printf("name: %s\n", name);
                 env_put(_env, name, POPP());
                 FORWARD(strlen(name) + 1);
                 break;
@@ -758,7 +771,8 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             }
             case OPCODE_POP_JUMP_IF_FALSE: {
                 int jump_offset = get_int(bytecode, ip);
-                if (!object_is_truthy(POPP())) {
+                object_t *obj = POPP();
+                if (!object_is_truthy(obj)) {
                     FORWARD(jump_offset);
                 } else {
                     FORWARD(4);
@@ -767,7 +781,8 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             }
             case OPCODE_POP_JUMP_IF_TRUE: {
                 int jump_offset = get_int(bytecode, ip);
-                if (object_is_truthy(POPP())) {
+                object_t *obj = POPP();
+                if (object_is_truthy(obj)) {
                     FORWARD(jump_offset);
                 } else {
                     FORWARD(4);
@@ -797,8 +812,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 break;
             }
             case OPCODE_JUMP_FORWARD: {
-                int jump_offset = get_int(bytecode, ip);
-                FORWARD(jump_offset)
+                FORWARD(get_int(bytecode, ip));
                 break;
             }
             case OPCODE_POPTOP: {
@@ -817,6 +831,17 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 uint8_t* function_bytecode = malloc(function_size);
                 memcpy(function_bytecode, bytecode + ip, function_size);
                 PUSH(object_new_function(opcode == OPCODE_MAKE_ASYNC_FUNCTION, param_count, function_bytecode, function_size));
+                FORWARD(function_size);
+                break;
+            }
+            case OPCODE_SETUP_BLOCK: {
+                size_t function_size = get_long(bytecode, ip);
+                char* module_name = get_string(bytecode, ip + 8);
+                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
+                uint8_t* function_bytecode = malloc(function_size);
+                memcpy(function_bytecode, bytecode + ip, function_size);
+                object_t* closure = object_new_function(false, 0, function_bytecode, function_size);
+                do_block(_env, closure);
                 FORWARD(function_size);
                 break;
             }
