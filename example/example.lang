@@ -68,3 +68,10 @@ var arr = [
     3];
 
 println(arr);
+
+
+var jj = 1;
+
+while (jj < 5000) {
+    ++jj;
+}

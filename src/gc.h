@@ -1,5 +1,6 @@
 #include "env.h"
 #include "object.h"
+#include "type.h"
 #include "vm.h"
 
 #ifndef GC_H

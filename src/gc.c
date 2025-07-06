@@ -20,6 +20,11 @@ INTERNAL void gc_free_object(object_t* _obj) {
     if (_obj == NULL) {
         return;
     }
+    if (OBJECT_TYPE_STRING(_obj)) {
+        free(_obj->value.opaque);
+    } else if (OBJECT_TYPE_ARRAY(_obj)) {
+        array_free((array_t*) _obj->value.opaque);
+    }
     free(_obj);
 }
 
@@ -30,6 +35,12 @@ INTERNAL void gc_mark_object(object_t* _obj) {
 
     object_t* current = _obj;
     current->marked = true;
+    if (OBJECT_TYPE_ARRAY(_obj)) {
+        array_t* array = (array_t*) _obj->value.opaque;
+        for (size_t i = 0; i < array_length(array); i++) {
+            gc_mark_object(array_get(array, i));
+        }
+    }
 }
 
 INTERNAL void gc_mark_vm_content(vm_t* _vm) {
