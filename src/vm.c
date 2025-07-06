@@ -1043,5 +1043,5 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
     POPP();
-    printf("VM executed\n");
+    gc_collect_all(instance, env);
 }

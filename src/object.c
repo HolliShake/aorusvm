@@ -63,7 +63,7 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         case OBJECT_TYPE_DOUBLE: {
             double intpart;
             if (modf(_obj->value.f64, &intpart) == 0.0) {
-                sprintf(str, "%d", (int) _obj->value.f64);
+                sprintf(str, "%ld", (long) _obj->value.f64);
             } else {
                 sprintf(str, "%.2lf", (double) _obj->value.f64);
             }

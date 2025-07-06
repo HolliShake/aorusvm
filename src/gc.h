@@ -7,6 +7,8 @@
 
 #include "vm.h"
 
+void gc_collect_all(vm_t* _vm, env_t* _env);
+
 void gc_collect(vm_t* _vm, env_t* _env);
 
 #endif

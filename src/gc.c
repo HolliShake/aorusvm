@@ -16,6 +16,13 @@ INTERNAL size_t gc_total_objects(object_t* root) {
     return count;
 }
 
+INTERNAL void gc_free_object(object_t* _obj) {
+    if (_obj == NULL) {
+        return;
+    }
+    free(_obj);
+}
+
 INTERNAL void gc_mark_object(object_t* _obj) {
     if (_obj == NULL) {
         return;
@@ -47,20 +54,24 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
     }
 }
 
-INTERNAL void gc_sweep(vm_t* vm) {
+INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
     object_t** current = &vm->root;
 
     while (*current != NULL) {
         object_t* obj = *current;
 
-        if (!obj->marked) {
+        if (!obj->marked || _collect_all) {
             *current = obj->next; // unlink
-            free(obj);
+            gc_free_object(obj);
         } else {
             obj->marked = false;
             current = &obj->next;
         }
     }
+}
+
+void gc_collect_all(vm_t* _vm, env_t* _env) {
+    gc_sweep(_vm, true);
 }
 
 void gc_collect(vm_t* _vm, env_t* _env) {
@@ -72,7 +83,7 @@ void gc_collect(vm_t* _vm, env_t* _env) {
     gc_mark_env_content(_env);
 
     // collect the garbage
-    gc_sweep(_vm);
+    gc_sweep(_vm, false);
 
     // reset the allocation counter
     _vm->allocation_counter = 0;
