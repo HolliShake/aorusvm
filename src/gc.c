@@ -88,6 +88,7 @@ INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
         object_t* obj = *current;
 
         if (!obj->marked || _collect_all) {
+            ++gc_collected_count;
             *current = obj->next; // unlink
             gc_free_object(obj);
         } else {
@@ -111,6 +112,9 @@ void gc_collect(vm_t* _vm, env_t* _env) {
 
     // collect the garbage
     gc_sweep(_vm, false);
+
+    // printf("collected %d objects\n", gc_collected_count);
+    gc_collected_count = 0;
 
     // reset the allocation counter
     _vm->allocation_counter = 0;
