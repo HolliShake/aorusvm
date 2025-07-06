@@ -44,7 +44,7 @@ func pp(callback) {
         }
         println("Nah");
     }
-    println("Continue!");
+    println("End!");
 }
 
 pp(println);
