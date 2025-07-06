@@ -37,6 +37,12 @@ DLLEXPORT object_t* object_new_string(char *_value) {
     return obj;
 }
 
+DLLEXPORT object_t* object_new_array(size_t _length) {
+    object_t* obj = object_new(OBJECT_TYPE_ARRAY);
+    obj->value.opaque = array_new(_length);
+    return obj;
+}
+
 DLLEXPORT object_t* object_new_null() {
     object_t* obj = object_new(OBJECT_TYPE_NULL);
     return obj;
@@ -79,6 +85,19 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         case OBJECT_TYPE_NULL: {
             strcpy(str, "null");
             return string_allocate(str);
+        }
+        case OBJECT_TYPE_ARRAY: {
+            char* str = string_allocate("");
+            string_append(str, "[");
+            array_t* array = (array_t*) _obj->value.opaque;
+            for (size_t i = 0; i < array_length((array_t*) _obj->value.opaque); i++) {
+                string_append(str, object_to_string(array_get(array, i)));
+                if (i < array_length(array) - 1) {
+                    string_append(str, ", ");
+                }
+            }
+            string_append(str, "]");
+            return str;
         }
         default: {
             strcpy(str, "unknown");

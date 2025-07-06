@@ -78,6 +78,15 @@ DLLEXPORT ast_node_t* ast_string_node(position_t* _position, char* _value);
 DLLEXPORT ast_node_t* ast_null_node(position_t* _position);
 
 /*
+ * Array node.
+ *
+ * @param _position The position of the node.
+ * @param _elements The elements of the array.
+ * @return The array node.
+ */
+DLLEXPORT ast_node_t* ast_array_node(position_t* _position, ast_node_list_t _elements);
+
+/*
  * Call node.
  *
  * @param _position The position of the node.

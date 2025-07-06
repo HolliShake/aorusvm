@@ -1,3 +1,4 @@
+#include "array.h"
 #include "api/core/vm.h"
 
 #ifndef VM_H

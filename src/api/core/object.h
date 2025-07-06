@@ -65,6 +65,13 @@ DLLEXPORT object_t* object_new_bool(bool _value);
 DLLEXPORT object_t* object_new_string(char* _value);
 
 /*
+ * Create a new array object.
+ * @param _length The length of the array.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_array(size_t _length);
+
+/*
  * Create a new function object.
  * @param _param_count The number of parameters.
  * @param _bytecode The bytecode.

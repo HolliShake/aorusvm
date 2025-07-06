@@ -714,6 +714,16 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 PUSH_REF(instance->null);
                 break;
             }
+            case OPCODE_LOAD_ARRAY: {
+                int length = get_int(bytecode, ip);
+                object_t* array = object_new_array(length);
+                for (int i = 0; i < length; i++) {
+                    array_set((array_t*) array->value.opaque, i, POPP());
+                }
+                PUSH(array);
+                FORWARD(4);
+                break;
+            }
             case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();

@@ -92,9 +92,53 @@ ast_node_t* parser_terminal(parser_t* _parser) {
     }
 }
 
+ast_node_t* parser_array(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV("[");
+    size_t index = 0;
+    ast_node_list_t elements = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    elements[0] = NULL;
+
+    ast_node_t* element = parser_expression(_parser);
+
+    if (element != NULL) {
+        elements[index++] = element;
+        elements = (ast_node_list_t) realloc(elements, (sizeof(ast_node_t*) * (index + 1)));
+        elements[index] = NULL;
+
+        while (CHECKV(",")) {
+            ACCEPTV(",");
+            ast_node_t* element = parser_expression(_parser);
+            if (element == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "array element expected"
+                );
+            }
+            elements[index++] = element;
+            elements = (ast_node_list_t) realloc(elements, (sizeof(ast_node_t*) * (index + 1)));
+            elements[index] = NULL;
+        }
+    }
+    ended = _parser->current->position;
+    ACCEPTV("]");
+    return ast_array_node(position_merge(start, ended), elements);
+}
+
+
+ast_node_t* parser_group(parser_t* _parser) {
+    if (CHECKV("[")) {
+        return parser_array(_parser);
+    } else {
+        return parser_terminal(_parser);
+    }
+}
+
 ast_node_t* parser_member_or_call(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ast_node_t* node = parser_terminal(_parser);
+    ast_node_t* node = parser_group(_parser);
     if (node == NULL) {
         return NULL;
     }
@@ -111,7 +155,7 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
             ast_node_t* argument = parser_expression(_parser);
             if (argument != NULL) {
                 arguments[index++] = argument;
-                arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 2)));
+                arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 1)));
                 arguments[index] = NULL;
                 while (CHECKV(",")) {
                     ACCEPTV(",");
@@ -125,7 +169,7 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
                         );
                     }
                     arguments[index++] = argument;
-                    arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 2)));
+                    arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 1)));
                     arguments[index] = NULL;
                 }
             }
@@ -500,7 +544,7 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
 
     if (parameter != NULL) {
         parameters[index++] = parameter;
-        parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 2)));
+        parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 1)));
         parameters[index] = NULL;
         while (CHECKV(",")) {
             ACCEPTV(",");
@@ -514,7 +558,7 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
                 );
             }
             parameters[index++] = parameter;
-            parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 2)));
+            parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 1)));
             parameters[index] = NULL;
         }
     }
@@ -529,7 +573,7 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
 
     while (statement != NULL) {
         body[index++] = statement;
-        body = (ast_node_list_t) realloc(body, (sizeof(ast_node_t*) * (index + 2)));
+        body = (ast_node_list_t) realloc(body, (sizeof(ast_node_t*) * (index + 1)));
         body[index] = NULL;
         statement = parser_statement(_parser);
     }
@@ -754,7 +798,7 @@ ast_node_t* parser_block_statement(parser_t* _parser) {
     ast_node_t* statement = parser_statement(_parser);
     while (statement != NULL) {
         statements[index++] = statement;
-        statements = (ast_node_list_t) realloc(statements, (sizeof(ast_node_t*) * (index + 2)));
+        statements = (ast_node_list_t) realloc(statements, (sizeof(ast_node_t*) * (index + 1)));
         statements[index] = NULL;
         statement = parser_statement(_parser);
     }
@@ -785,7 +829,7 @@ ast_node_t* parser_program(parser_t* _parser) {
     }
     while (nodeN != NULL) {
         list[index++] = nodeN;
-        list = (ast_node_list_t) realloc(list, (sizeof(ast_node_t*) * (index + 2)));
+        list = (ast_node_list_t) realloc(list, (sizeof(ast_node_t*) * (index + 1)));
         list[index] = NULL;
         nodeN = parser_statement(_parser);
         if (nodeN != NULL) {

@@ -134,6 +134,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBoolean:
         case AstString:
         case AstNull:
+        case AstArray:
         case AstCall:
         case AstUnaryPlus:
         case AstBinaryMul:
@@ -342,6 +343,20 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             );
             free(_expression);
             break;
+        case AstArray: {
+            ast_node_list_t elements = _expression->array0;
+            size_t length = 0;
+            // Count elements first
+            for (size_t i = 0; elements[i] != NULL; i++) length++;
+            // Generate elements right to left for reversed array
+            for (size_t i = length; i > 0; i--) {
+                generator_expression(_generator, _scope, elements[i-1]);
+            }
+            generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
+            generator_emit_raw_int(_generator, length);
+            free(_expression);
+            break;
+        }
         case AstCall: {
             if (_expression->ast0 == NULL) {
                 __THROW_ERROR(
