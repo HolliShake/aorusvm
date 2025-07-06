@@ -10,7 +10,9 @@ typedef enum scope_type_enum {
     ScopeTypeLocal,
     ScopeTypeFunction,
     ScopeTypeSingle,
-    ScopeTypeLoop
+    ScopeTypeLoop,
+    ScopeTypeArray,
+    ScopeTypeObject,
 } scope_type_t;
 
 typedef struct scope_value_struct {
@@ -114,6 +116,22 @@ bool scope_is_single(scope_t* _scope);
  * @return True if the scope is a loop, false otherwise.
  */
 bool scope_is_loop(scope_t* _scope);
+
+/*
+ * Check if a scope is an array.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is an array, false otherwise.
+ */
+bool scope_is_array(scope_t* _scope);
+
+/*
+ * Check if a scope is an object.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is an object, false otherwise.
+ */
+bool scope_is_object(scope_t* _scope);
 
 /*
  * Free a scope.

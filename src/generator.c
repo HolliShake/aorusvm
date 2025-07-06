@@ -344,16 +344,51 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(_expression);
             break;
         case AstArray: {
+            scope_t* array_scope = scope_new(_scope, ScopeTypeArray);
             ast_node_list_t elements = _expression->array0;
-            size_t length = 0;
             // Count elements first
-            for (size_t i = 0; elements[i] != NULL; i++) length++;
-            // Generate elements right to left for reversed array
-            for (size_t i = length; i > 0; i--) {
-                generator_expression(_generator, _scope, elements[i-1]);
+            bool has_spread = false;
+            size_t count = 0;
+            for (size_t i = 0; elements[i] != NULL; i++) {
+                if (elements[i]->type == AstUnarySpread) {
+                    has_spread = true;
+                }
+                count++;
             }
-            generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
-            generator_emit_raw_int(_generator, length);
+            // Generate elements right to left for reversed array
+            size_t i;
+            if (!has_spread) {
+                for (i = count; i > 0; i--) {
+                    ast_node_t* element = elements[i-1];
+                    generator_expression(_generator, array_scope, element);
+                }
+                generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
+                generator_emit_raw_int(_generator, count);
+            } else {
+                has_spread = false;
+                for (i = 0;elements[i] != NULL;i++) {
+                    ast_node_t* element = elements[i];
+
+                    if (element->type == AstUnarySpread) {
+                        has_spread = true;
+                        // load array
+                        generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
+                        generator_emit_raw_int(_generator, i);
+                        // extend array
+                        generator_expression(_generator, _scope, element->ast0);
+                        generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
+                        continue;
+                    } else {
+                        if (!has_spread) {
+                            generator_expression(_generator, array_scope, element);
+                        } else {
+                            generator_expression(_generator, array_scope, element);
+                            generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
+                        }
+                    }
+                }
+            }
+            scope_free(array_scope);
             free(_expression);
             break;
         }
@@ -410,6 +445,19 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             generator_emit_byte(_generator, OPCODE_INCREMENT);
             generator_assignment1(_generator, _scope, _expression->ast0);
             free(_expression);
+            break;
+        }
+        case AstUnarySpread: {
+            if (!scope_is_array(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "spread operator can only be used in an array"
+                );
+            }
+            // Or ignore it!!!
+            generator_expression(_generator, _scope, _expression->ast0);
             break;
         }
         case AstBinaryMul: {

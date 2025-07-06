@@ -66,3 +66,17 @@ object_t* array_pop(array_t* _array) {
     _array->length--;
     return element;
 }
+
+void array_extend(array_t* _array, array_t* _other_array) {
+    if (_array == NULL || _other_array == NULL) return;
+    size_t new_length = _array->length + _other_array->length;
+    _array->elements = (object_t**) realloc(_array->elements, sizeof(object_t*) * new_length);
+    if (_array->elements == NULL) {
+        PD("failed to allocate memory for array extend");
+        return;
+    }
+    for (size_t i = 0; i < _other_array->length; i++) {
+        _array->elements[_array->length + i] = _other_array->elements[i];
+    }
+    _array->length = new_length;
+}

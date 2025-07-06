@@ -88,15 +88,20 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         }
         case OBJECT_TYPE_ARRAY: {
             char* str = string_allocate("");
-            string_append(str, "[");
+            str = string_append(str, "[");
             array_t* array = (array_t*) _obj->value.opaque;
             for (size_t i = 0; i < array_length((array_t*) _obj->value.opaque); i++) {
-                string_append(str, object_to_string(array_get(array, i)));
+                object_t* element = array_get(array, i);
+                if (element == _obj) {
+                    str = string_append(str, "<self>");
+                    continue;
+                }
+                str =string_append(str, object_to_string(element));
                 if (i < array_length(array) - 1) {
-                    string_append(str, ", ");
+                    str = string_append(str, ", ");
                 }
             }
-            string_append(str, "]");
+            str = string_append(str, "]");
             return str;
         }
         default: {

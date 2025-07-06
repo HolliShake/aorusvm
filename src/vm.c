@@ -724,6 +724,21 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 FORWARD(4);
                 break;
             }
+            case OPCODE_EXTEND_ARRAY: {
+                object_t* other_array = POPP();
+                object_t* array = PEEK();
+                array_t* array_value = (array_t*) array->value.opaque;
+                array_extend(array_value, (array_t*) other_array->value.opaque);
+                break;
+            }
+            case OPCODE_APPEND_ARRAY: {
+                object_t* element = POPP();
+                printf("appending %s\n", object_to_string(element));
+                object_t* array = PEEK();
+                array_t* array_value = (array_t*) array->value.opaque;
+                array_push(array_value, element);
+                break;
+            }
             case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();
@@ -951,6 +966,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             }
             case OPCODE_DUPTOP: {
                 PUSH(PEEK());
+                break;
+            }
+            case OPCODE_ROT2: {
+                // A B -> B A
+                object_t *A = instance->evaluation_stack[instance->sp-1];
+                object_t *B = instance->evaluation_stack[instance->sp-2];
+                instance->evaluation_stack[instance->sp-1] = B;
+                instance->evaluation_stack[instance->sp-2] = A;
                 break;
             }
             default: {

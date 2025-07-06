@@ -172,6 +172,8 @@ token_t* tokenizer_symbol(tokenizer_t* _tokenizer) {
                 if (_tokenizer->look != '.') {
                     __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "invalid symbol");
                 }
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
             }
             break;
         }

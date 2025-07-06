@@ -62,16 +62,15 @@ do {
     
 } while (n < 23 || true)
 
-var arr = [
-    1,
-    2,
-    3];
-
-println(arr);
-
 
 var jj = 1;
 
 while (jj < 5000) {
     ++jj;
 }
+
+var arr = [...[1, 2, 3, 4, 5]];
+var arr2 = [...arr, ...arr];
+
+println(arr);
+println(arr2);

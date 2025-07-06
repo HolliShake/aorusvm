@@ -122,6 +122,14 @@ bool scope_is_loop(scope_t* _scope) {
     return false;
 }
 
+bool scope_is_array(scope_t* _scope) {
+    return _scope->type == ScopeTypeArray;
+}
+
+bool scope_is_object(scope_t* _scope) {
+    return _scope->type == ScopeTypeObject;
+}
+
 void scope_free(scope_t* _scope) {
     for (size_t i = 0; i < _scope->bucket_count; i++) {
         scope_node_t* node = _scope->buckets[i];

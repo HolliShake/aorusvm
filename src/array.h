@@ -68,4 +68,12 @@ void array_push(array_t* _array, object_t* _element);
 object_t* array_pop(array_t* _array);
 
 
+/*
+ * Extend an array with another array.
+ *
+ * @param _array The array to extend.
+ * @param _other_array The other array to extend with.
+ */
+void array_extend(array_t* _array, array_t* _other_array);
+
 #endif
