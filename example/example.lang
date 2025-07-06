@@ -65,9 +65,6 @@ do {
 
 var jj = 1;
 
-while (jj < 5000) {
-    ++jj;
-}
 
 var arr = [...[1, 2, 3, 4, 5]];
 var arr2 = [...arr, ...arr, 6, 7, 8];
@@ -86,4 +83,9 @@ var obj = {
     ...(obj1)
 };
 
-println(obj, obj1);
+while (jj < 52000) {
+    ++jj;
+    println(jj);
+}
+
+println(obj, [obj1, 1, 2]);

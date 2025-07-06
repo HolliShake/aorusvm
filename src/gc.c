@@ -24,6 +24,8 @@ INTERNAL void gc_free_object(object_t* _obj) {
         free(_obj->value.opaque);
     } else if (OBJECT_TYPE_ARRAY(_obj)) {
         array_free((array_t*) _obj->value.opaque);
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_free((hashmap_t*) _obj->value.opaque);
     }
     free(_obj);
 }
@@ -39,6 +41,20 @@ INTERNAL void gc_mark_object(object_t* _obj) {
         array_t* array = (array_t*) _obj->value.opaque;
         for (size_t i = 0; i < array_length(array); i++) {
             gc_mark_object(array_get(array, i));
+        }
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* hashmap = (hashmap_t*) _obj->value.opaque;
+        for (size_t i = 0; i < hashmap->bucket_count; i++) {
+            if (hashmap->buckets[i] == NULL) {
+                continue;
+            }
+            hashmap_node_t* node = hashmap->buckets[i];
+            while (node) {
+                hashmap_node_t* next = node->next;
+                gc_mark_object(node->key);
+                gc_mark_object(node->value);
+                node = next;
+            }
         }
     }
 }
