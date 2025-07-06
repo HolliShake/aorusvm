@@ -377,6 +377,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     if (element->type == AstUnarySpread) {
                         generator_expression(_generator, _scope, element->ast0);
                         generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
+                        free(element);
                     } else {
                         generator_expression(_generator, _scope, element);
                         generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
@@ -420,7 +421,31 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 generator_emit_byte(_generator, OPCODE_LOAD_OBJECT);
                 generator_emit_raw_int(_generator, count);
             } else {
+                // Dynamic object with possible spread
+                generator_emit_byte(_generator, OPCODE_LOAD_OBJECT);
+                generator_emit_raw_int(_generator, 0); // Start from empty object
 
+                for (i = 0; i < count; i++) {
+                    ast_node_t* property = properties[i];
+
+                    if (property->type == AstUnarySpread) {
+                        generator_expression(_generator, _scope, property->ast0);
+                        generator_emit_byte(_generator, OPCODE_EXTEND_OBJECT);
+                    } else {
+                        if (property->type != AstObjectProperty) {
+                            __THROW_ERROR(
+                                _generator->fpath,
+                                _generator->fdata,
+                                property->position,
+                                "object property expected"
+                            );
+                        }
+                        generator_expression(_generator, _scope, property->ast1); // value
+                        generator_expression(_generator, _scope, property->ast0); // key
+                        generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
+                    }
+                    free(property);
+                }
             }
             scope_free(object_scope);
             free(properties);

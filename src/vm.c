@@ -760,6 +760,31 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 FORWARD(4);
                 break;
             }
+            case OPCODE_EXTEND_OBJECT: {
+                object_t* obj_src = POPP();
+                object_t* obj_dst = PEEK();
+                if (!OBJECT_TYPE_OBJECT(obj_src)) {
+                    PD("expected object, got %s", object_to_string(obj_src));
+                }
+                if (!OBJECT_TYPE_OBJECT(obj_dst)) {
+                    PD("expected object, got %s", object_to_string(obj_dst));
+                }
+                hashmap_extend((hashmap_t*) obj_dst->value.opaque, (hashmap_t*) obj_src->value.opaque);
+                break;
+            }
+            case OPCODE_PUT_OBJECT: {
+                object_t* key = POPP();
+                object_t* val = POPP();
+                object_t* obj_dst = PEEK();
+                if (OBJECT_TYPE_COLLECTION(key)) {
+                    PD("invalid key type %s", object_to_string(key));
+                }
+                if (!OBJECT_TYPE_OBJECT(obj_dst)) {
+                    PD("expected object, got %s", object_to_string(obj_dst));
+                }
+                hashmap_put((hashmap_t*) obj_dst->value.opaque, key, val);
+                break;
+            }
             case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();

@@ -50,6 +50,14 @@ void hashmap_put(hashmap_t* _hashmap, object_t* _key, object_t* _value);
 object_t* hashmap_get(hashmap_t* _hashmap, object_t* _key);
 
 /*
+ * Extend the hashmap with another hashmap.
+ *
+ * @param _hashmap The hashmap.
+ * @param _other The other hashmap.
+ */
+void hashmap_extend(hashmap_t* _hashmap, hashmap_t* _other);
+
+/*
  * Get the size of the hashmap.
  *
  * @param _hashmap The hashmap.

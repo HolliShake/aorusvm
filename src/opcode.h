@@ -12,8 +12,8 @@ typedef enum opcode_enum {
     OPCODE_EXTEND_ARRAY          = 82,   // No following bytes
     OPCODE_APPEND_ARRAY          = 83,   // No following bytes
     OPCODE_LOAD_OBJECT           = 84,   // Followed by 4 bytes (aka the number of properties)
-    X0                           = 85,
-    X1                           = 86,
+    OPCODE_EXTEND_OBJECT         = 85,   // No following bytes
+    OPCODE_PUT_OBJECT            = 86,   // No following bytes
     OPCODE_STORE_NAME            = 87,   // Followed by the length of the name in bytes + 1 (for the null terminator)
     OPCODE_SET_NAME              = 88,   // Followed by the length of the name in bytes + 1 (for the null terminator)
     OPCODE_CALL                  = 89,   // Followed by 4 bytes (aka the number of arguments)
