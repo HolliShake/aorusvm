@@ -1056,6 +1056,8 @@ DLLEXPORT void vm_init() {
     // singleton boolean
     instance->tobj = object_new_bool(true);
     instance->fobj = object_new_bool(false);
+    // env globals
+    instance->env = env_new(NULL);
 }
 
 DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
@@ -1099,14 +1101,20 @@ DLLEXPORT void vm_load_bool(bool _value) {
     PUSH_REF((_value ? instance->tobj : instance->fobj));
 }
 
+DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
+    PUSH(_value); // value
+    env_put(instance->env, _name, POPP());
+}
+
 DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     ASSERTNULL(instance, ERROR_VM_NOT_INITIALIZED);
     // Verify magic number
     VERIFY_MAGIC_NUMBER(_bytecode);
     // Verify version
     VERIFY_VERSION(_bytecode);
-    // Skip magic number
-    env_t* env = env_new(NULL);
+
+    // Create a new environment for the main function
+    env_t* env = env_new(instance->env);
 
     code_t code = {
         .param_count = 0,

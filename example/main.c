@@ -44,16 +44,17 @@ void scan_function(size_t _arg_count) {
 }
 
 void custom_name_resolver(env_t* _env, char* _name) {
-    if (strcmp(_name, "print") == 0) {
-       vm_push(object_new_native_function(1, (vm_native_function) print_function));
-    } else if (strcmp(_name, "println") == 0) {
-        vm_push(object_new_native_function(1, (vm_native_function) println_function));
-    } else if (strcmp(_name, "scan") == 0) {
-        vm_push(object_new_native_function(0, (vm_native_function) scan_function));
-    } else {
-        // Default name resolver (important!).
-        vm_name_resolver(_env, _name);
-    }
+    // if (strcmp(_name, "print") == 0) {
+    //    vm_push(object_new_native_function(1, (vm_native_function) print_function));
+    //    return;
+    // } else if (strcmp(_name, "println") == 0) {
+    //     vm_push(object_new_native_function(1, (vm_native_function) println_function));
+    //     return;
+    // } else if (strcmp(_name, "scan") == 0) {
+    //     vm_push(object_new_native_function(0, (vm_native_function) scan_function));
+    //     return;
+    // }
+    vm_name_resolver(_env, _name);
 }
 
 int main(int argc, char** argv) {
@@ -66,6 +67,9 @@ int main(int argc, char** argv) {
     generator_free(generator);
     vm_init();
     vm_set_name_resolver((vm_name_resolver_t) custom_name_resolver);
+    vm_define_global("print", object_new_native_function(1, (vm_native_function) print_function));
+    vm_define_global("println", object_new_native_function(1, (vm_native_function) println_function));
+    vm_define_global("scan", object_new_native_function(0, (vm_native_function) scan_function));
     vm_run_main(bytecode);
     parser_free(parser);
     return 0;

@@ -82,6 +82,13 @@ DLLEXPORT void vm_load_null();
 DLLEXPORT void vm_load_bool(bool _value);
 
 /*
+ * Define a global variable.
+ * @param _name The name.
+ * @param _value The value.
+ */
+DLLEXPORT void vm_define_global(char* _name, object_t* _value);
+
+/*
  * Run the main function.
  * @param _bytecode The bytecode.
  * @param _bytecode_size The size of the bytecode.

@@ -26,6 +26,8 @@ typedef struct vm_struct {
     // singleton boolean
     object_t *tobj;
     object_t *fobj;
+    // env globals
+    env_t* env;
 } vm_t;
 
 #endif
