@@ -375,11 +375,11 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     ast_node_t* element = elements[i];
 
                     if (element->type == AstUnarySpread) {
-                        generator_expression(_generator, _scope, element->ast0);
+                        generator_expression(_generator, array_scope, element->ast0);
                         generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
                         free(element);
                     } else {
-                        generator_expression(_generator, _scope, element);
+                        generator_expression(_generator, array_scope, element);
                         generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
                     }
                 }
@@ -445,7 +445,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     ast_node_t* property = properties[i];
 
                     if (property->type == AstUnarySpread) {
-                        generator_expression(_generator, _scope, property->ast0);
+                        generator_expression(_generator, object_scope, property->ast0);
                         generator_emit_byte(_generator, OPCODE_EXTEND_OBJECT);
                     } else {
                         if (property->type != AstObjectProperty) {
@@ -456,8 +456,8 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                                 "object property expected"
                             );
                         }
-                        generator_expression(_generator, _scope, property->ast1); // value
-                        generator_expression(_generator, _scope, property->ast0); // key
+                        generator_expression(_generator, object_scope, property->ast1); // value
+                        generator_expression(_generator, object_scope, property->ast0); // key
                         generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
                     }
                     free(property);
