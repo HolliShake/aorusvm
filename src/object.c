@@ -104,6 +104,22 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             str = string_append(str, "]");
             return str;
         }
+        case OBJECT_TYPE_FUNCTION: {
+            char* str = string_allocate("function");
+            str = string_append(str, "(");
+            code_t* code = (code_t*) _obj->value.opaque;
+            for (size_t i = 0; i < code->param_count; i++) {
+                char* fmt = string_format("arg%d", i);
+                str = string_append(str, fmt);
+                free(fmt);
+                if (i < code->param_count - 1) {
+                    str = string_append(str, ", ");
+                }
+            }
+            str = string_append(str, ")");
+            str = string_append(str, "{}");
+            return str;
+        }
         default: {
             strcpy(str, "unknown");
             return string_allocate(str);

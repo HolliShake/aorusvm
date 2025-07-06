@@ -8,7 +8,9 @@
 void print_function(size_t _arg_count) {
     for (size_t i = 0; i < _arg_count; i++) {
         object_t* top = vm_pop();
-        printf("%s", object_to_string(top));
+        char* str = object_to_string(top);
+        printf("%s", str);
+        free(str);
         if (i < _arg_count - 1) {
             printf(" ");
         }
@@ -20,7 +22,9 @@ void print_function(size_t _arg_count) {
 void println_function(size_t _arg_count) {
     for (size_t i = 0; i < _arg_count; i++) {
         object_t* top = vm_pop();
-        printf("%s", object_to_string(top));
+        char* str = object_to_string(top);
+        printf("%s", str);
+        free(str);
         if (i < _arg_count - 1) {
             printf(" ");
         }

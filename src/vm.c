@@ -725,18 +725,15 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 break;
             }
             case OPCODE_EXTEND_ARRAY: {
-                object_t* other_array = POPP();
-                object_t* array = PEEK();
-                array_t* array_value = (array_t*) array->value.opaque;
-                array_extend(array_value, (array_t*) other_array->value.opaque);
+                object_t* array_src = POPP();
+                object_t* array_dst = PEEK();
+                array_extend((array_t*) array_dst->value.opaque, (array_t*) array_src->value.opaque);
                 break;
             }
             case OPCODE_APPEND_ARRAY: {
-                object_t* element = POPP();
-                printf("appending %s\n", object_to_string(element));
-                object_t* array = PEEK();
-                array_t* array_value = (array_t*) array->value.opaque;
-                array_push(array_value, element);
+                object_t* obj = POPP();
+                object_t* arr = PEEK();
+                array_push((array_t*) arr->value.opaque, obj);
                 break;
             }
             case OPCODE_CALL: {
