@@ -249,6 +249,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expres
 INTERNAL void generator_assignment1(generator_t* _generator, ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
+
             generator_emit_byte(_generator, OPCODE_SET_NAME);
             generator_emit_raw_string(
                 _generator, 
@@ -265,7 +266,7 @@ INTERNAL void generator_assignment1(generator_t* _generator, ast_node_t* _expres
     }
 }
 
-INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _expression) {
+INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
             generator_emit_byte(_generator, OPCODE_LOAD_NAME);
@@ -364,9 +365,9 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
                         "call expression must be an expression, but received %d", argument->type
                     );
                 }
-                generator_expression(_generator, argument);
+                generator_expression(_generator, _scope, argument);
             }
-            generator_expression(_generator, _expression->ast0);
+            generator_expression(_generator, _scope, _expression->ast0);
             generator_emit_byte(_generator, OPCODE_CALL);
             generator_emit_raw_int(_generator, param_count);
             free(_expression);
@@ -402,10 +403,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_MUL);
@@ -435,10 +438,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_DIV);
@@ -460,10 +465,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_MOD);
@@ -493,10 +500,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_ADD);
@@ -526,10 +535,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SUB);
@@ -559,10 +570,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SHL);
@@ -592,10 +605,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_SHR);
@@ -625,10 +640,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_LT);
@@ -650,10 +667,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_LTE);
@@ -675,10 +694,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_GT);
@@ -700,10 +721,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_GTE);
@@ -725,10 +748,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_EQ);
@@ -750,10 +775,12 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_emit_byte(_generator, OPCODE_CMP_NE);
@@ -783,6 +810,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_emit_byte(_generator, OPCODE_JUMP_IF_FALSE_OR_POP);
@@ -790,6 +818,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             generator_allocate_nbytes(_generator, 4);
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
@@ -819,6 +848,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast0
             );
             generator_emit_byte(_generator, OPCODE_JUMP_IF_TRUE_OR_POP);
@@ -826,6 +856,7 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             generator_allocate_nbytes(_generator, 4);
             generator_expression(
                 _generator, 
+                _scope,
                 _expression->ast1
             );
             generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
@@ -911,7 +942,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 // Generate value code
                 if (value) {
-                    generator_expression(_generator, value);
+                    generator_expression(_generator, _scope, value);
                 } else {
                     generator_emit_byte(_generator, OPCODE_LOAD_NULL);
                 }
@@ -949,7 +980,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
-                generator_expression(_generator, cond);
+                generator_expression(_generator, _scope, cond);
                 // Jump if false
                 generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                 int jump_start = _generator->bsize;
@@ -994,12 +1025,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
-                    generator_expression(_generator, cond_l);
+                    generator_expression(_generator, _scope, cond_l);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // If left is true, then evaluate right
-                    generator_expression(_generator, cond_r);
+                    generator_expression(_generator, _scope, cond_r);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
@@ -1024,12 +1055,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     free(cond);
                     free(_statement);
                 } else {
-                    generator_expression(_generator, cond_l);
+                    generator_expression(_generator, _scope, cond_l);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
                     int jump_start_l = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // If left is false, then evaluate right
-                    generator_expression(_generator, cond_r);
+                    generator_expression(_generator, _scope, cond_r);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
@@ -1072,7 +1103,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             size_t loop_start = _generator->bsize;
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
-                generator_expression(_generator, cond);
+                generator_expression(_generator, _scope, cond);
                 // Jump if false
                 generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                 int jump_endwhile_if_false = _generator->bsize;
@@ -1107,12 +1138,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
-                    generator_expression(_generator, cond_l);
+                    generator_expression(_generator, _scope, cond_l);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // If left is true, then evaluate right
-                    generator_expression(_generator, cond_r);
+                    generator_expression(_generator, _scope, cond_r);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
@@ -1127,12 +1158,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     scope_free(while_scope);
                     free(_statement);
                 } else {
-                    generator_expression(_generator, cond_l);
+                    generator_expression(_generator, _scope, cond_l);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
                     int jump_start_l = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // If left is false, then evaluate right
-                    generator_expression(_generator, cond_r);
+                    generator_expression(_generator, _scope, cond_r);
                     generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
@@ -1175,7 +1206,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 );
             }
             if (expr != NULL) {
-                generator_expression(_generator, expr);
+                generator_expression(_generator, _scope, expr);
             } else {
                 generator_emit_byte(_generator, OPCODE_LOAD_NULL);
             }
@@ -1200,7 +1231,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "expression statement must be an expression, but received %d", _statement->ast0->type
                 );
             }
-            generator_expression(_generator, _statement->ast0);
+            generator_expression(_generator, _scope, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
             free(_statement);
             break;
