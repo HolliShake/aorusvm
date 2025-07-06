@@ -55,8 +55,9 @@ while (b < 100) {
 
 pp(println);
 
+var n = 1;
 do {
-    
-    println(">> Hello World!");
 
-} while (3 > 2);
+    println(">> Hello World!", ++n);
+
+} while (n < 23 || true)

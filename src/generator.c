@@ -1173,6 +1173,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     scope_free(while_scope);
+                    free(cond);
                     free(_statement);
                 } else {
                     generator_expression(_generator, _scope, cond_l);
@@ -1194,6 +1195,105 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     // Set if false
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     scope_free(while_scope);
+                    free(cond);
+                    free(_statement);
+                }
+            }
+            break;
+        }
+        case AstDoWhileStatement: {
+            ast_node_t* cond = _statement->ast0;
+            ast_node_t* body = _statement->ast1;
+            if (!cond || !body || !generator_is_expression_type(cond)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "do while statement must have a condition and a body"
+                );
+            }
+            scope_t* do_while_scope = scope_new(_scope, ScopeTypeLoop);
+            size_t loop_start = _generator->bsize;
+            if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
+                // Body
+                generator_statement(_generator, do_while_scope, body);
+                // Condition
+                generator_expression(_generator, _scope, cond);
+                // Jump if false
+                generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                int jump_endwhile_if_false = _generator->bsize;
+                generator_allocate_nbytes(_generator, 4);
+                // Jump to the start of the do while loop
+                generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                generator_emit_raw_int(_generator, loop_start);
+                // Jump to the end of the do while loop
+                generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
+                scope_free(do_while_scope);
+                free(_statement);
+                break;
+            } else {
+                ast_node_t* cond_l = cond->ast0;
+                ast_node_t* cond_r = cond->ast1;
+                if (!cond_l || !cond_r || !generator_is_logical_expression(cond)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have a left and right operand"
+                    );
+                }
+                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have both left and right operands to be expressions"
+                    );
+                }
+                bool is_logical_and = cond->type == AstLogicalAnd;
+                if (is_logical_and) {
+                    // Body
+                    generator_statement(_generator, do_while_scope, body);
+                    // Condition
+                    generator_expression(_generator, _scope, cond_l);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_l = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // If left is true, then evaluate right
+                    generator_expression(_generator, _scope, cond_r);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_r = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // Loop
+                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, loop_start);
+                    // Jump to the end of the do while loop
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    scope_free(do_while_scope);
+                    free(cond);
+                    free(_statement);
+                } else {
+                    // Body
+                    generator_statement(_generator, do_while_scope, body);
+                    // Condition
+                    generator_expression(_generator, _scope, cond_l);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_l = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // If left is false, then evaluate right
+                    generator_expression(_generator, _scope, cond_r);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_r = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // Loop
+                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, loop_start);
+                    // Jump to the end of the do while loop
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    scope_free(do_while_scope);
+                    free(cond);
                     free(_statement);
                 }
             }

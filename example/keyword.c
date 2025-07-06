@@ -11,6 +11,7 @@ const char* KEYWORDS[] = {
     KEY_ELSE,
     KEY_FOR,
     KEY_WHILE,
+    KEY_DO,
     KEY_BREAK,
     KEY_CONTINUE,
     KEY_TRUE,
