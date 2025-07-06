@@ -73,4 +73,4 @@ var arr = [...[1, 2, 3, 4, 5]];
 var arr2 = [...arr, ...arr];
 
 println(arr);
-println(arr2);
+println(">>", arr2);

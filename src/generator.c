@@ -137,6 +137,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstArray:
         case AstCall:
         case AstUnaryPlus:
+        case AstUnarySpread:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
@@ -365,26 +366,19 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
                 generator_emit_raw_int(_generator, count);
             } else {
-                has_spread = false;
-                for (i = 0;elements[i] != NULL;i++) {
+                // Dynamic array with possible spread
+                generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
+                generator_emit_raw_int(_generator, 0); // Start from empty array
+
+                for (i = 0; i < count; i++) {
                     ast_node_t* element = elements[i];
 
                     if (element->type == AstUnarySpread) {
-                        has_spread = true;
-                        // load array
-                        generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
-                        generator_emit_raw_int(_generator, i);
-                        // extend array
                         generator_expression(_generator, _scope, element->ast0);
                         generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
-                        continue;
                     } else {
-                        if (!has_spread) {
-                            generator_expression(_generator, array_scope, element);
-                        } else {
-                            generator_expression(_generator, array_scope, element);
-                            generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
-                        }
+                        generator_expression(_generator, _scope, element);
+                        generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
                     }
                 }
             }
@@ -448,12 +442,12 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             break;
         }
         case AstUnarySpread: {
-            if (!scope_is_array(_scope)) {
+            if (!scope_is_array(_scope) && !scope_is_object(_scope)) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
                     _expression->position, 
-                    "spread operator can only be used in an array"
+                    "spread operator can only be used in an array or object"
                 );
             }
             // Or ignore it!!!
