@@ -101,7 +101,12 @@ bool scope_is_local(scope_t* _scope) {
 }
 
 bool scope_is_function(scope_t* _scope) {
-    return _scope->type == ScopeTypeFunction;
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeFunction) return true;
+        current = current->parent;
+    }
+    return false;
 }
 
 bool scope_is_single(scope_t* _scope) {
@@ -109,7 +114,12 @@ bool scope_is_single(scope_t* _scope) {
 }
 
 bool scope_is_loop(scope_t* _scope) {
-    return _scope->type == ScopeTypeLoop;
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeLoop) return true;
+        current = current->parent;
+    }
+    return false;
 }
 
 void scope_free(scope_t* _scope) {

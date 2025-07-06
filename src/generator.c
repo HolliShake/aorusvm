@@ -849,7 +849,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "variable value must be an expression"
                     );
                 }
-                if (scope_has(_scope, name->str0, true)) {
+                if (scope_has(_scope, name->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
@@ -1123,6 +1123,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             generator_emit_raw_string(_generator, name->str0);
             // Create function scope
             scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
+            scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
             // Compile parameters
             for (size_t i = 0; params[i] != NULL; i++) {
                 ast_node_t* param = params[i];
@@ -1149,7 +1150,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "function body must contain statement only, but received %d", statement->type
                     );
                 }
-                generator_statement(_generator, function_scope, statement);
+                generator_statement(_generator, local_scope, statement);
             }
             // Emit the return opcode
             generator_emit_byte(_generator, OPCODE_LOAD_NULL);
@@ -1169,6 +1170,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             generator_emit_byte(_generator, OPCODE_STORE_NAME);
             generator_emit_raw_string(_generator, name->str0);
             // Free the function scope
+            scope_free(local_scope);
             scope_free(function_scope);
             free(name);
             free(params);

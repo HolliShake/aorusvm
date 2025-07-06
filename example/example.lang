@@ -1,6 +1,9 @@
 
 
 var x = 100, y = 10.323, z;
+
+const j = 100;
+
 y * x;
 z;
 
@@ -16,6 +19,7 @@ func add(a, b) {
 func fact(n) {
     if (n <= 1) 
         return 1;
+    local x = 100;
     return n * fact(n - 1);
 }
 

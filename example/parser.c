@@ -404,7 +404,7 @@ ast_node_t* parser_mandatory_expression(parser_t* _parser) {
 }
 
 ast_node_t* parser_function_declaration(parser_t* _parser);
-ast_node_t* parser_variable_declaration(parser_t* _parser);
+ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool _is_local);
 ast_node_t* parser_if_statement(parser_t* _parser);
 ast_node_t* parser_return_statement(parser_t* _parser);
 
@@ -413,7 +413,11 @@ ast_node_t* parser_statement(parser_t* _parser) {
     if (CHECKV(KEY_FUNC)) {
         return parser_function_declaration(_parser);
     } else if (CHECKV(KEY_VAR)) {
-        return parser_variable_declaration(_parser);
+        return parser_variable_declaration(_parser, false, false);
+    } else if (CHECKV(KEY_CONST)) {
+        return parser_variable_declaration(_parser, true, false);
+    } else if (CHECKV(KEY_LOCAL)) {
+        return parser_variable_declaration(_parser, false, true);
     } else if (CHECKV(KEY_IF)) {
         return parser_if_statement(_parser);
     } else if (CHECKV(KEY_RETURN)) {
@@ -492,7 +496,7 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
     return ast_function_node(position_merge(start, ended), name, parameters, body);
 }
 
-ast_node_t* parser_variable_declaration(parser_t* _parser) {
+ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool _is_local) {
     position_t* start = _parser->current->position, *ended = start;
     size_t index0 = 0, index1 = 0;
     ast_node_list_t names = (ast_node_list_t) malloc(sizeof(ast_node_t*));
@@ -500,7 +504,20 @@ ast_node_t* parser_variable_declaration(parser_t* _parser) {
     names[0] = NULL;
     valus[0] = NULL;
 
-    ACCEPTV(KEY_VAR);
+    if (!_is_const && !_is_local) {
+        ACCEPTV(KEY_VAR);
+    } else if (_is_const) {
+        ACCEPTV(KEY_CONST);
+    } else if (_is_local) {
+        ACCEPTV(KEY_LOCAL);
+    } else {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "invalid variable declaration"
+        );
+    }
     ast_node_t* nameN = parser_terminal(_parser);
     ast_node_t* valueN = NULL;
 
@@ -575,7 +592,20 @@ ast_node_t* parser_variable_declaration(parser_t* _parser) {
     ended = _parser->current->position;
     ACCEPTV(";");
 
-    return ast_var_statement_node(position_merge(start, ended), names, valus);
+    if (!_is_const && !_is_local) {
+        return ast_var_statement_node(position_merge(start, ended), names, valus);
+    } else if (_is_const) {
+        return ast_const_statement_node(position_merge(start, ended), names, valus);
+    } else if (_is_local) {
+        return ast_local_statement_node(position_merge(start, ended), names, valus);
+    } else {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "invalid variable declaration"
+        );
+    }
 }
 
 ast_node_t* parser_if_statement(parser_t* _parser) {
