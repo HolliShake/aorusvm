@@ -406,6 +406,7 @@ ast_node_t* parser_mandatory_expression(parser_t* _parser) {
 ast_node_t* parser_function_declaration(parser_t* _parser);
 ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool _is_local);
 ast_node_t* parser_if_statement(parser_t* _parser);
+ast_node_t* parser_while_statement(parser_t* _parser);
 ast_node_t* parser_block_statement(parser_t* _parser);
 ast_node_t* parser_return_statement(parser_t* _parser);
 
@@ -421,6 +422,8 @@ ast_node_t* parser_statement(parser_t* _parser) {
         return parser_variable_declaration(_parser, false, true);
     } else if (CHECKV(KEY_IF)) {
         return parser_if_statement(_parser);
+    } else if (CHECKV(KEY_WHILE)) {
+        return parser_while_statement(_parser);
     } else if (CHECKV("{")) {
         return parser_block_statement(_parser);
     } else if (CHECKV(KEY_RETURN)) {
@@ -649,6 +652,33 @@ ast_node_t* parser_if_statement(parser_t* _parser) {
         ended = ast_position(falseNode);
     }
     return ast_if_statement_node(position_merge(start, ended), expr, trueNode, falseNode);
+}
+
+ast_node_t* parser_while_statement(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_WHILE);
+    ACCEPTV("(");
+    ast_node_t* expr = parser_expression(_parser);
+    if (expr == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "while condition expected"
+        );
+    }
+    ACCEPTV(")");
+    ast_node_t* body = parser_statement(_parser);
+    if (body == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "while body expected"
+        );
+    }
+    ended = ast_position(body);
+    return ast_while_statement_node(position_merge(start, ended), expr, body);
 }
 
 ast_node_t* parser_block_statement(parser_t* _parser) {

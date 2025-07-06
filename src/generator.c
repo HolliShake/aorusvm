@@ -237,16 +237,18 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             free(_expression);
             break;
         case AstInt:
+        case AstFloat:
             generator_emit_int(
                 _generator, 
-                _expression->value.i32
+                (int) _expression->value.i32
             );
             free(_expression);
             break;
+        case AstLong:
         case AstDouble:
             generator_emit_double(
                 _generator, 
-                _expression->value.f64
+                (double) _expression->value.i64
             );
             free(_expression);
             break;
@@ -1004,6 +1006,32 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             break;
         }
+        case AstWhileStatement: {
+            ast_node_t* cond = _statement->ast0;
+            ast_node_t* body = _statement->ast1;
+            if (!cond || !body || !generator_is_expression_type(cond)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "while statement must have a condition and a body"
+                );
+            }
+            scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
+            size_t loop_start = _generator->bsize;
+            generator_expression(_generator, cond);
+            generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+            int jump_endwhile_if_false = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+            generator_statement(_generator, while_scope, body);
+            generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+            generator_emit_raw_int(_generator, loop_start - _generator->bsize);
+            // Jump to the end of the while loop
+            generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
+            scope_free(while_scope);
+            free(_statement);
+            break;
+        }
         case AstReturnStatement: {
             if (!scope_is_function(_scope)) {
                 __THROW_ERROR(
@@ -1190,9 +1218,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             for (ast_node_t** stmt = statements; *stmt; stmt++) {
                 generator_statement(_generator, block_scope, *stmt);
             }
-            // Emit return and finalize
+            // Emit complete and finalize
             generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-            generator_emit_byte(_generator, OPCODE_RETURN);
+            generator_emit_byte(_generator, OPCODE_COMPLETE_BLOCK);
             generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
             // Cleanup
             scope_free(block_scope);

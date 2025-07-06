@@ -3,6 +3,12 @@
 #ifndef VM_H
 #define VM_H
 
+typedef enum vm_block_signal_t {
+    VmBlockSignalReturned,
+    VmBlockSignalCompleted,
+    VmBlockSignalPending,
+} vm_block_signal_t;
+
 typedef struct vm_struct {
     // evaluation stack
     object_t **evaluation_stack;

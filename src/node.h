@@ -35,11 +35,12 @@ typedef enum ast_node_type_struct {
     AstBinaryXor,
     AstLogicalAnd,
     AstLogicalOr,
-    // Statements
+    // Statements and declarations
     AstVarStatement,
     AstConstStatement,
     AstLocalStatement,
     AstIfStatement,
+    AstWhileStatement,
     AstReturnStatement,
     AstExpressionStatement,
     AstBlockStatement,

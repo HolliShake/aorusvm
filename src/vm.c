@@ -12,7 +12,10 @@
 #define GC_ALLOCATION_THRESHOLD 10000
 
 #define PUSH(obj) { \
-    ASSERTNULL(instance->evaluation_stack, "Evaluation stack is full"); \
+    ASSERTNULL(instance->evaluation_stack, "Evaluation stack is not initialized"); \
+    if (instance->sp >= EVALUATION_STACK_SIZE) { \
+        PD("Stackoverflow"); \
+    } \
     instance->allocation_counter++; \
     instance->evaluation_stack[instance->sp++] = obj; \
     obj->next = instance->root; \
@@ -66,9 +69,16 @@
     printf("\n"); \
 }
 
+#define DUMP_STACK() { \
+    for (size_t i = 0; i < instance->sp; i++) { \
+        printf("[%02zu]: %s\n", i, object_to_string(instance->evaluation_stack[i])); \
+    } \
+    printf("\n"); \
+}
+
 vm_t *instance = NULL;
 
-INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code);
+INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code);
 
 INTERNAL
 int get_int(uint8_t *bytecode, size_t ip) {
@@ -561,18 +571,21 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  * @param _env The environment.
  * @param _closure The closure.
  */
-INTERNAL void do_block(env_t* _env, object_t* _closure) {
+INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
     code_t *code = (code_t *) _closure->value.opaque;
     env_t* block_env = env_new(_env);
-    vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    *signal = vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    if (*signal == VmBlockSignalCompleted) {
+        POPP(); // pop block return value
+    }
     env_free(block_env);
 }
 
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     code_t *code = (code_t *) _function->value.opaque;
     if (code->param_count != _argc) {
-        PD("expected %d arguments, got %d", code->param_count, _argc);
+        PD("expected %ld arguments, got %d", code->param_count, _argc);
     }
     env_t* func_env = env_new(_parent_env);
     vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
@@ -584,7 +597,7 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
     function(_argc);
 }
 
-INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
+INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
     
     // Get bytecode size
@@ -828,7 +841,10 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 break;
             }
             case OPCODE_RETURN: {
-                return;
+                return VmBlockSignalReturned;
+            }
+            case OPCODE_COMPLETE_BLOCK: {
+                return VmBlockSignalCompleted;
             }
             case OPCODE_MAKE_FUNCTION: 
             case OPCODE_MAKE_ASYNC_FUNCTION: {
@@ -849,9 +865,14 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 uint8_t* function_bytecode = malloc(function_size);
                 memcpy(function_bytecode, bytecode + ip, function_size);
                 object_t* closure = object_new_function(false, 0, function_bytecode, function_size);
-                do_block(_env, closure);
+                vm_block_signal_t signal = VmBlockSignalPending;
+                do_block(_env, closure, &signal);
                 FORWARD(function_size);
-                break;
+                if (signal == VmBlockSignalCompleted) {
+                    break;
+                } else {
+                    return VmBlockSignalReturned;
+                }
             }
             default: {
                 DUMP_BYTECODE(bytecode, bytecode_size);
@@ -859,6 +880,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             }
         }
     }
+    return VmBlockSignalReturned;
 }
 
 // -----------------------------
@@ -931,5 +953,12 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     };
 
     vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, &code);
+
+    // Evaluation stack must contain 1 object
+    if (instance->sp != 1) {
+        DUMP_STACK();
+        PD("evaluation stack must contain 1 object, got %zu", instance->sp);
+    }
+    POPP();
     printf("VM executed\n");
 }

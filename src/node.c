@@ -230,6 +230,13 @@ DLLEXPORT ast_node_t* ast_if_statement_node(position_t* _position, ast_node_t* _
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_while_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* _body) {
+    ast_node_t* node = ast_node_new(AstWhileStatement, _position);
+    node->ast0 = _cond;
+    node->ast1 = _body;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_return_statement_node(position_t* _position, ast_node_t* _expr) {
     ast_node_t* node = ast_node_new(AstReturnStatement, _position);
     node->ast0 = _expr;

@@ -53,7 +53,7 @@ void custom_name_resolver(env_t* _env, char* _name) {
 }
 
 int main(int argc, char** argv) {
-    const char* fpath = "./example.lang";
+    char* fpath = "./example.lang";
     char* content = file_read(fpath);
     parser_t* parser = parser_new(fpath, content);
     ast_node_t* node = parser_parse(parser);

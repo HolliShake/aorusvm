@@ -17,15 +17,16 @@ func add(a, b) {
 }
 
 func fact(n) {
-    if (n <= 1) 
+    if (n <= 1) {
         return 1;
-    local x = 100;
+    }
     return n * fact(n - 1);
 }
 
 add(69, 420);
 
 var f = fact(5);
+
 println(f);
 
 if (3 < 2) {
@@ -34,6 +35,16 @@ if (3 < 2) {
     2 + 7;
 }
 
-var msg = scan(1,2,3);
-println(1, 2, 3, msg, z);
+println(1, 2, 3, "Hello World!", z);
 
+func pp(callback) {
+    {
+        {
+            callback(1,2,3);
+        }
+        println("Nah");
+    }
+    println("Continue!");
+}
+
+pp(println);
