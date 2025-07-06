@@ -26,7 +26,7 @@ func fact(n) {
 add(69, 420);
 
 var f = fact(5);
-print(f);
+println(f);
 
 if (3 < 2) {
     1 + 1;
@@ -34,4 +34,6 @@ if (3 < 2) {
     2 + 7;
 }
 
-print(1, 2, 3);
+var msg = scan(1,2,3);
+println(1, 2, 3, msg, z);
+

@@ -4,9 +4,20 @@
 #include "filereader.h"
 #include "parser.h"
 
-
 // The built-in print function.
 void print_function(size_t _arg_count) {
+    for (size_t i = 0; i < _arg_count; i++) {
+        object_t* top = vm_pop();
+        printf("%s", object_to_string(top));
+        if (i < _arg_count - 1) {
+            printf(" ");
+        }
+    }
+    vm_load_null();
+}
+
+// he built-in println function.
+void println_function(size_t _arg_count) {
     for (size_t i = 0; i < _arg_count; i++) {
         object_t* top = vm_pop();
         printf("%s", object_to_string(top));
@@ -18,9 +29,23 @@ void print_function(size_t _arg_count) {
     vm_load_null();
 }
 
+// The built-in scan function.
+void scan_function(size_t _arg_count) {
+    for (size_t i = 0; i < _arg_count; i++); // ignore the arguments
+    char* input = malloc(1024);
+    printf(">> ");
+    scanf("%[^\n]", input);
+    vm_push(object_new_string(input));
+    free(input);
+}
+
 void custom_name_resolver(env_t* _env, char* _name) {
     if (strcmp(_name, "print") == 0) {
        vm_push(object_new_native_function(1, (vm_native_function) print_function));
+    } else if (strcmp(_name, "println") == 0) {
+        vm_push(object_new_native_function(1, (vm_native_function) println_function));
+    } else if (strcmp(_name, "scan") == 0) {
+        vm_push(object_new_native_function(0, (vm_native_function) scan_function));
     } else {
         // Default name resolver (important!).
         vm_name_resolver(_env, _name);
