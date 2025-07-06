@@ -75,10 +75,15 @@ var arr2 = [...arr, ...arr, 6, 7, 8];
 println(arr);
 println(">>", arr2);
 
+var obj1 = {
+    "Two": 2, 
+    "Three": 3
+};
+
 var obj = {
     "Hello": "World",
     "One": 1,
-    ...({ "Two": 2 })
+    ...(obj1)
 };
 
-println(obj);
+println(obj, obj1);

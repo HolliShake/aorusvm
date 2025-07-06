@@ -389,6 +389,22 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(_expression);
             break;
         }
+        case AstObjectProperty: {
+            if (!scope_is_object(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "object property can only be used in an object"
+                );
+            }
+            // Or ignore it!!!
+            generator_expression(_generator, _scope, _expression->ast1); // value
+            generator_expression(_generator, _scope, _expression->ast0); // key
+            generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
+            free(_expression);
+            break;
+        }
         case AstObject: {
             scope_t* object_scope = scope_new(_scope, ScopeTypeObject);
             ast_node_list_t properties = _expression->array0;
@@ -518,6 +534,8 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             // Or ignore it!!!
             generator_expression(_generator, _scope, _expression->ast0);
+            generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
+            free(_expression);
             break;
         }
         case AstBinaryMul: {

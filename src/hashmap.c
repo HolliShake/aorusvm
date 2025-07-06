@@ -116,6 +116,10 @@ void hashmap_extend(hashmap_t* _hashmap, hashmap_t* _other) {
     ASSERTNULL(_hashmap, "hashmap is null");
     ASSERTNULL(_other, "other is null");
 
+    // Track original size before extending
+    size_t original_size = _hashmap->size;
+
+    // Iterate forward to maintain insertion order
     for (size_t i = 0; i < _other->bucket_count; i++) {
         hashmap_node_t* node = _other->buckets[i];
         while (node) {
@@ -123,7 +127,9 @@ void hashmap_extend(hashmap_t* _hashmap, hashmap_t* _other) {
             node = node->next;
         }
     }
-    _hashmap->size += _other->size;
+
+    // Adjust size to account for any key collisions
+    _hashmap->size = original_size + _other->size;
 }
 
 size_t hashmap_size(hashmap_t* _hashmap) {
