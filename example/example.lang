@@ -70,7 +70,14 @@ while (jj < 5000) {
 }
 
 var arr = [...[1, 2, 3, 4, 5]];
-var arr2 = [...arr, ...arr, 6,7,8];
+var arr2 = [...arr, ...arr, 6, 7, 8];
 
 println(arr);
 println(">>", arr2);
+
+var obj = {
+    "Hello": "World",
+    "One": 1
+};
+
+println(obj);

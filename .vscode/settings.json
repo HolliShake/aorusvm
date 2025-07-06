@@ -29,6 +29,7 @@
         "string.h": "c",
         "tokenizer.h": "c",
         "file.h": "c",
-        "env.h": "c"
+        "env.h": "c",
+        "cstdint": "c"
     }
 }

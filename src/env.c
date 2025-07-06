@@ -19,7 +19,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
     return env;
 }
 
-static void env_rehash(env_t* _env) {
+INTERNAL void env_rehash(env_t* _env) {
     size_t new_bucket_count = _env->bucket_count * 2;
     env_node_t** new_buckets = calloc(new_bucket_count, sizeof(env_node_t*));
     ASSERTNULL(new_buckets, ERROR_ALLOCATING_BUCKETS);

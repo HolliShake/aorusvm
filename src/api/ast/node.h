@@ -87,6 +87,25 @@ DLLEXPORT ast_node_t* ast_null_node(position_t* _position);
 DLLEXPORT ast_node_t* ast_array_node(position_t* _position, ast_node_list_t _elements);
 
 /*
+ * Object property node.
+
+ * @param _position The position of the node.
+ * @param _key The key of the property.
+ * @param _value The value of the property.
+ * @return The object property node.
+ */
+DLLEXPORT ast_node_t* ast_object_property_node(position_t* _position, ast_node_t* _key, ast_node_t* _value);
+
+/*
+ * Object node.
+ *
+ * @param _position The position of the node.
+ * @param _properties The properties of the object.
+ * @return The object node.
+ */
+DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _properties);
+
+/*
  * Call node.
  *
  * @param _position The position of the node.

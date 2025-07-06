@@ -127,10 +127,70 @@ ast_node_t* parser_array(parser_t* _parser) {
     return ast_array_node(position_merge(start, ended), elements);
 }
 
+ast_node_t* parser_object_property(parser_t* _parser) {
+    ast_node_t* key = parser_expression(_parser);
+    if (key == NULL) {
+        return NULL;
+    }
+    if (!CHECKV(":")) {
+        return key;
+    }
+    ACCEPTV(":");
+    ast_node_t* value = parser_expression(_parser);
+    if (value == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "object property value expected"
+        );
+    }
+    return ast_object_property_node(position_merge(ast_position(key), ast_position(value)), key, value);
+}
+
+ast_node_t* parser_object(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    size_t index = 0;
+    ast_node_list_t properties = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    properties[0] = NULL;
+    ACCEPTV("{");
+    ast_node_t* property = parser_object_property(_parser);
+    if (property != NULL) {
+        properties[index++] = property;
+        properties = (ast_node_list_t) realloc(properties, (sizeof(ast_node_t*) * (index + 1)));
+        properties[index] = NULL;
+
+        while (CHECKV(",")) {
+            ACCEPTV(",");
+            property = parser_object_property(_parser);
+            if (property == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "object property expected"
+                );
+            }
+            properties[index++] = property;
+            properties = (ast_node_list_t) realloc(properties, (sizeof(ast_node_t*) * (index + 1)));
+            properties[index] = NULL;
+        }
+    }
+    ended = _parser->current->position;
+    ACCEPTV("}");
+    return ast_object_node(position_merge(start, ended), properties);
+}
 
 ast_node_t* parser_group(parser_t* _parser) {
     if (CHECKV("[")) {
         return parser_array(_parser);
+    } else if (CHECKV("{")) {
+        return parser_object(_parser);
+    }  else if (CHECKV("(")) {
+        ACCEPTV("(");
+        ast_node_t* node = parser_mandatory_expression(_parser);
+        ACCEPTV(")");
+        return node;
     } else {
         return parser_terminal(_parser);
     }

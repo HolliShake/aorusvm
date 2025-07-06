@@ -727,13 +727,37 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             case OPCODE_EXTEND_ARRAY: {
                 object_t* array_src = POPP();
                 object_t* array_dst = PEEK();
+                if (!OBJECT_TYPE_ARRAY(array_src)) {
+                    PD("expected array, got %s", object_to_string(array_src));
+                }
+                if (!OBJECT_TYPE_ARRAY(array_dst)) {
+                    PD("expected array, got %s", object_to_string(array_dst));
+                }
                 array_extend((array_t*) array_dst->value.opaque, (array_t*) array_src->value.opaque);
                 break;
             }
             case OPCODE_APPEND_ARRAY: {
                 object_t* obj = POPP();
                 object_t* arr = PEEK();
+                if (!OBJECT_TYPE_ARRAY(arr)) {
+                    PD("expected array, got %s", object_to_string(arr));
+                }
                 array_push((array_t*) arr->value.opaque, obj);
+                break;
+            }
+            case OPCODE_LOAD_OBJECT: {
+                int length = get_int(bytecode, ip);
+                object_t* obj = object_new_object();
+                for (int i = 0; i < length; i++) {
+                    object_t* key = POPP();
+                    if (OBJECT_TYPE_COLLECTION(key)) {
+                        PD("invalid key type %s", object_to_string(key));
+                    }
+                    object_t* val = POPP();
+                    hashmap_put((hashmap_t*) obj->value.opaque, key, val);
+                }
+                PUSH(obj);
+                FORWARD(4);
                 break;
             }
             case OPCODE_CALL: {

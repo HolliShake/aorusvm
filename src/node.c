@@ -74,6 +74,19 @@ DLLEXPORT ast_node_t* ast_array_node(position_t* _position, ast_node_list_t _ele
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_object_property_node(position_t* _position, ast_node_t* _key, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstObjectProperty, _position);
+    node->ast0 = _key;
+    node->ast1 = _value;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _properties) {
+    ast_node_t* node = ast_node_new(AstObject, _position);
+    node->array0 = _properties;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments) {
     ast_node_t* node = ast_node_new(AstCall, _position);
     node->ast0 = _function;

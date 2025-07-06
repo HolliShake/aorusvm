@@ -45,6 +45,12 @@
     #define DLLEXPORT __attribute__((visibility("default")))
 #endif
 
+#if defined(_WIN64) || defined(__x86_64__) || defined(__ppc64__) || defined(__aarch64__)
+    #define IS_64BIT 1
+#else
+    #define IS_64BIT 0
+#endif
+
 #define INTERNAL static
 
 // Print and Die

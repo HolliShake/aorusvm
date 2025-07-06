@@ -2,6 +2,7 @@
 #include "api/core/vm.h"
 #include "array.h"
 #include "code.h"
+#include "hashmap.h"
 #include "type.h"
 
 #ifndef OBJECT_H

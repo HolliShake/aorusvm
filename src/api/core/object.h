@@ -72,6 +72,12 @@ DLLEXPORT object_t* object_new_string(char* _value);
 DLLEXPORT object_t* object_new_array(size_t _length);
 
 /*
+ * Create a new object object.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_object();
+
+/*
  * Create a new function object.
  * @param _param_count The number of parameters.
  * @param _bytecode The bytecode.
@@ -108,5 +114,22 @@ DLLEXPORT bool object_is_truthy(object_t* _obj);
  * @return True if the object is a number, false otherwise.
  */
 DLLEXPORT bool object_is_number(object_t* _obj);
+
+/*
+ * Check if two objects are equal.
+ *
+ * @param _obj1 The first object.
+ * @param _obj2 The second object.
+ * @return True if the objects are equal, false otherwise.
+ */
+DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2);
+
+/*
+ * Get the hash of the object.
+ *
+ * @param _obj The object.
+ * @return The hash of the object.
+ */
+DLLEXPORT uint64_t object_hash(object_t* _obj);
 
 #endif

@@ -135,6 +135,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstString:
         case AstNull:
         case AstArray:
+        case AstObject:
         case AstCall:
         case AstUnaryPlus:
         case AstUnarySpread:
@@ -383,6 +384,46 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 }
             }
             scope_free(array_scope);
+            free(elements);
+            free(_expression);
+            break;
+        }
+        case AstObject: {
+            scope_t* object_scope = scope_new(_scope, ScopeTypeObject);
+            ast_node_list_t properties = _expression->array0;
+            // Count elements first
+            bool has_spread = false;
+            size_t count = 0;
+            for (size_t i = 0; properties[i] != NULL; i++) {
+                if (properties[i]->type == AstUnarySpread) {
+                    has_spread = true;
+                }
+                count++;
+            }
+            // Generate elements right to left for reversed array
+            size_t i;
+            if (!has_spread) {
+                for (i = count; i > 0; i--) {
+                    ast_node_t* property = properties[i-1];
+                    if (property->type != AstObjectProperty) {
+                        __THROW_ERROR(
+                            _generator->fpath,
+                            _generator->fdata,
+                            property->position,
+                            "object property expected"
+                        );
+                    }
+                    generator_expression(_generator, object_scope, property->ast1); // value
+                    generator_expression(_generator, object_scope, property->ast0); // key
+                    free(property);
+                }
+                generator_emit_byte(_generator, OPCODE_LOAD_OBJECT);
+                generator_emit_raw_int(_generator, count);
+            } else {
+
+            }
+            scope_free(object_scope);
+            free(properties);
             free(_expression);
             break;
         }
