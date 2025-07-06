@@ -32,13 +32,7 @@ typedef struct vm_struct vm_t;
  * @param _vm The VM.
  * @param _name The name.
  */
-typedef void (*vm_name_resolver_t)(vm_t*, env_t*, char*);
-
-/*
- * Native function.
- * @param _vm The VM.
- */
-typedef void (*vm_native_function)(vm_t*);
+typedef void (*vm_name_resolver_t)(env_t*, char*);
 
 /*
  * Initialize the VM.
@@ -47,18 +41,45 @@ DLLEXPORT void vm_init();
 
 /*
  * Set the variable resolver.
- * @param _vm The VM.
  * @param _resolver The resolver.
  */
-DLLEXPORT void vm_set_name_resolver(vm_t* _vm, vm_name_resolver_t _resolver);
+DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver);
 
 /*
  * Name resolver.
- * @param _vm The VM.
  * @param _env The environment.
  * @param _name The name.
  */
-DLLEXPORT void vm_name_resolver(vm_t* _vm, env_t* _env, char* _name);
+DLLEXPORT void vm_name_resolver(env_t* _env, char* _name);
+
+/*
+ * Push an object to the evaluation stack.
+ * @param _obj The object.
+ */
+DLLEXPORT void vm_push(object_t* _obj);
+
+/*
+ * Pop an object from the evaluation stack.
+ * @return The object.
+ */
+DLLEXPORT object_t* vm_pop();
+
+/*
+ * Peek at the top of the evaluation stack.
+ * @return The object.
+ */
+DLLEXPORT object_t* vm_peek();
+
+/*
+ * Load a null value into the evaluation stack.
+ */
+DLLEXPORT void vm_load_null();
+
+/*
+ * Load a boolean value into the evaluation stack.
+ * @param _value The value.
+ */
+DLLEXPORT void vm_load_bool(bool _value);
 
 /*
  * Run the main function.

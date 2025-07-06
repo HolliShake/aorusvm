@@ -24,6 +24,12 @@ typedef enum object_type_enum object_type_t;
 typedef struct object_struct object_t;
 
 /*
+ * Native function.
+ * @param _argc The number of arguments.
+ */
+typedef void (*vm_native_function)(int argc);
+
+/*
  * Create a new object.
  * @param _type The type of the object.
  * @return The new object.
@@ -66,6 +72,14 @@ DLLEXPORT object_t* object_new_string(char* _value);
  * @return The new object.
  */
 DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size);
+
+/*
+ * Create a new native function object.
+ * @param _param_count The number of parameters.
+ * @param _function The function.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_native_function(size_t _param_count, vm_native_function _function);
 
 /*
  * Convert an object to a string.

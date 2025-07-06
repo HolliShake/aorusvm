@@ -48,6 +48,12 @@ DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uin
     return obj;
 }
 
+DLLEXPORT object_t* object_new_native_function(size_t _param_count, vm_native_function _function) {
+    object_t* obj = object_new(OBJECT_TYPE_NATIVE_FUNCTION);
+    obj->value.opaque = _function;
+    return obj;
+}
+
 DLLEXPORT char* object_to_string(object_t* _obj) {
     char str[255];
     switch (_obj->type) {

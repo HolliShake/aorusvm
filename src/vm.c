@@ -579,6 +579,11 @@ INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     env_free(func_env);
 }
 
+INTERNAL void do_native_call(object_t* _function, int _argc) {
+    vm_native_function function = (vm_native_function) _function->value.opaque;
+    function(_argc);
+}
+
 INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
     
@@ -593,8 +598,8 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
     char* exec_name = 
         get_string(_code->bytecode, _header_size + strlen(file_path) + 1);
 
-    printf("file_path: '%s'\n", file_path);
-    printf("exec_name: '%s'\n", exec_name);
+    // printf("file_path: '%s'\n", file_path);
+    // printf("exec_name: '%s'\n", exec_name);
 
     // Calculate the starting IP
     size_t ip = 
@@ -616,7 +621,6 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             case OPCODE_LOAD_NAME: {
                 char* name = get_string(bytecode, ip);
                 instance->name_resolver(
-                    instance, 
                     _env, name
                 );
                 FORWARD(strlen(name) + 1);
@@ -660,10 +664,14 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
             case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();
-                if (!OBJECT_TYPE_FUNCTION(function)) {
+                if (!OBJECT_TYPE_CALLABLE(function)) {
                     PD("expected function, got %s", object_to_string(function));
                 }
-                do_call(_env, function, argc);
+                if (OBJECT_TYPE_FUNCTION(function)) {
+                    do_call(_env, function, argc);
+                } else {
+                    do_native_call(function, argc);
+                }
                 FORWARD(4);
                 break;
             }
@@ -816,7 +824,7 @@ INTERNAL void vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _
                 break;
             }
             case OPCODE_POPTOP: {
-                printf("TOP: %s\n", object_to_string(POPP()));
+                POPP();
                 break;
             }
             case OPCODE_RETURN: {
@@ -876,15 +884,35 @@ DLLEXPORT void vm_init() {
     instance->fobj = object_new_bool(false);
 }
 
-DLLEXPORT void vm_set_name_resolver(vm_t* _vm, vm_name_resolver_t _resolver) {
-    _vm->name_resolver = _resolver;
+DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
+    instance->name_resolver = _resolver;
 }
 
-DLLEXPORT void vm_name_resolver(vm_t* _vm, env_t* _env, char* _name) {
+DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
     if (!env_has(_env, _name, true)) {
         PD("variable %s not found", _name);
     }
     PUSH(env_get(_env, _name));
+}
+
+DLLEXPORT void vm_push(object_t* _obj) {
+    PUSH(_obj);
+}
+
+DLLEXPORT object_t* vm_pop() {
+    return POPP();
+}
+
+DLLEXPORT object_t* vm_peek() {
+    return PEEK();
+}
+
+DLLEXPORT void vm_load_null() {
+    PUSH(instance->null);
+}
+
+DLLEXPORT void vm_load_bool(bool _value) {
+    PUSH((_value ? instance->tobj : instance->fobj));
 }
 
 DLLEXPORT void vm_run_main(uint8_t* _bytecode) {

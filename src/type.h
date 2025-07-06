@@ -20,5 +20,7 @@ typedef enum object_type_enum {
 #define OBJECT_TYPE_STRING(object) (object->type == OBJECT_TYPE_STRING)
 #define OBJECT_TYPE_NULL(object) (object->type == OBJECT_TYPE_NULL)
 #define OBJECT_TYPE_FUNCTION(object) (object->type == OBJECT_TYPE_FUNCTION)
+#define OBJECT_TYPE_NATIVE_FUNCTION(object) (object->type == OBJECT_TYPE_NATIVE_FUNCTION)
+#define OBJECT_TYPE_CALLABLE(object) (OBJECT_TYPE_FUNCTION(object) || OBJECT_TYPE_NATIVE_FUNCTION(object))
 
 #endif

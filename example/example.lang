@@ -25,10 +25,13 @@ func fact(n) {
 
 add(69, 420);
 
-fact(5);
+var f = fact(5);
+print(f);
 
 if (3 < 2) {
     1 + 1;
 } else {
     2 + 7;
 }
+
+print(1, 2, 3);

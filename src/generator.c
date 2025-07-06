@@ -310,8 +310,11 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             }
             ast_node_list_t arguments = _expression->array0;
             int param_count = 0;
-            for (param_count = 0; arguments[param_count] != NULL; param_count++) {
-                ast_node_t* argument = arguments[param_count];
+            // Count arguments first
+            for (param_count = 0; arguments[param_count] != NULL; param_count++);
+            // Generate arguments right to left for stack
+            for (int i = param_count - 1; i >= 0; i--) {
+                ast_node_t* argument = arguments[i];
                 if (!generator_is_expression_type(argument)) {
                     __THROW_ERROR(
                         _generator->fpath, 

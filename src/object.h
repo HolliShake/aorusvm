@@ -1,4 +1,5 @@
 #include "api/core/object.h"
+#include "api/core/vm.h"
 #include "code.h"
 #include "type.h"
 
