@@ -19,6 +19,7 @@ typedef struct vm_struct {
     vm_name_resolver_t name_resolver;
     // root object
     object_t *root;
+    object_t *tail;
     // singleton null
     object_t *null;
     // singleton boolean

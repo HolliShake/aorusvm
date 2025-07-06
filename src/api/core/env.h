@@ -12,8 +12,8 @@
 #include "global.h"
 #include "object.h"
 
-#ifndef ENV_H
-#define ENV_H
+#ifndef API_CORE_ENV_H
+#define API_CORE_ENV_H
 
 /*
  * Environment.

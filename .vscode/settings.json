@@ -28,6 +28,7 @@
         "stdlib.h": "c",
         "string.h": "c",
         "tokenizer.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "env.h": "c"
     }
 }

@@ -9,17 +9,16 @@
 #include "type.h"
 #include "vm.h"
 
-#define GC_ALLOCATION_THRESHOLD 10000
+#define GC_ALLOCATION_THRESHOLD 1000
 
-#define PUSH(obj) { \
+#define PUSH(obj) vm_push(obj)
+
+#define PUSH_REF(obj) { \
     ASSERTNULL(instance->evaluation_stack, "Evaluation stack is not initialized"); \
     if (instance->sp >= EVALUATION_STACK_SIZE) { \
         PD("Stackoverflow"); \
     } \
-    instance->allocation_counter++; \
     instance->evaluation_stack[instance->sp++] = obj; \
-    obj->next = instance->root; \
-    instance->root = obj; \
 }
 
 #define JUMP(offset) { \
@@ -83,6 +82,17 @@
 vm_t *instance = NULL;
 
 INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code);
+
+INTERNAL bool vm_object_is_in_root(object_t* _obj) {
+    object_t* current = instance->root;
+    while (current != NULL) {
+        if (current == _obj) {
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
 
 INTERNAL
 int get_int(uint8_t *bytecode, size_t ip) {
@@ -396,10 +406,10 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     long rhs_value = number_coerce_to_long(_rhs);
     // Compare the long values
     if (lhs_value < rhs_value) {
-        PUSH(instance->tobj);
+        PUSH_REF(instance->tobj);
         return;
     }
-    PUSH(instance->fobj);
+    PUSH_REF(instance->fobj);
     return;
     ERROR:;
     PD("error in do_cmp_lt");
@@ -414,10 +424,10 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
     long rhs_value = number_coerce_to_long(_rhs);
     // Compare the long values
     if (lhs_value <= rhs_value) {
-        PUSH(instance->tobj);
+        PUSH_REF(instance->tobj);
         return;
     }
-    PUSH(instance->fobj);
+    PUSH_REF(instance->fobj);
     return;
     ERROR:;
     PD("error in do_cmp_lte");
@@ -432,10 +442,10 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
     long rhs_value = number_coerce_to_long(_rhs);
     // Compare the long values
     if (lhs_value > rhs_value) {
-        PUSH(instance->tobj);
+        PUSH_REF(instance->tobj);
         return;
     }
-    PUSH(instance->fobj);
+    PUSH_REF(instance->fobj);
     return;
     ERROR:;
     PD("error in do_cmp_gt");
@@ -450,10 +460,10 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
     long rhs_value = number_coerce_to_long(_rhs);
     // Compare the long values
     if (lhs_value >= rhs_value) {
-        PUSH(instance->tobj);
+        PUSH_REF(instance->tobj);
         return;
     }
-    PUSH(instance->fobj);
+    PUSH_REF(instance->fobj);
     return;
     ERROR:;
     PD("error in do_cmp_gte");
@@ -464,10 +474,10 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
         long lhs_value = number_coerce_to_long(_lhs);
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value == rhs_value) {
-            PUSH(instance->tobj);
+            PUSH_REF(instance->tobj);
             return;
         }
-        PUSH(instance->fobj);
+        PUSH_REF(instance->fobj);
         return;
     }
 
@@ -475,19 +485,19 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
         char* lhs_str = (char*)_lhs->value.opaque;
         char* rhs_str = (char*)_rhs->value.opaque;
         if (strcmp(lhs_str, rhs_str) == 0) {
-            PUSH(instance->tobj);
+            PUSH_REF(instance->tobj);
             return;
         }
-        PUSH(instance->fobj);
+        PUSH_REF(instance->fobj);
         return;
     }
 
     if (OBJECT_TYPE_NULL(_lhs) && OBJECT_TYPE_NULL(_rhs)) {
-        PUSH(instance->tobj);
+        PUSH_REF(instance->tobj);
         return;
     }
 
-    PUSH(instance->fobj);
+    PUSH_REF(instance->fobj);
     return;
     ERROR:;
     PD("error in do_cmp_eq");
@@ -498,10 +508,10 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         long lhs_value = number_coerce_to_long(_lhs);
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value != rhs_value) {
-            PUSH(instance->tobj);
+            PUSH_REF(instance->tobj);
             return;
         }
-        PUSH(instance->fobj);
+        PUSH_REF(instance->fobj);
         return;
     }
 
@@ -509,19 +519,19 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         char* lhs_str = (char*)_lhs->value.opaque;
         char* rhs_str = (char*)_rhs->value.opaque;
         if (strcmp(lhs_str, rhs_str) != 0) {
-            PUSH(instance->tobj);
+            PUSH_REF(instance->tobj);
             return;
         }
-        PUSH(instance->fobj);
+        PUSH_REF(instance->fobj);
         return;
     }
 
     if (OBJECT_TYPE_NULL(_lhs) || OBJECT_TYPE_NULL(_rhs)) {
-        PUSH(instance->fobj);
+        PUSH_REF(instance->fobj);
         return;
     }
     
-    PUSH(instance->tobj);
+    PUSH_REF(instance->tobj);
     return;
     ERROR:;
     PD("error in do_cmp_ne");
@@ -655,7 +665,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
     while (ip < bytecode_size) {
         opcode_t opcode = bytecode[ip++];
 
-        if (instance->allocation_counter >= GC_ALLOCATION_THRESHOLD) gc_collect(instance);
+        if (instance->allocation_counter >= GC_ALLOCATION_THRESHOLD) {
+            gc_collect(instance, _env);
+        }
 
         // Check if opcode is valid
         switch (opcode) {
@@ -683,9 +695,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             }
             case OPCODE_LOAD_BOOL: {
                 if (bytecode[ip] == 1) {
-                    PUSH(instance->tobj);
+                    PUSH_REF(instance->tobj);
                 } else {
-                    PUSH(instance->fobj);
+                    PUSH_REF(instance->fobj);
                 }
                 FORWARD(1);
                 break;
@@ -699,7 +711,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 break;
             }
             case OPCODE_LOAD_NULL: {
-                PUSH(instance->null);
+                PUSH_REF(instance->null);
                 break;
             }
             case OPCODE_CALL: {
@@ -943,6 +955,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
 // -----------------------------
 
 DLLEXPORT void vm_init() {
+    if (instance != NULL) {
+        PD("VM already initialized");
+    }
     instance = (vm_t *) malloc(sizeof(vm_t));
     ASSERTNULL(instance, ERROR_ALLOCATING_VM);
     // evaluation stack
@@ -956,6 +971,7 @@ DLLEXPORT void vm_init() {
     instance->name_resolver = vm_name_resolver;
     // root object
     instance->root = object_new(OBJECT_TYPE_OBJECT);
+    instance->tail = instance->root;
     // singleton null
     instance->null = object_new(OBJECT_TYPE_NULL);
     // singleton boolean
@@ -971,11 +987,21 @@ DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
     if (!env_has(_env, _name, true)) {
         PD("variable %s not found", _name);
     }
-    PUSH(env_get(_env, _name));
+    PUSH_REF(env_get(_env, _name));
 }
 
 DLLEXPORT void vm_push(object_t* _obj) {
-    PUSH(_obj);
+    ASSERTNULL(instance->evaluation_stack, "Evaluation stack is not initialized");
+    if (instance->sp >= EVALUATION_STACK_SIZE) {
+        PD("Stackoverflow");
+    } 
+    if (_obj->next != NULL) {
+        PD("Object is already in the root (%s)", object_to_string(_obj));
+    }
+    instance->allocation_counter++;
+    instance->evaluation_stack[instance->sp++] = _obj;
+    _obj->next = instance->root;
+    instance->root = _obj;
 }
 
 DLLEXPORT object_t* vm_pop() {
@@ -987,11 +1013,11 @@ DLLEXPORT object_t* vm_peek() {
 }
 
 DLLEXPORT void vm_load_null() {
-    PUSH(instance->null);
+    PUSH_REF(instance->null);
 }
 
 DLLEXPORT void vm_load_bool(bool _value) {
-    PUSH((_value ? instance->tobj : instance->fobj));
+    PUSH_REF((_value ? instance->tobj : instance->fobj));
 }
 
 DLLEXPORT void vm_run_main(uint8_t* _bytecode) {

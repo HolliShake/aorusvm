@@ -1,25 +1,12 @@
 #include "api/core/env.h"
 #include "api/core/global.h"
 #include "api/core/object.h"
+#include "env.h"
 #include "error.h"
 #include "internal.h"
 
 #define ENV_BUCKET_COUNT 16
 #define LOAD_FACTOR_THRESHOLD 0.75
-
-typedef struct env_node_struct env_node_t;
-typedef struct env_node_struct {
-    char* name;
-    object_t* value;
-    env_node_t* next;
-} env_node_t;
-
-struct env_struct {
-    env_t* parent;
-    env_node_t** buckets;
-    size_t bucket_count;
-    size_t size;
-};
 
 DLLEXPORT env_t* env_new(env_t* _parent) {
     env_t* env = malloc(sizeof(env_t));
@@ -123,4 +110,22 @@ DLLEXPORT void env_free(env_t* _env) {
             node = next;
         }
     }
+}
+
+object_t** env_get_object_list(env_t* _env) {
+    size_t index = 0;
+    object_t** list = malloc(sizeof(object_t*));
+    list[0] = NULL;
+
+    for (size_t i = 0; i < _env->bucket_count; i++) {
+        env_node_t* node = _env->buckets[i];
+        while (node) {
+            list[index++] = node->value;
+            list = (object_t**) realloc(list, sizeof(object_t*) * (index + 1));
+            list[index] = NULL;
+            node = node->next;
+        }
+    }
+
+    return list;
 }
