@@ -76,7 +76,7 @@ println(arr);
 println(">>", arr2);
 
 var obj1 = {
-    "Two": 2, 
+    "Two"  : 2, 
     "Three": 3
 };
 
