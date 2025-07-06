@@ -246,10 +246,26 @@ INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expres
     }
 }
 
-INTERNAL void generator_assignment1(generator_t* _generator, ast_node_t* _expression) {
+INTERNAL void generator_assignment1(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
-
+            if (!scope_has(_scope, _expression->str0, true)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "variable %s not found", _expression->str0
+                );
+            }
+            scope_value_t symbol = scope_get(_scope, _expression->str0, true);
+            if (symbol.is_const) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "constant variable %s cannot be re-assigned", _expression->str0
+                );
+            }
             generator_emit_byte(_generator, OPCODE_SET_NAME);
             generator_emit_raw_string(
                 _generator, 
@@ -376,7 +392,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
         case AstUnaryPlus: {
             generator_assignment0(_generator, _expression->ast0);
             generator_emit_byte(_generator, OPCODE_INCREMENT);
-            generator_assignment1(_generator, _expression->ast0);
+            generator_assignment1(_generator, _scope, _expression->ast0);
             free(_expression);
             break;
         }
