@@ -37,7 +37,7 @@ void parser_accept(parser_t* _parser, bool _is_type, token_type_t _type, char* _
         _parser->fpath,
         _parser->fdata,
         _parser->current->position,
-        "unexpected token: %s", _parser->current->value
+        "unexpected token: '%s'", _parser->current->value
     );
 }
 
@@ -72,6 +72,20 @@ ast_node_t* parser_terminal(parser_t* _parser) {
             _parser->current->value
         );
         ACCEPTT(TTSTR);
+        return node;
+    } else if (CHECKT(TTKEY) && CHECKV(KEY_TRUE)) {
+        ast_node_t* node = ast_boolean_node(
+            _parser->current->position,
+            true
+        );
+        ACCEPTT(TTKEY);
+        return node;
+    } else if (CHECKT(TTKEY) && CHECKV(KEY_FALSE)) {
+        ast_node_t* node = ast_boolean_node(
+            _parser->current->position,
+            false
+        );
+        ACCEPTT(TTKEY);
         return node;
     } else {
         return NULL;
@@ -124,15 +138,34 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_unary(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    if (CHECKV("++")) {
+        ACCEPTV("++");
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for ++"
+            );
+        }
+        ended = ast_position(node);
+        return ast_unary_plus_node(position_merge(start, ended), node);
+    }
+    return parser_member_or_call(_parser);
+}
+
 ast_node_t* parser_multiplicative(parser_t* _parser) {
-    ast_node_t* node = parser_member_or_call(_parser);
+    ast_node_t* node = parser_unary(_parser);
     if (node == NULL) {
         return NULL;
     }
     while (CHECKV("*") || CHECKV("/") || CHECKV("%")) {
         char* op = _parser->current->value;
         ACCEPTV(op);
-        ast_node_t* right = parser_member_or_call(_parser);
+        ast_node_t* right = parser_unary(_parser);
         if (right == NULL) {
             __THROW_ERROR(
                 _parser->fpath,

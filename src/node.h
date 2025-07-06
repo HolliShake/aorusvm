@@ -16,6 +16,8 @@ typedef enum ast_node_type_struct {
     AstString,
     AstNull,
     AstCall,
+    // Unary operators
+    AstUnaryPlus,
     // Binary operators
     AstBinaryMul,
     AstBinaryDiv,

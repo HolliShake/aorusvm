@@ -88,6 +88,15 @@ DLLEXPORT ast_node_t* ast_null_node(position_t* _position);
 DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments);
 
 /*
+ * Unary plus node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary plus node.
+ */
+DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _value);
+
+/*
  * Binary mul node.
  *
  * @param _position The position of the node.

@@ -51,6 +51,13 @@ DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value);
 DLLEXPORT object_t* env_get(env_t* _env, char* _name);
 
 /*
+ * Get the parent environment.
+ * @param _env The environment.
+ * @return The parent environment.
+ */
+DLLEXPORT env_t* env_parent(env_t* _env);
+
+/*
  * Free the environment.
  * @param _env The environment.
  */

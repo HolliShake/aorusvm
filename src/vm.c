@@ -22,6 +22,10 @@
     instance->root = obj; \
 }
 
+#define JUMP(offset) { \
+    ip = offset; \
+}
+
 #define FORWARD(size) { \
     ip += size; \
 }
@@ -134,6 +138,30 @@ char* get_string(uint8_t *_bytecode, size_t _ip) {
         _ip++;
     }
     return str;
+}
+
+INTERNAL
+void do_increment(object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        long result = (long)_obj->value.i32 + 1;
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            PUSH(object_new_int((int)result));
+            return;
+        }
+        PUSH(object_new_double((double)result));
+        return;
+    }
+
+    double result = number_coerce_to_double(_obj);
+    result += 1;
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    PD("error in do_increment");
 }
 
 INTERNAL
@@ -694,6 +722,27 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 FORWARD(strlen(name) + 1);
                 break;
             }
+            case OPCODE_SET_NAME: {
+                char* name = get_string(bytecode, ip);
+                if (!env_has(_env, name, true)) {
+                    PD("variable %s not found", name);
+                }
+                env_t* env = _env;
+                while (env != NULL) {
+                    if (env_has(env, name, false)) {
+                        env_put(env, name, POPP());
+                        break;
+                    }
+                    env = env_parent(env);
+                }
+                FORWARD(strlen(name) + 1);
+                break;
+            }
+            case OPCODE_INCREMENT: {
+                object_t *obj = POPP();
+                do_increment(obj);
+                break;
+            }
             case OPCODE_MUL: {
                 object_t *obj2 = POPP();
                 object_t *obj1 = POPP();
@@ -832,6 +881,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 }
                 break;
             }
+            case OPCODE_ABSOLUTE_JUMP: {
+                JUMP(get_int(bytecode, ip));
+                break;
+            }
             case OPCODE_JUMP_FORWARD: {
                 FORWARD(get_int(bytecode, ip));
                 break;
@@ -873,6 +926,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 } else {
                     return VmBlockSignalReturned;
                 }
+            }
+            case OPCODE_DUPTOP: {
+                PUSH(PEEK());
+                break;
             }
             default: {
                 DUMP_BYTECODE(bytecode, bytecode_size);

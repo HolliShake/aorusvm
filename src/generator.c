@@ -135,6 +135,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstString:
         case AstNull:
         case AstCall:
+        case AstUnaryPlus:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
@@ -224,6 +225,44 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
                 result.type \
             ); \
     } \
+}
+
+INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expression) {
+    switch (_expression->type) {
+        case AstName:
+            generator_emit_byte(_generator, OPCODE_LOAD_NAME);
+            generator_emit_raw_string(
+                _generator, 
+                _expression->str0
+            );
+            break;
+        default:
+            __THROW_ERROR(
+                _generator->fpath, 
+                _generator->fdata, 
+                _expression->position, 
+                "assignment expression must be a name, but received %d", _expression->type
+            );
+    }
+}
+
+INTERNAL void generator_assignment1(generator_t* _generator, ast_node_t* _expression) {
+    switch (_expression->type) {
+        case AstName:
+            generator_emit_byte(_generator, OPCODE_SET_NAME);
+            generator_emit_raw_string(
+                _generator, 
+                _expression->str0
+            );
+            break;
+        default:
+            __THROW_ERROR(
+                _generator->fpath, 
+                _generator->fdata, 
+                _expression->position, 
+                "assignment expression must be a name, but received %d", _expression->type
+            );
+    }
 }
 
 INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _expression) {
@@ -330,6 +369,14 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
             generator_expression(_generator, _expression->ast0);
             generator_emit_byte(_generator, OPCODE_CALL);
             generator_emit_raw_int(_generator, param_count);
+            free(_expression);
+            break;
+        }
+        case AstUnaryPlus: {
+            generator_assignment0(_generator, _expression->ast0);
+            generator_emit_byte(_generator, OPCODE_INCREMENT);
+            generator_emit_byte(_generator, OPCODE_DUPTOP);
+            generator_assignment1(_generator, _expression->ast0);
             free(_expression);
             break;
         }
@@ -1019,13 +1066,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
             size_t loop_start = _generator->bsize;
+            // Condition
             generator_expression(_generator, cond);
+            // Jump if false
             generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
             int jump_endwhile_if_false = _generator->bsize;
             generator_allocate_nbytes(_generator, 4);
+
+            // Body
             generator_statement(_generator, while_scope, body);
-            generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
-            generator_emit_raw_int(_generator, loop_start - _generator->bsize);
+
+            // Jump to the start of the while loop
+            generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+            generator_emit_raw_int(_generator, loop_start);
+
             // Jump to the end of the while loop
             generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
             scope_free(while_scope);

@@ -47,4 +47,10 @@ func pp(callback) {
     println("End!");
 }
 
+var b = 0;
+
+while (b < 5) {
+    println("Hello!", ++b);
+}
+
 pp(println);

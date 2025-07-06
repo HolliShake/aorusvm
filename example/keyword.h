@@ -15,6 +15,8 @@
 #define KEY_WHILE "while"
 #define KEY_BREAK "break"
 #define KEY_CONTINUE "continue"
+#define KEY_TRUE "true"
+#define KEY_FALSE "false"
 
 extern const char* KEYWORDS[];
 

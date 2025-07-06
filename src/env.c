@@ -21,7 +21,7 @@ struct env_struct {
     size_t size;
 };
 
-env_t* env_new(env_t* _parent) {
+DLLEXPORT env_t* env_new(env_t* _parent) {
     env_t* env = malloc(sizeof(env_t));
     ASSERTNULL(env, ERROR_ALLOCATING_ENV);
     env->parent = _parent;
@@ -53,7 +53,7 @@ static void env_rehash(env_t* _env) {
     _env->bucket_count = new_bucket_count;
 }
 
-bool env_has(env_t* _env, char* _name, bool _recurse) {
+DLLEXPORT bool env_has(env_t* _env, char* _name, bool _recurse) {
     size_t hash = hash64(_name);
     do {
         env_node_t* node = _env->buckets[hash % _env->bucket_count];
@@ -66,7 +66,7 @@ bool env_has(env_t* _env, char* _name, bool _recurse) {
     return false;
 }
 
-void env_put(env_t* _env, char* _name, object_t* _value) {
+DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
     size_t hash = hash64(_name);
     size_t index = hash % _env->bucket_count;
     env_node_t* node = _env->buckets[index];
@@ -94,7 +94,7 @@ void env_put(env_t* _env, char* _name, object_t* _value) {
     }
 }
 
-object_t* env_get(env_t* _env, char* _name) {
+DLLEXPORT object_t* env_get(env_t* _env, char* _name) {
     size_t hash = hash64(_name);
     while (_env) {
         env_node_t* node = _env->buckets[hash % _env->bucket_count];
@@ -109,7 +109,11 @@ object_t* env_get(env_t* _env, char* _name) {
     return NULL;
 }
 
-void env_free(env_t* _env) {
+DLLEXPORT env_t* env_parent(env_t* _env) {
+    return _env->parent;
+}
+
+DLLEXPORT void env_free(env_t* _env) {
     for (size_t i = 0; i < _env->bucket_count; i++) {
         env_node_t* node = _env->buckets[i];
         while (node) {

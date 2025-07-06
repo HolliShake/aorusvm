@@ -13,6 +13,8 @@ const char* KEYWORDS[] = {
     KEY_WHILE,
     KEY_BREAK,
     KEY_CONTINUE,
+    KEY_TRUE,
+    KEY_FALSE,
 };
 
 bool is_keyword(char* _value) {
