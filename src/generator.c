@@ -375,7 +375,6 @@ INTERNAL void generator_expression(generator_t* _generator, ast_node_t* _express
         case AstUnaryPlus: {
             generator_assignment0(_generator, _expression->ast0);
             generator_emit_byte(_generator, OPCODE_INCREMENT);
-            generator_emit_byte(_generator, OPCODE_DUPTOP);
             generator_assignment1(_generator, _expression->ast0);
             free(_expression);
             break;
@@ -949,12 +948,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 );
             }
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
-                if (generator_is_constant_node(cond)) {
-                    FOLD_CONSTANT_EXPRESSION(cond);
-                    free(cond);
-                } else {
-                    generator_expression(_generator, cond);
-                }
+                // Condition
+                generator_expression(_generator, cond);
+                // Jump if false
                 generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
                 int jump_start = _generator->bsize;
                 generator_allocate_nbytes(_generator, 4);
@@ -980,12 +976,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             } else {
                 ast_node_t* cond_l = cond->ast0;
                 ast_node_t* cond_r = cond->ast1;
-                if (!cond_l || !cond_r || !generator_is_logical_expression(cond_l) || !generator_is_constant_node(cond_r)) {
+                if (!cond_l || !cond_r || !generator_is_logical_expression(cond)) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
                         cond->position, 
                         "logical expression must have a left and right operand"
+                    );
+                }
+                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have both left and right operands to be expressions"
                     );
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
@@ -1066,24 +1070,85 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
             size_t loop_start = _generator->bsize;
-            // Condition
-            generator_expression(_generator, cond);
-            // Jump if false
-            generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
-            int jump_endwhile_if_false = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
-
-            // Body
-            generator_statement(_generator, while_scope, body);
-
-            // Jump to the start of the while loop
-            generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-            generator_emit_raw_int(_generator, loop_start);
-
-            // Jump to the end of the while loop
-            generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
-            scope_free(while_scope);
-            free(_statement);
+            if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
+                // Condition
+                generator_expression(_generator, cond);
+                // Jump if false
+                generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                int jump_endwhile_if_false = _generator->bsize;
+                generator_allocate_nbytes(_generator, 4);
+                // Body
+                generator_statement(_generator, while_scope, body);
+                // Jump to the start of the while loop
+                generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                generator_emit_raw_int(_generator, loop_start);
+                // Jump to the end of the while loop
+                generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
+                scope_free(while_scope);
+                free(_statement);
+            } else {
+                ast_node_t* cond_l = cond->ast0;
+                ast_node_t* cond_r = cond->ast1;
+                if (!cond_l || !cond_r || !generator_is_logical_expression(cond)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have a left and right operand"
+                    );
+                }
+                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        cond->position, 
+                        "logical expression must have both left and right operands to be expressions"
+                    );
+                }
+                bool is_logical_and = cond->type == AstLogicalAnd;
+                if (is_logical_and) {
+                    generator_expression(_generator, cond_l);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_l = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // If left is true, then evaluate right
+                    generator_expression(_generator, cond_r);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_r = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // true
+                    generator_statement(_generator, while_scope, body);
+                    // Jump to the start of the while loop
+                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, loop_start);
+                    // Jump to the end of the while loop
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    scope_free(while_scope);
+                    free(_statement);
+                } else {
+                    generator_expression(_generator, cond_l);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
+                    int jump_start_l = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // If left is false, then evaluate right
+                    generator_expression(_generator, cond_r);
+                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    int jump_start_r = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                    // Set if true
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    // true
+                    generator_statement(_generator, while_scope, body);
+                    // Jump to the start of the while loop
+                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, loop_start);
+                    // Set if false
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    scope_free(while_scope);
+                    free(_statement);
+                }
+            }
             break;
         }
         case AstReturnStatement: {

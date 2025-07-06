@@ -730,7 +730,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 env_t* env = _env;
                 while (env != NULL) {
                     if (env_has(env, name, false)) {
-                        env_put(env, name, POPP());
+                        env_put(env, name, PEEK());
                         break;
                     }
                     env = env_parent(env);
