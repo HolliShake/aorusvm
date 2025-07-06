@@ -43,6 +43,7 @@ typedef enum ast_node_type_struct {
     AstLocalStatement,
     AstIfStatement,
     AstWhileStatement,
+    AstDoWhileStatement,
     AstReturnStatement,
     AstExpressionStatement,
     AstBlockStatement,

@@ -17,7 +17,12 @@ typedef struct env_struct {
     size_t size;
 } env_t;
 
-
+/*
+ * Get the object list of the environment.
+ *
+ * @param _env The environment.
+ * @return The object list.
+ */
 object_t** env_get_object_list(env_t* _env);
 
 #endif

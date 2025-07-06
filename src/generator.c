@@ -290,6 +290,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 _generator, 
                 _expression->str0
             );
+            free(_expression->str0);
             free(_expression);
             break;
         case AstInt:

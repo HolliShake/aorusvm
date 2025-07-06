@@ -25,6 +25,12 @@ typedef struct eval_result_struct {
     } value;
 } eval_result_t;
 
+/*
+ * Evaluate an expression.
+ *
+ * @param _expression The expression to evaluate.
+ * @return The result of the evaluation.
+ */
 eval_result_t eval_eval(ast_node_t* _expression);
 
 #endif

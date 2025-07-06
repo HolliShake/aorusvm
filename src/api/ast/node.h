@@ -322,6 +322,16 @@ DLLEXPORT ast_node_t* ast_if_statement_node(position_t* _position, ast_node_t* _
 DLLEXPORT ast_node_t* ast_while_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* _body);
 
 /*
+ * Do while statement node.
+ *
+ * @param _position The position of the node.
+ * @param _cond The condition of the node.
+ * @param _body The body of the node.
+ * @return The do while statement node.
+ */
+DLLEXPORT ast_node_t* ast_do_while_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* _body);
+
+/*
  * Return statement node.
  *
  * @param _position The position of the node.

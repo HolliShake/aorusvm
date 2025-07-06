@@ -54,3 +54,9 @@ while (b < 100) {
 }
 
 pp(println);
+
+do {
+    
+    println(">> Hello World!");
+
+} while (3 > 2);

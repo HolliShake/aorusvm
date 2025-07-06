@@ -38,15 +38,88 @@ typedef struct scope_struct {
     bool           is_returned;
 } scope_t;
 
+/*
+ * Create a new scope.
+ *
+ * @param _parent The parent scope.
+ * @param _type The type of the scope.
+ * @return The new scope.
+ */
 scope_t* scope_new(scope_t* _parent, scope_type_t _type);
+
+/*
+ * Check if a scope has a value.
+ *
+ * @param _scope The scope to check.
+ * @param _name The name of the value.
+ * @param _recurse Whether to recurse up the scope chain.
+ * @return True if the scope has the value, false otherwise.
+ */
 bool scope_has(scope_t* _scope, char* _name, bool _recurse);
+
+/*
+ * Put a value into a scope.
+ *
+ * @param _scope The scope to put the value into.
+ * @param _name The name of the value.
+ * @param _value The value to put into the scope.
+ */
 void scope_put(scope_t* _scope, char* _name, scope_value_t _value);
+
+/*
+ * Get a value from a scope.
+ *
+ * @param _scope The scope to get the value from.
+ * @param _name The name of the value.
+ * @param _recurse Whether to recurse up the scope chain.
+ * @return The value.
+ */
 scope_value_t scope_get(scope_t* _scope, char* _name, bool _recurse);
+
+/*
+ * Check if a scope is global.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is global, false otherwise.
+ */
 bool scope_is_global(scope_t* _scope);
+
+/*
+ * Check if a scope is a local.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a local, false otherwise.
+ */
 bool scope_is_local(scope_t* _scope);
+
+/*
+ * Check if a scope is a function.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a function, false otherwise.
+ */
 bool scope_is_function(scope_t* _scope);
+
+/*
+ * Check if a scope is a single.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a single, false otherwise.
+ */
 bool scope_is_single(scope_t* _scope);
+/*
+ * Check if a scope is a loop.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a loop, false otherwise.
+ */
 bool scope_is_loop(scope_t* _scope);
+
+/*
+ * Free a scope.
+ *
+ * @param _scope The scope to free.
+ */
 void scope_free(scope_t* _scope);
 
 #endif
