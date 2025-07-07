@@ -30,7 +30,7 @@ typedef struct generator_struct {
 
 INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size) {
     _generator->bytecode = (uint8_t*) realloc(_generator->bytecode, sizeof(uint8_t) * ((_generator->bsize + 1) + _size));
-    ASSERTNULL(_generator->bytecode, ERROR_ALLOCATING_BYTECODE);
+    ASSERTNULL(_generator->bytecode, "failed to allocate memory for bytecode");
 }
 
 
@@ -1120,7 +1120,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         case AstLocalStatement: {
             ast_node_list_t names  = _statement->array0;
             ast_node_list_t values = _statement->array1;
-            
+
             // Validate scope
             if (_statement->type == AstVarStatement && !scope_is_global(_scope)) {
                 __THROW_ERROR(
@@ -1769,14 +1769,14 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
 
 DLLEXPORT generator_t* generator_new(char* _fpath, char* _fdata) {
     generator_t* generator = (generator_t*) malloc(sizeof(generator_t));
-    ASSERTNULL(generator, ERROR_ALLOCATING_GENERATOR);
+    ASSERTNULL(generator, "failed to allocate memory for generator");
     generator->fpath = string_allocate(_fpath);
     generator->fdata = string_allocate(_fdata);
     generator->fsize = strlen(_fdata);
     generator->bsize = 0;
     generator->reset_base = 0;
     generator->bytecode = (uint8_t*) malloc(sizeof(uint8_t) * 1);
-    ASSERTNULL(generator->bytecode, ERROR_ALLOCATING_BYTECODE);
+    ASSERTNULL(generator->bytecode, "failed to allocate memory for bytecode");
     // Return instance
     return generator;
 }

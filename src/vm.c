@@ -1075,11 +1075,11 @@ DLLEXPORT void vm_init() {
         PD("VM already initialized");
     }
     instance = (vm_t *) malloc(sizeof(vm_t));
-    ASSERTNULL(instance, ERROR_ALLOCATING_VM);
+    ASSERTNULL(instance, "failed to allocate memory for vm");
     // evaluation stack
     instance->evaluation_stack = 
         (object_t **) malloc(sizeof(object_t *) * EVALUATION_STACK_SIZE);
-    ASSERTNULL(instance->evaluation_stack, ERROR_ALLOCATING_EVALUATION_STACK);
+    ASSERTNULL(instance->evaluation_stack, "failed to allocate memory for evaluation stack");
     instance->sp = 0;
     // counter
     instance->allocation_counter = 0;
@@ -1144,7 +1144,7 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 }
 
 DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
-    ASSERTNULL(instance, ERROR_VM_NOT_INITIALIZED);
+    ASSERTNULL(instance, "VM is not initialized");
     // Verify magic number
     VERIFY_MAGIC_NUMBER(_bytecode);
     // Verify version

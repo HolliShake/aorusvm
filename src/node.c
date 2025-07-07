@@ -7,7 +7,7 @@
 INTERNAL
 ast_node_t* ast_node_new(ast_node_type_t type, position_t* position) {
     ast_node_t* node = (ast_node_t*) malloc(sizeof(ast_node_t));
-    ASSERTNULL(node, ERROR_ALLOCATING_AST_NODE);
+    ASSERTNULL(node, "failed to allocate memory for ast node");
     node->type = type;
     node->position = position;
     node->str0   = NULL;

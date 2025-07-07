@@ -6,7 +6,7 @@
 #pragma region StringC
 char* string_allocate(const char* _str) {
     char* str = (char*) malloc(sizeof(char) * (strlen(_str) + 1)); str[0] = '\0';
-    ASSERTNULL(str, ERROR_ALLOCATING_STRING);
+    ASSERTNULL(str, "failed to allocate memory for string");
     strcpy(str, _str);
     return str;
 }
@@ -14,7 +14,7 @@ char* string_allocate(const char* _str) {
 char* string_append_char(char* _dst, char _c) {
     size_t len = strlen(_dst);
     _dst = (char*) realloc(_dst, sizeof(char) * (len + 2));
-    ASSERTNULL(_dst, ERROR_ALLOCATING_STRING);
+    ASSERTNULL(_dst, "failed to allocate memory for string");
     _dst[len] = _c;
     _dst[len + 1] = '\0';
     return _dst;
@@ -22,7 +22,7 @@ char* string_append_char(char* _dst, char _c) {
 
 char* string_append(char* _dst, char* _src) {
     _dst = (char*) realloc(_dst, sizeof(char) * (strlen(_dst) + strlen(_src) + 1));
-    ASSERTNULL(_dst, ERROR_ALLOCATING_STRING);
+    ASSERTNULL(_dst, "failed to allocate memory for string");
     strcat(_dst, _src);
     return _dst;
 }
@@ -35,7 +35,7 @@ char* string_format(char* _format, ...) {
     int size = vsnprintf(NULL, 0, _format, args);
     va_end(args);
     char* str = (char*) malloc(sizeof(char) * (size + 1));
-    ASSERTNULL(str, ERROR_ALLOCATING_STRING);
+    ASSERTNULL(str, "failed to allocate memory for string");
     vsnprintf(str, size + 1, _format, args_copy);
     va_end(args_copy);
     return str;

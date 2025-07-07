@@ -6,11 +6,11 @@
 
 scope_t* scope_new(scope_t* _parent, scope_type_t _type) {
     scope_t* scope = (scope_t*) malloc(sizeof(scope_t));
-    ASSERTNULL(scope, ERROR_ALLOCATING_SCOPE);
+    ASSERTNULL(scope, "failed to allocate memory for scope");
     scope->type = _type;
     scope->parent = _parent;
     scope->buckets = (scope_node_t**) calloc(SCOPE_BUCKET_COUNT, sizeof(scope_node_t*));
-    ASSERTNULL(scope->buckets, ERROR_ALLOCATING_BUCKETS);
+    ASSERTNULL(scope->buckets, "failed to allocate memory for buckets");
     scope->bucket_count = SCOPE_BUCKET_COUNT;
     scope->size = 0;
     return scope;
@@ -19,7 +19,7 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type) {
 INTERNAL void scope_rehash(scope_t* _scope) {
     size_t new_bucket_count = _scope->bucket_count * 2;
     scope_node_t** new_buckets = (scope_node_t**) calloc(new_bucket_count, sizeof(scope_node_t*));
-    ASSERTNULL(new_buckets, ERROR_ALLOCATING_BUCKETS);
+    ASSERTNULL(new_buckets, "failed to allocate memory for buckets");
 
     // Rehash existing entries
     for (size_t i = 0; i < _scope->bucket_count; i++) {
@@ -67,7 +67,7 @@ void scope_put(scope_t* _scope, char* _name, scope_value_t _value) {
 
     // Create new node and insert at head of chain
     node = (scope_node_t*) malloc(sizeof(scope_node_t));
-    ASSERTNULL(node, ERROR_ALLOCATING_SCOPE_NODE);
+    ASSERTNULL(node, "failed to allocate memory for scope node");
     node->name = _name;
     node->value = _value;
     node->next = _scope->buckets[index];

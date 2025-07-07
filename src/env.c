@@ -10,10 +10,10 @@
 
 DLLEXPORT env_t* env_new(env_t* _parent) {
     env_t* env = malloc(sizeof(env_t));
-    ASSERTNULL(env, ERROR_ALLOCATING_ENV);
+    ASSERTNULL(env, "failed to allocate memory for env");
     env->parent = _parent;
     env->buckets = calloc(ENV_BUCKET_COUNT, sizeof(env_node_t*));
-    ASSERTNULL(env->buckets, ERROR_ALLOCATING_BUCKETS);
+    ASSERTNULL(env->buckets, "failed to allocate memory for buckets");
     env->bucket_count = ENV_BUCKET_COUNT;
     env->size = 0;
     return env;
@@ -22,7 +22,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
 INTERNAL void env_rehash(env_t* _env) {
     size_t new_bucket_count = _env->bucket_count * 2;
     env_node_t** new_buckets = calloc(new_bucket_count, sizeof(env_node_t*));
-    ASSERTNULL(new_buckets, ERROR_ALLOCATING_BUCKETS);
+    ASSERTNULL(new_buckets, "failed to allocate memory for buckets");
 
     for (size_t i = 0; i < _env->bucket_count; i++) {
         env_node_t* node = _env->buckets[i];
@@ -69,7 +69,7 @@ DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
 
     // Create new node and insert at head of chain
     node = malloc(sizeof(env_node_t));
-    ASSERTNULL(node, ERROR_ALLOCATING_ENV_NODE);
+    ASSERTNULL(node, "failed to allocate memory for env node");
     node->name = _name;
     node->value = _value;
     node->next = _env->buckets[index];

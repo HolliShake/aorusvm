@@ -5,35 +5,41 @@
 INTERNAL char** get_lines(char* _fdata) {
     size_t len = strlen(_fdata);
     
-    // Count newlines in one pass
+    // Count lines and allocate array in one pass
     int line_count = 1;
-    for (size_t i = 0; i < len; i++) {
-        line_count += (_fdata[i] == '\n');
-    }
-
-    // Allocate array of line pointers
-    char** lines = (char**) malloc(sizeof(char*) * (line_count + 1));
-    ASSERTNULL(lines, ERROR_ALLOCATING_STRING);
-
-    // Split into lines in a single pass
-    int curr_line = 0;
-    size_t line_start = 0;
+    char** lines = (char**) malloc(sizeof(char*) * (len/2 + 2)); // Conservative estimate
+    ASSERTNULL(lines, "failed to allocate memory for lines");
     
-    for (size_t i = 0; i <= len; i++) {
-        if (i == len || _fdata[i] == '\n') {
-            // Allocate and copy line
-            size_t line_len = i - line_start;
+    // Split into lines
+    char* line_start = _fdata;
+    char* curr = _fdata;
+    
+    while (*curr) {
+        if (*curr == '\n') {
+            size_t line_len = curr - line_start;
             char* line = (char*) malloc(line_len + 1);
-            ASSERTNULL(line, ERROR_ALLOCATING_STRING);
-            memcpy(line, _fdata + line_start, line_len);
+            ASSERTNULL(line, "failed to allocate memory for line");
+            memcpy(line, line_start, line_len);
             line[line_len] = '\0';
             
-            lines[curr_line++] = line;
-            line_start = i + 1;
+            lines[line_count-1] = line;
+            line_count++;
+            line_start = curr + 1;
         }
+        curr++;
+    }
+    
+    // Handle last line if not empty
+    if (curr > line_start) {
+        size_t line_len = curr - line_start;
+        char* line = (char*) malloc(line_len + 1);
+        ASSERTNULL(line, "failed to allocate memory for line");
+        memcpy(line, line_start, line_len);
+        line[line_len] = '\0';
+        lines[line_count-1] = line;
     }
 
-    lines[curr_line] = NULL;
+    lines[line_count] = NULL;
     return lines;
 }
 

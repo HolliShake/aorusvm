@@ -6,7 +6,7 @@
 
 DLLEXPORT object_t* object_new(object_type_t _type) {
     object_t* obj = (object_t* ) malloc(sizeof(object_t));
-    ASSERTNULL(obj, ERROR_ALLOCATING_OBJECT);
+    ASSERTNULL(obj, "failed to allocate memory for object");
     obj->type = _type;
     obj->next = NULL;
     obj->marked = false;
