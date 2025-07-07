@@ -83,7 +83,7 @@ var obj = {
     ...(obj1)
 };
 
-while (jj < 52000) {
+while (jj < 100000) {
     ++jj;
     println(jj);
 }
