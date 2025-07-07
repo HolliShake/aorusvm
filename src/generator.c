@@ -136,6 +136,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstNull:
         case AstArray:
         case AstObject:
+        case AstIndex:
         case AstCall:
         case AstUnaryPlus:
         case AstUnarySpread:
@@ -465,6 +466,39 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             scope_free(object_scope);
             free(properties);
+            free(_expression);
+            break;
+        }
+        case AstIndex: {
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* index = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index expression requires an object, but received NULL"
+                );
+            }
+            if (index == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index expression requires an index, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(obj) || !generator_is_expression_type(index)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index expression requires both object and index to be expressions"
+                );
+            }
+            generator_expression(_generator, _scope, obj);
+            generator_expression(_generator, _scope, index);
+            generator_emit_byte(_generator, OPCODE_INDEX);
             free(_expression);
             break;
         }

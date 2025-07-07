@@ -620,6 +620,37 @@ INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signa
     env_free(block_env);
 }
 
+INTERNAL void do_index(object_t* _obj, object_t* _index) {
+    if (!(OBJECT_TYPE_COLLECTION(_obj))) {
+        PD("expected collection, got %s", object_to_string(_obj));
+    }
+    if (OBJECT_TYPE_ARRAY(_obj)) {
+        if (!OBJECT_TYPE_NUMBER(_index)) {
+            PD("expected number, got %s", object_to_string(_index));
+        }
+        long index = number_coerce_to_long(_index);
+        
+        array_t* array = (array_t*) _obj->value.opaque;
+        if (index < 0 || index >= array_length(array)) {
+            PD("index out of bounds");
+        }
+        object_t* result = array_get(array, index);
+        PUSH_REF(result);
+        return;
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* map = (hashmap_t*) _obj->value.opaque;
+        if (!hashmap_has(map, _index)) {
+            PD("key not found");
+        }
+        object_t* result = hashmap_get(map, _index);
+        PUSH_REF(result);
+        return;
+    }
+    PD("expected array or object, got %s", object_to_string(_obj));
+    ERROR:;
+    PD("error in do_index");
+}
+
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     code_t *code = (code_t *) _function->value.opaque;
     if (code->param_count != _argc) {
@@ -783,6 +814,12 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                     PD("expected object, got %s", object_to_string(obj_dst));
                 }
                 hashmap_put((hashmap_t*) obj_dst->value.opaque, key, val);
+                break;
+            }
+            case OPCODE_INDEX: {
+                object_t* index = POPP();
+                object_t* obj = POPP();
+                do_index(obj, index);
                 break;
             }
             case OPCODE_CALL: {
