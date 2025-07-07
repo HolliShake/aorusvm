@@ -138,11 +138,11 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
                 }
             }
             str = string_append(str, ")");
-            str = string_append(str, "{}");
+            str = string_append(str, "{...}");
             return str;
         }
         case OBJECT_TYPE_NATIVE_FUNCTION: {
-            return string_allocate("native function(...){}");
+            return string_allocate("native function(...){...}");
         }
         default: {
             return string_allocate("unknown");

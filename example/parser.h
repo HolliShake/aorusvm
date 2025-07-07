@@ -3,6 +3,7 @@
 #include "keyword.h"
 #include "token.h"
 #include "tokenizer.h"
+#include "symbol.h"
 
 #ifndef PARSER_H
 #define PARSER_H

@@ -85,7 +85,8 @@ var obj = {
 
 while (jj < 52000) {
     ++jj;
-    println(jj);
 }
+
+println(">>", obj["Hello"]);
 
 println(obj, [obj1, 1, 2]);

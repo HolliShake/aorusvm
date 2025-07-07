@@ -87,6 +87,12 @@ ast_node_t* parser_terminal(parser_t* _parser) {
         );
         ACCEPTT(TTKEY);
         return node;
+    } else if (CHECKT(TTKEY) && CHECKV(KEY_NULL)) {
+        ast_node_t* node = ast_null_node(
+            _parser->current->position
+        );
+        ACCEPTT(TTKEY);
+        return node;
     } else {
         return NULL;
     }
@@ -94,7 +100,7 @@ ast_node_t* parser_terminal(parser_t* _parser) {
 
 ast_node_t* parser_array(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ACCEPTV("[");
+    ACCEPTV(LBRACE);
     size_t index = 0;
     ast_node_list_t elements = (ast_node_list_t) malloc(sizeof(ast_node_t*));
     elements[0] = NULL;
@@ -106,8 +112,8 @@ ast_node_t* parser_array(parser_t* _parser) {
         elements = (ast_node_list_t) realloc(elements, (sizeof(ast_node_t*) * (index + 1)));
         elements[index] = NULL;
 
-        while (CHECKV(",")) {
-            ACCEPTV(",");
+        while (CHECKV(COMMA)) {
+            ACCEPTV(COMMA);
             ast_node_t* element = parser_expression(_parser);
             if (element == NULL) {
                 __THROW_ERROR(
@@ -123,7 +129,7 @@ ast_node_t* parser_array(parser_t* _parser) {
         }
     }
     ended = _parser->current->position;
-    ACCEPTV("]");
+    ACCEPTV(RBRACE);
     return ast_array_node(position_merge(start, ended), elements);
 }
 
@@ -132,10 +138,10 @@ ast_node_t* parser_object_property(parser_t* _parser) {
     if (key == NULL) {
         return NULL;
     }
-    if (!CHECKV(":")) {
+    if (!CHECKV(COLON)) {
         return key;
     }
-    ACCEPTV(":");
+    ACCEPTV(COLON);
     ast_node_t* value = parser_expression(_parser);
     if (value == NULL) {
         __THROW_ERROR(
@@ -153,15 +159,15 @@ ast_node_t* parser_object(parser_t* _parser) {
     size_t index = 0;
     ast_node_list_t properties = (ast_node_list_t) malloc(sizeof(ast_node_t*));
     properties[0] = NULL;
-    ACCEPTV("{");
+    ACCEPTV(LBRACKET);
     ast_node_t* property = parser_object_property(_parser);
     if (property != NULL) {
         properties[index++] = property;
         properties = (ast_node_list_t) realloc(properties, (sizeof(ast_node_t*) * (index + 1)));
         properties[index] = NULL;
 
-        while (CHECKV(",")) {
-            ACCEPTV(",");
+        while (CHECKV(COMMA)) {
+            ACCEPTV(COMMA);
             property = parser_object_property(_parser);
             if (property == NULL) {
                 __THROW_ERROR(
@@ -177,19 +183,19 @@ ast_node_t* parser_object(parser_t* _parser) {
         }
     }
     ended = _parser->current->position;
-    ACCEPTV("}");
+    ACCEPTV(RBRACKET);
     return ast_object_node(position_merge(start, ended), properties);
 }
 
 ast_node_t* parser_group(parser_t* _parser) {
-    if (CHECKV("[")) {
+    if (CHECKV(LBRACE)) {
         return parser_array(_parser);
-    } else if (CHECKV("{")) {
+    } else if (CHECKV(LBRACKET)) {
         return parser_object(_parser);
-    }  else if (CHECKV("(")) {
-        ACCEPTV("(");
+    }  else if (CHECKV(LPAREN)) {
+        ACCEPTV(LPAREN);
         ast_node_t* node = parser_mandatory_expression(_parser);
-        ACCEPTV(")");
+        ACCEPTV(RPAREN);
         return node;
     } else {
         return parser_terminal(_parser);
@@ -202,23 +208,35 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV(".") || CHECKV("[") || CHECKV("(")) {
-        if (CHECKV(".")) {
+    while (CHECKV(DOT) || CHECKV(LBRACE) || CHECKV(LPAREN)) {
+        if (CHECKV(DOT)) {
             PD("Not implemented");
-        } else if (CHECKV("[")) {
-            PD("Not implemented");
-        } else if (CHECKV("(")) {
+        } else if (CHECKV(LBRACE)) {
+            ACCEPTV(LBRACE);
+            ast_node_t* index = parser_expression(_parser);
+            if (index == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "index expression expected"
+                );
+            }
+            ended = _parser->current->position;
+            ACCEPTV(RBRACE);
+            node = ast_index_node(position_merge(start, ended), node, index);
+        } else if (CHECKV(LPAREN)) {
             size_t index = 0;
             ast_node_list_t arguments = (ast_node_list_t) malloc(sizeof(ast_node_t*));
             arguments[0] = NULL;
-            ACCEPTV("(");
+            ACCEPTV(LPAREN);
             ast_node_t* argument = parser_expression(_parser);
             if (argument != NULL) {
                 arguments[index++] = argument;
                 arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 1)));
                 arguments[index] = NULL;
-                while (CHECKV(",")) {
-                    ACCEPTV(",");
+                while (CHECKV(COMMA)) {
+                    ACCEPTV(COMMA);
                     ast_node_t* argument = parser_expression(_parser);
                     if (argument == NULL) {
                         __THROW_ERROR(
@@ -234,9 +252,8 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
                 }
             }
             ended = _parser->current->position;
-            ACCEPTV(")");
+            ACCEPTV(RPAREN);
             node = ast_call_node(position_merge(start, ended), node, arguments);
-            return node;
         }
     }
     return node;
@@ -244,8 +261,8 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
 
 ast_node_t* parser_unary(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    if (CHECKV("++")) {
-        ACCEPTV("++");
+    if (CHECKV(PLUSPLUS)) {
+        ACCEPTV(PLUSPLUS);
         ast_node_t* node = parser_unary(_parser);
         if (node == NULL) {
             __THROW_ERROR(
@@ -257,8 +274,8 @@ ast_node_t* parser_unary(parser_t* _parser) {
         }
         ended = ast_position(node);
         return ast_unary_plus_node(position_merge(start, ended), node);
-    } else if (CHECKV("...")) {
-        ACCEPTV("...");
+    } else if (CHECKV(SPREAD)) {
+        ACCEPTV(SPREAD);
         ast_node_t* node = parser_unary(_parser);
         if (node == NULL) {
             __THROW_ERROR(
@@ -279,7 +296,7 @@ ast_node_t* parser_multiplicative(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("*") || CHECKV("/") || CHECKV("%")) {
+    while (CHECKV(MULTIPLY) || CHECKV(DIVIDE) || CHECKV(MODULO)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_unary(_parser);
@@ -291,19 +308,19 @@ ast_node_t* parser_multiplicative(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "*") == 0) {
+        if (strcmp(op, MULTIPLY) == 0) {
             node = ast_binary_mul_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "/") == 0) {
+        } else if (strcmp(op, DIVIDE) == 0) {
             node = ast_binary_div_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "%") == 0) {
+        } else if (strcmp(op, MODULO) == 0) {
             node = ast_binary_mod_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -319,7 +336,7 @@ ast_node_t* parser_additive(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("+") || CHECKV("-")) {
+    while (CHECKV(PLUS) || CHECKV(MINUS)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_multiplicative(_parser);
@@ -331,13 +348,13 @@ ast_node_t* parser_additive(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "+") == 0) {
+        if (strcmp(op, PLUS) == 0) {
             node = ast_binary_add_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "-") == 0) {
+        } else if (strcmp(op, MINUS) == 0) {
             node = ast_binary_sub_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -353,7 +370,7 @@ ast_node_t* parser_shifting(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("<<") || CHECKV(">>")) {
+    while (CHECKV(SHIFT_LEFT) || CHECKV(SHIFT_RIGHT)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_additive(_parser);
@@ -365,13 +382,13 @@ ast_node_t* parser_shifting(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "<<") == 0) {
+        if (strcmp(op, SHIFT_LEFT) == 0) {
             node = ast_binary_shl_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, ">>") == 0) {
+        } else if (strcmp(op, SHIFT_RIGHT) == 0) {
             node = ast_binary_shr_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -387,7 +404,7 @@ ast_node_t* parser_relational(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("<") || CHECKV("<=") || CHECKV(">") || CHECKV(">=")) {
+    while (CHECKV(LESS) || CHECKV(LESS_EQUAL) || CHECKV(GREATER) || CHECKV(GREATER_EQUAL)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_shifting(_parser);
@@ -399,25 +416,25 @@ ast_node_t* parser_relational(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "<") == 0) {
+        if (strcmp(op, LESS) == 0) {
             node = ast_cmp_lt_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "<=") == 0) {
+        } else if (strcmp(op, LESS_EQUAL) == 0) {
             node = ast_cmp_lte_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, ">") == 0) {
+        } else if (strcmp(op, GREATER) == 0) {
             node = ast_cmp_gt_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, ">=") == 0) {
+        } else if (strcmp(op, GREATER_EQUAL) == 0) {
             node = ast_cmp_gte_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -433,7 +450,7 @@ ast_node_t* parser_equality(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("==") || CHECKV("!=")) {
+    while (CHECKV(EQUALTO) || CHECKV(NOT_EQUALTO)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_relational(_parser);
@@ -445,13 +462,13 @@ ast_node_t* parser_equality(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "==") == 0) {
+        if (strcmp(op, EQUALTO) == 0) {
             node = ast_cmp_eq_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "!=") == 0) {
+        } else if (strcmp(op, NOT_EQUALTO) == 0) {
             node = ast_cmp_ne_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -467,7 +484,7 @@ ast_node_t* parser_bitwise(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("&") || CHECKV("|") || CHECKV("^")) {
+    while (CHECKV(BITWISE_AND) || CHECKV(BITWISE_OR) || CHECKV(BITWISE_XOR)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_equality(_parser);
@@ -479,19 +496,19 @@ ast_node_t* parser_bitwise(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        if (strcmp(op, "&") == 0) {
+        if (strcmp(op, BITWISE_AND) == 0) {
             node = ast_binary_and_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "|") == 0) {
+        } else if (strcmp(op, BITWISE_OR) == 0) {
             node = ast_binary_or_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
                 right
             );
-        } else if (strcmp(op, "^") == 0) {
+        } else if (strcmp(op, BITWISE_XOR) == 0) {
             node = ast_binary_xor_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -507,7 +524,7 @@ ast_node_t* parser_logical(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV("&&") || CHECKV("||")) {
+    while (CHECKV(AND) || CHECKV(OR)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_bitwise(_parser);

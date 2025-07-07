@@ -106,6 +106,16 @@ DLLEXPORT ast_node_t* ast_object_property_node(position_t* _position, ast_node_t
 DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _properties);
 
 /*
+ * Index node.
+ *
+ * @param _position The position of the node.
+ * @param _obj The object of the node.
+ * @param _index The index of the node.
+ * @return The index node.
+ */
+DLLEXPORT ast_node_t* ast_index_node(position_t* _position, ast_node_t* _obj, ast_node_t* _index);
+
+/*
  * Call node.
  *
  * @param _position The position of the node.

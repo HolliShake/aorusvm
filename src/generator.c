@@ -131,8 +131,8 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstLong:
         case AstFloat:
         case AstDouble:
-        case AstBoolean:
         case AstString:
+        case AstBoolean:
         case AstNull:
         case AstArray:
         case AstObject:
@@ -169,8 +169,8 @@ INTERNAL bool generator_is_constant_node(ast_node_t* _expression) {
         case AstLong:
         case AstFloat:
         case AstDouble:
-        case AstBoolean:
         case AstString:
+        case AstBoolean:
         case AstNull:
             return true;
         case AstBinaryMul:
@@ -312,17 +312,6 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             );
             free(_expression);
             break;
-        case AstBoolean:
-            generator_emit_byte(
-                _generator, 
-                OPCODE_LOAD_BOOL
-            );
-            generator_emit_byte(
-                _generator, 
-                _expression->value.i32 == 1
-            );
-            free(_expression);
-            break;
         case AstString:
             if (_expression->str0 == NULL) {
                 __THROW_ERROR(
@@ -335,6 +324,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             generator_emit_string(
                 _generator, 
                 _expression->str0
+            );
+            free(_expression);
+            break;
+        case AstBoolean:
+            generator_emit_byte(
+                _generator, 
+                OPCODE_LOAD_BOOL
+            );
+            generator_emit_byte(
+                _generator, 
+                _expression->value.i32 == 1
             );
             free(_expression);
             break;

@@ -18,6 +18,7 @@
 #define KEY_CONTINUE "continue"
 #define KEY_TRUE "true"
 #define KEY_FALSE "false"
+#define KEY_NULL "null"
 
 extern const char* KEYWORDS[];
 
