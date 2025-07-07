@@ -87,6 +87,6 @@ while (jj < 52000) {
     ++jj;
 }
 
-println(">>", obj["Hello"], obj["One"]);
+println(">>", obj["Hello"], obj["One"], arr2[0]);
 
 println(obj, [obj1, 1, 2]);

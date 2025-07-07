@@ -391,6 +391,8 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             break;
         }
         case AstObjectProperty: {
+            ast_node_t* key = _expression->ast0;
+            ast_node_t* value = _expression->ast1;
             if (!scope_is_object(_scope)) {
                 __THROW_ERROR(
                     _generator->fpath,
@@ -399,9 +401,33 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "object property can only be used in an object"
                 );
             }
+            if (key == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "object property must have a key"
+                );
+            }
+            if (value == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "object property must have a value"
+                );
+            }
+            if (!generator_is_expression_type(key) || !generator_is_expression_type(value)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "object property must have a key and value"
+                );
+            }
             // Or ignore it!!!
-            generator_expression(_generator, _scope, _expression->ast1); // value
-            generator_expression(_generator, _scope, _expression->ast0); // key
+            generator_expression(_generator, _scope, value); // value
+            generator_expression(_generator, _scope, key); // key
             generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
             free(_expression);
             break;
@@ -503,7 +529,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             break;
         }
         case AstCall: {
-            if (_expression->ast0 == NULL) {
+            ast_node_t* function = _expression->ast0;
+            ast_node_list_t arguments = _expression->array0;
+            if (function == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -511,15 +539,15 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "call expression must have a function, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_expression->ast0)) {
+            if (!generator_is_expression_type(function)) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
                     _expression->position, 
-                    "call expression must have a function, but received %d", _expression->ast0->type
+                    "call expression must have a function, but received %d", function->type
                 );
             }
-            if (_expression->array0 == NULL) {
+            if (arguments == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -527,7 +555,6 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "call expression must have arguments, but received NULL"
                 );
             }
-            ast_node_list_t arguments = _expression->array0;
             int param_count = 0;
             // Count arguments first
             for (param_count = 0; arguments[param_count] != NULL; param_count++);
@@ -544,20 +571,38 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 }
                 generator_expression(_generator, _scope, argument);
             }
-            generator_expression(_generator, _scope, _expression->ast0);
+            generator_expression(_generator, _scope, function);
             generator_emit_byte(_generator, OPCODE_CALL);
             generator_emit_raw_int(_generator, param_count);
             free(_expression);
             break;
         }
         case AstUnaryPlus: {
-            generator_assignment0(_generator, _expression->ast0);
+            ast_node_t* expression = _expression->ast0;
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "unary expression must have an expression, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(expression)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "unary expression must be an expression, but received %d", expression->type
+                );
+            }
+            generator_assignment0(_generator, expression);
             generator_emit_byte(_generator, OPCODE_INCREMENT);
-            generator_assignment1(_generator, _scope, _expression->ast0);
+            generator_assignment1(_generator, _scope, expression);
             free(_expression);
             break;
         }
         case AstUnarySpread: {
+            ast_node_t* expression = _expression->ast0;
             if (!scope_is_array(_scope) && !scope_is_object(_scope)) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -566,8 +611,16 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "spread operator can only be used in an array or object"
                 );
             }
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "spread operator must have an expression, but received NULL"
+                );
+            }
             // Or ignore it!!!
-            generator_expression(_generator, _scope, _expression->ast0);
+            generator_expression(_generator, _scope, expression);
             generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
             free(_expression);
             break;
@@ -1065,6 +1118,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         case AstVarStatement:
         case AstConstStatement:
         case AstLocalStatement: {
+            ast_node_list_t names  = _statement->array0;
+            ast_node_list_t values = _statement->array1;
+            
             // Validate scope
             if (_statement->type == AstVarStatement && !scope_is_global(_scope)) {
                 __THROW_ERROR(
@@ -1082,9 +1138,6 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "local variable declaration must be in a function or block"
                 );
             }
-            
-            ast_node_list_t names  = _statement->array0;
-            ast_node_list_t values = _statement->array1;
 
             if (names == NULL) {
                 __THROW_ERROR(
