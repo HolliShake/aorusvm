@@ -56,6 +56,8 @@ INTERNAL void gc_mark_object(object_t* _obj) {
                 node = next;
             }
         }
+    } else if (OBJECT_TYPE_ERROR(_obj)) {
+        gc_mark_object((object_t*) _obj->value.opaque);
     }
 }
 

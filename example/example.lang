@@ -7,9 +7,9 @@ const j = 100;
 y * x;
 z;
 
-if (3 < 2) 
+if (3 < 2) {
     2 + 2;
-else 
+} else 
     3 + 6;
 
 func add(a, b) {
@@ -85,7 +85,7 @@ var obj = {
 
 while (jj < 100000) {
     ++jj;
-   
+   println(">>", jj);
 }
 
 println(">>", obj["Hello"], obj["One"], arr2[0]);
@@ -97,8 +97,12 @@ func err(a, b, c) {
     return a + b + c;
 }
 
+var k = 0;
+
+var result = 100 / k;
+println(result);
+
 
 println(err(1,2,3));
-
-println(">>", obj[0]);
+println(">>", obj["Hello"], [1,2,3][1000]);
 println("Done!!!");
