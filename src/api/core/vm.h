@@ -53,6 +53,14 @@ DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver);
 DLLEXPORT void vm_name_resolver(env_t* _env, char* _name);
 
 /*
+ * Links an object into the VM's heap memory and returns a handle to it.
+ * The object will be tracked by the garbage collector.
+ * @param _obj The object to link into the VM's heap
+ * @return Handle to the linked object in heap memory
+ */
+DLLEXPORT object_t* vm_to_heap(object_t* _obj);
+
+/*
  * Push an object to the evaluation stack.
  * @param _obj The object.
  */

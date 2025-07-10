@@ -31,26 +31,26 @@ DLLEXPORT object_t* object_new_double(double _value) {
     return obj;
 }
 
-DLLEXPORT object_t* object_new_bool(bool _value) {
-    object_t* obj = object_new(OBJECT_TYPE_BOOL);
-    obj->value.i32 = _value;
-    return obj;
-}
-
 DLLEXPORT object_t* object_new_string(char *_value) {
     object_t* obj = object_new(OBJECT_TYPE_STRING);
     obj->value.opaque = string_allocate((const char*) _value);
     return obj;
 }
 
-DLLEXPORT object_t* object_new_array(size_t _length) {
-    object_t* obj = object_new(OBJECT_TYPE_ARRAY);
-    obj->value.opaque = array_new(_length);
+DLLEXPORT object_t* object_new_null() {
+    object_t* obj = object_new(OBJECT_TYPE_NULL);
     return obj;
 }
 
-DLLEXPORT object_t* object_new_null() {
-    object_t* obj = object_new(OBJECT_TYPE_NULL);
+DLLEXPORT object_t* object_new_bool(bool _value) {
+    object_t* obj = object_new(OBJECT_TYPE_BOOL);
+    obj->value.i32 = _value;
+    return obj;
+}
+
+DLLEXPORT object_t* object_new_array(size_t _length) {
+    object_t* obj = object_new(OBJECT_TYPE_ARRAY);
+    obj->value.opaque = array_new(_length);
     return obj;
 }
 
@@ -63,6 +63,20 @@ DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uin
 DLLEXPORT object_t* object_new_native_function(size_t _param_count, vm_native_function _function) {
     object_t* obj = object_new(OBJECT_TYPE_NATIVE_FUNCTION);
     obj->value.opaque = _function;
+    return obj;
+}
+
+DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
+    object_t* obj = object_new(OBJECT_TYPE_ERROR);
+    if (_vm_error) {
+        // _message here should be a string a.k.a C string.
+        obj->value.opaque = 
+            vm_to_heap(object_new_string((char*) _message));
+    } else {
+        // _message here should be an object_t*, that is already in the heap
+        obj->value.opaque = 
+            (object_t*) _message;
+    }
     return obj;
 }
 
@@ -144,8 +158,11 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         case OBJECT_TYPE_NATIVE_FUNCTION: {
             return string_allocate("native function(...){...}");
         }
+        case OBJECT_TYPE_ERROR: {
+            return string_format("error: %s", object_to_string((object_t*) _obj->value.opaque));
+        }
         default: {
-            return string_allocate("unknown");
+            return string_allocate("unknown object");
         }
     }
 }
@@ -165,6 +182,8 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
             return array_length((array_t*) _obj->value.opaque) > 0;
         case OBJECT_TYPE_OBJECT:
             return hashmap_size((hashmap_t*) _obj->value.opaque) > 0;
+        case OBJECT_TYPE_ERROR:
+            return object_is_truthy((object_t*) _obj->value.opaque);
         default:
             return false;
     }
@@ -219,12 +238,39 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
         }
         case OBJECT_TYPE_FUNCTION:
         case OBJECT_TYPE_NATIVE_FUNCTION:
+        case OBJECT_TYPE_ERROR:
             return _obj1->value.opaque == _obj2->value.opaque || _obj1 == _obj2;
         default:
             return _obj1 == _obj2;
     }
 }
 
+DLLEXPORT char* object_type_to_string(object_t* _obj) {
+    switch (_obj->type) {
+        case OBJECT_TYPE_INT:
+            return "int";
+        case OBJECT_TYPE_DOUBLE:
+            return "number";
+        case OBJECT_TYPE_STRING:
+            return "string";
+        case OBJECT_TYPE_BOOL:
+            return "boolean";
+        case OBJECT_TYPE_NULL:
+            return "null";
+        case OBJECT_TYPE_ARRAY:
+            return "array";
+        case OBJECT_TYPE_OBJECT:
+            return "object";
+        case OBJECT_TYPE_FUNCTION:
+            return "function";
+        case OBJECT_TYPE_NATIVE_FUNCTION:
+            return "native function";
+        case OBJECT_TYPE_ERROR:
+            return "error";
+        default:
+            return "unknown";
+    }
+}
 DLLEXPORT size_t object_hash(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
@@ -296,6 +342,8 @@ DLLEXPORT size_t object_hash(object_t* _obj) {
             return (size_t) _obj->value.opaque;
         case OBJECT_TYPE_NATIVE_FUNCTION:
             return (size_t) _obj->value.opaque;
+        case OBJECT_TYPE_ERROR:
+            return object_hash((object_t*) _obj->value.opaque);
         default:
             PD("unsupported object type for hash: %d", _obj->type);
             return 0;

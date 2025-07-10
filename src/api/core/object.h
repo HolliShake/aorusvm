@@ -37,6 +37,12 @@ typedef void (*vm_native_function)(int argc);
 DLLEXPORT object_t* object_new(object_type_t _type);
 
 /*
+ * Create a new object object.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_object();
+
+/*
  * Create a new int object.
  * @param _value The value.
  * @return The new object.
@@ -51,13 +57,6 @@ DLLEXPORT object_t* object_new_int(int _value);
 DLLEXPORT object_t* object_new_double(double _value);
 
 /*
- * Create a new bool object.
- * @param _value The value.
- * @return The new object.
- */
-DLLEXPORT object_t* object_new_bool(bool _value);
-
-/*
  * Create a new string object.
  * @param _value The value.
  * @return The new object.
@@ -65,17 +64,24 @@ DLLEXPORT object_t* object_new_bool(bool _value);
 DLLEXPORT object_t* object_new_string(char* _value);
 
 /*
+ * Create a new bool object.
+ * @param _value The value.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_bool(bool _value);
+
+/*
+ * Create a new null object.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_null();
+
+/*
  * Create a new array object.
  * @param _length The length of the array.
  * @return The new object.
  */
 DLLEXPORT object_t* object_new_array(size_t _length);
-
-/*
- * Create a new object object.
- * @return The new object.
- */
-DLLEXPORT object_t* object_new_object();
 
 /*
  * Create a new function object.
@@ -93,6 +99,14 @@ DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uin
  * @return The new object.
  */
 DLLEXPORT object_t* object_new_native_function(size_t _param_count, vm_native_function _function);
+
+/*
+ * Create a new error object.
+ * @param _message The message.
+ * @param _vm_error True if the error is a VM error, false otherwise.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error);
 
 /*
  * Convert an object to a string.
@@ -123,6 +137,13 @@ DLLEXPORT bool object_is_number(object_t* _obj);
  * @return True if the objects are equal, false otherwise.
  */
 DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2);
+
+/*
+ * Convert an object type to a string.
+ * @param _type The type.
+ * @return The string.
+ */
+DLLEXPORT char* object_type_to_string(object_t* _obj);
 
 /*
  * Get the hash of the object.

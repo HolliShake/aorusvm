@@ -85,9 +85,20 @@ var obj = {
 
 while (jj < 100000) {
     ++jj;
-    println(jj);
+   
 }
 
 println(">>", obj["Hello"], obj["One"], arr2[0]);
 
 println(obj, [obj1, 1, 2]);
+
+
+func err(a, b, c) {
+    return a + b + c;
+}
+
+
+println(err(1,2,3));
+
+println(">>", obj[0]);
+println("Done!!!");

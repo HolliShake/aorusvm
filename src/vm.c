@@ -171,7 +171,13 @@ void do_increment(object_t* _obj) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_increment");
+    char* message = string_format(
+        "cannot increment type %s", 
+        object_type_to_string(_obj)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL
@@ -200,7 +206,14 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_mul");
+    char* message = string_format(
+        "cannot multiply type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL
@@ -210,7 +223,8 @@ void do_div(object_t *_lhs, object_t *_rhs) {
         int a = _lhs->value.i32;
         int b = _rhs->value.i32;
         if (b == 0) {
-            PD("division by zero");
+            PUSH(object_new_error("division by zero", true));
+            return;
         }
         int result = a / b;
         PUSH(object_new_int(result));
@@ -221,7 +235,8 @@ void do_div(object_t *_lhs, object_t *_rhs) {
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
     if (rhs_value == 0) {
-        PD("division by zero");
+        PUSH(object_new_error("division by zero", true));
+        return;
     }
     double result = lhs_value / rhs_value;
 
@@ -233,7 +248,14 @@ void do_div(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_div");
+    char* message = string_format(
+        "cannot divide type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL
@@ -243,7 +265,8 @@ void do_mod(object_t *_lhs, object_t *_rhs) {
         int a = _lhs->value.i32;
         int b = _rhs->value.i32;
         if (b == 0) {
-            PD("division by zero");
+            PUSH(object_new_error("division by zero", true));
+            return;
         }
         int result = a % b;
         PUSH(object_new_int(result));
@@ -254,7 +277,8 @@ void do_mod(object_t *_lhs, object_t *_rhs) {
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
     if (rhs_value == 0) {
-        PD("division by zero");
+        PUSH(object_new_error("division by zero", true));
+        return;
     }
     double result = fmod(lhs_value, rhs_value);
 
@@ -266,7 +290,14 @@ void do_mod(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_mod");
+    char* message = string_format(
+        "cannot modulo type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL
@@ -313,7 +344,14 @@ void do_add(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_add");
+    char* message = string_format(
+        "cannot add type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL
@@ -344,7 +382,14 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
-    PD("error in do_sub");
+    char* message = string_format(
+        "cannot subtract type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
@@ -369,7 +414,14 @@ INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double((double)result));
     return;
     ERROR:;
-    PD("error in do_shl");
+    char* message = string_format(
+        "cannot shift left type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
@@ -394,7 +446,14 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
     PUSH(object_new_double((double)result));
     return;
     ERROR:;
-    PD("error in do_shr");
+    char* message = string_format(
+        "cannot shift right type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
@@ -412,7 +471,14 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
-    PD("error in do_cmp_lt");
+    char* message = string_format(
+        "cannot compare less than type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
@@ -430,7 +496,14 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
-    PD("error in do_cmp_lte");
+    char* message = string_format(
+        "cannot compare less than or equal to type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
@@ -448,7 +521,14 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
-    PD("error in do_cmp_gt");
+    char* message = string_format(
+        "cannot compare greater than type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
@@ -466,7 +546,14 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
-    PD("error in do_cmp_gte");
+    char* message = string_format(
+        "cannot compare greater than or equal to type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
@@ -500,7 +587,14 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
-    PD("error in do_cmp_eq");
+    char* message = string_format(
+        "cannot compare equal type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
@@ -534,7 +628,14 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
     PUSH_REF(instance->tobj);
     return;
     ERROR:;
-    PD("error in do_cmp_ne");
+    char* message = string_format(
+        "cannot compare not equal type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
@@ -556,7 +657,14 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
-    PD("error in do_and");
+    char* message = string_format(
+        "cannot bitwise and type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
@@ -578,7 +686,14 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
-    PD("error in do_or");
+    char* message = string_format(
+        "cannot bitwise or type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
@@ -600,7 +715,14 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     }
     return;
     ERROR:;
-    PD("error in do_xor");
+    char* message = string_format(
+        "cannot bitwise xor type(s) %s and %s", 
+        object_type_to_string(_lhs), 
+        object_type_to_string(_rhs)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 /**
@@ -622,17 +744,35 @@ INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signa
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
     if (!(OBJECT_TYPE_COLLECTION(_obj))) {
-        PD("expected collection, got %s", object_to_string(_obj));
+        char* message = string_format(
+            "expected collection, got %s", 
+            object_to_string(_obj)
+        );
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
     }
     if (OBJECT_TYPE_ARRAY(_obj)) {
         if (!OBJECT_TYPE_NUMBER(_index)) {
-            PD("expected number, got %s", object_to_string(_index));
+            char* message = string_format(
+                "expected number, got %s", 
+                object_to_string(_index)
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
         }
         long index = number_coerce_to_long(_index);
         
         array_t* array = (array_t*) _obj->value.opaque;
         if (index < 0 || index >= array_length(array)) {
-            PD("index out of bounds");
+            char* message = string_format(
+                "index out of bounds", 
+                index
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
         }
         object_t* result = array_get(array, index);
         PUSH_REF(result);
@@ -640,21 +780,40 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* map = (hashmap_t*) _obj->value.opaque;
         if (!hashmap_has(map, _index)) {
-            PD("key not found");
+            char* message = string_format(
+                "key not found", 
+                object_to_string(_index)
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
         }
         object_t* result = hashmap_get(map, _index);
         PUSH_REF(result);
         return;
     }
-    PD("expected array or object, got %s", object_to_string(_obj));
-    ERROR:;
-    PD("error in do_index");
+    char* message = string_format(
+        "expected array or object, got %s", 
+        object_to_string(_obj)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
 }
 
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     code_t *code = (code_t *) _function->value.opaque;
     if (code->param_count != _argc) {
-        PD("expected %ld arguments, got %d", code->param_count, _argc);
+        // pop all arguments, before returning error
+        POPN(_argc);
+        char* message = string_format(
+            "expected %ld arguments, got %d", 
+            code->param_count, 
+            _argc
+        );
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
     }
     env_t* func_env = env_new(_parent_env);
     vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
@@ -759,10 +918,24 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 object_t* array_src = POPP();
                 object_t* array_dst = PEEK();
                 if (!OBJECT_TYPE_ARRAY(array_src)) {
-                    PD("expected array, got %s", object_to_string(array_src));
+                    POPP();
+                    char* message = string_format(
+                        "expected array, got %s", 
+                        object_to_string(array_src)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 if (!OBJECT_TYPE_ARRAY(array_dst)) {
-                    PD("expected array, got %s", object_to_string(array_dst));
+                    POPP();
+                    char* message = string_format(
+                        "expected array, got %s", 
+                        object_to_string(array_dst)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 array_extend((array_t*) array_dst->value.opaque, (array_t*) array_src->value.opaque);
                 break;
@@ -771,7 +944,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 object_t* obj = POPP();
                 object_t* arr = PEEK();
                 if (!OBJECT_TYPE_ARRAY(arr)) {
-                    PD("expected array, got %s", object_to_string(arr));
+                    POPP();
+                    char* message = string_format(
+                        "expected array, got %s", 
+                        object_to_string(arr)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 array_push((array_t*) arr->value.opaque, obj);
                 break;
@@ -782,7 +962,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 for (int i = 0; i < length; i++) {
                     object_t* key = POPP();
                     if (OBJECT_TYPE_COLLECTION(key)) {
-                        PD("invalid key type %s", object_to_string(key));
+                        char* message = string_format(
+                            "invalid key type %s", 
+                            object_to_string(key)
+                        );
+                        PUSH(object_new_error(message, true));
+                        free(message);
+                        break;
                     }
                     object_t* val = POPP();
                     hashmap_put((hashmap_t*) obj->value.opaque, key, val);
@@ -795,10 +981,24 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 object_t* obj_src = POPP();
                 object_t* obj_dst = PEEK();
                 if (!OBJECT_TYPE_OBJECT(obj_src)) {
-                    PD("expected object, got %s", object_to_string(obj_src));
+                    POPP();
+                    char* message = string_format(
+                        "expected object, got %s", 
+                        object_to_string(obj_src)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
-                    PD("expected object, got %s", object_to_string(obj_dst));
+                    POPP();
+                    char* message = string_format(
+                        "expected object, got %s", 
+                        object_to_string(obj_dst)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 hashmap_extend((hashmap_t*) obj_dst->value.opaque, (hashmap_t*) obj_src->value.opaque);
                 break;
@@ -808,10 +1008,23 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 object_t* val = POPP();
                 object_t* obj_dst = PEEK();
                 if (OBJECT_TYPE_COLLECTION(key)) {
-                    PD("invalid key type %s", object_to_string(key));
+                    char* message = string_format(
+                        "invalid key type %s", 
+                        object_to_string(key)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
-                    PD("expected object, got %s", object_to_string(obj_dst));
+                    POPP();
+                    char* message = string_format(
+                        "expected object, got %s", 
+                        object_to_string(obj_dst)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 hashmap_put((hashmap_t*) obj_dst->value.opaque, key, val);
                 break;
@@ -826,7 +1039,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();
                 if (!OBJECT_TYPE_CALLABLE(function)) {
-                    PD("expected function, got %s", object_to_string(function));
+                    POPP();
+                    char* message = string_format(
+                        "expected function, got %s", 
+                        object_type_to_string(function)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 if (OBJECT_TYPE_FUNCTION(function)) {
                     do_call(_env, function, argc);
@@ -845,7 +1065,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             case OPCODE_SET_NAME: {
                 char* name = get_string(bytecode, ip);
                 if (!env_has(_env, name, true)) {
-                    PD("variable %s not found", name);
+                    char* message = string_format(
+                        "variable %s not found", 
+                        name
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
                 }
                 env_t* env = _env;
                 while (env != NULL) {
@@ -1106,6 +1332,16 @@ DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
         PD("variable %s not found", _name);
     }
     PUSH_REF(env_get(_env, _name));
+}
+
+DLLEXPORT object_t* vm_to_heap(object_t* _obj) {
+    if (_obj->next != NULL) {
+        PD("Object is already in the root (%s)", object_to_string(_obj));
+    }
+    instance->allocation_counter++;
+    _obj->next = instance->root;
+    instance->root = _obj;
+    return _obj;
 }
 
 DLLEXPORT void vm_push(object_t* _obj) {

@@ -24,11 +24,11 @@ void test_function_node() {
         ast_name_node(pos, "a"),
         ast_name_node(pos, "b")
     );
-    body[0] = ast_return_node(pos, add);
+    body[0] = ast_return_statement_node(pos, add);
     body[1] = NULL;
     
     // Create function node
-    ast_node_t* func = ast_function_node(pos, name, params, body);
+    ast_node_t* func = ast_async_function_node(pos, name, params, body);
 
     ast_node_list_t arguments = malloc(sizeof(ast_node_t*) * 3);
     arguments[0] = ast_int_node(pos, 1);
@@ -39,7 +39,7 @@ void test_function_node() {
 
     ast_node_list_t statements = malloc(sizeof(ast_node_t*) * 3);
     statements[0] = func;
-    statements[1] = ast_statement_expression_node(pos, call);
+    statements[1] = ast_expression_statement_node(pos, call);
     statements[2] = NULL;
 
     ast_node_t* program = ast_program_node(
