@@ -1191,13 +1191,23 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
 
             // Body
+            bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
+                if (body[i]->type == AstReturnStatement && has_visible_return) {
+                    for (size_t j = i; body[j] != NULL; j++) {
+                        ast_node_free(body[j]);
+                    }
+                    break;
+                }
+                if (body[i]->type == AstReturnStatement) has_visible_return = true;
                 generator_statement(_generator, catch_scope, body[i]);
             }
 
             // Return placeholder
-            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-            generator_emit_byte(_generator, OPCODE_RETURN);
+            if (!has_visible_return) {
+                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, OPCODE_RETURN);
+            }
             
             scope_free(catch_scope);
 

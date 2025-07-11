@@ -333,3 +333,31 @@ DLLEXPORT ast_node_t* ast_program_node(position_t* _position, ast_node_list_t _c
 DLLEXPORT position_t* ast_position(ast_node_t* _node) {
     return _node->position;
 }
+
+void ast_node_free(ast_node_t* _node) {
+    if (_node == NULL) return;
+    if (_node->str0 != NULL) free(_node->str0);
+    if (_node->ast0 != NULL) ast_node_free(_node->ast0);
+    if (_node->ast1 != NULL) ast_node_free(_node->ast1);
+    if (_node->ast2 != NULL) ast_node_free(_node->ast2);
+    if (_node->ast3 != NULL) ast_node_free(_node->ast3);
+    if (_node->array0 != NULL) {
+        for (size_t i = 0; _node->array0[i] != NULL; i++) {
+            ast_node_free(_node->array0[i]);
+        }
+        free(_node->array0);
+    }
+    if (_node->array1 != NULL) {
+        for (size_t i = 0; _node->array1[i] != NULL; i++) {
+            ast_node_free(_node->array1[i]);
+        }
+        free(_node->array1);
+    }
+    if (_node->array2 != NULL) {
+        for (size_t i = 0; _node->array2[i] != NULL; i++) {
+            ast_node_free(_node->array2[i]);
+        }
+        free(_node->array2);
+    }
+    free(_node);
+}

@@ -77,4 +77,11 @@ typedef struct ast_node_struct {
     position_t*     position;
 } ast_node_t;
 
+/*
+ * Free an AST node.
+ *
+ * @param _node The node to free.
+ */
+void ast_node_free(ast_node_t* _node);
+
 #endif
