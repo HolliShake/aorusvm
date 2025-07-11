@@ -1227,6 +1227,17 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 }
                 break;
             }
+            case OPCODE_JUMP_IF_NOT_ERROR_OR_POP: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t* obj = PEEK();
+                if (!object_is_error(obj)) {
+                    POPP();
+                    FORWARD(jump_offset);
+                } else {
+                    FORWARD(4);
+                }
+                break;
+            }
             case OPCODE_ABSOLUTE_JUMP: {
                 JUMP(get_int(bytecode, ip));
                 break;
@@ -1272,6 +1283,18 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 } else {
                     return VmBlockSignalReturned;
                 }
+            }
+            case OPCODE_SETUP_CATCH_BLOCK: {
+                size_t function_size = get_long(bytecode, ip);
+                char* module_name = get_string(bytecode, ip + 8);
+                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
+                uint8_t* function_bytecode = malloc(function_size);
+                memcpy(function_bytecode, bytecode + ip, function_size);
+                object_t* closure = object_new_function(false, 0, function_bytecode, function_size);
+                vm_block_signal_t signal = VmBlockSignalPending;
+                do_block(_env, closure, &signal);
+                FORWARD(function_size);
+                break;
             }
             case OPCODE_DUPTOP: {
                 PUSH(PEEK());

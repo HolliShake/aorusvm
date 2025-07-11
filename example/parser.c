@@ -43,6 +43,7 @@ void parser_accept(parser_t* _parser, bool _is_type, token_type_t _type, char* _
 
 ast_node_t* parser_expression(parser_t* _parser);
 ast_node_t* parser_mandatory_expression(parser_t* _parser);
+ast_node_t* parser_statement(parser_t* _parser);
 
 ast_node_t* parser_terminal(parser_t* _parser) {
     if (CHECKT(TTIDN)) {
@@ -553,8 +554,45 @@ ast_node_t* parser_logical(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_catch(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ast_node_t* error = parser_logical(_parser);
+    if (error == NULL) {
+        return NULL;
+    }
+    if (!CHECKV(KEY_CATCH)) {
+        return error;
+    }
+    ACCEPTV(KEY_CATCH);
+    ACCEPTV(LPAREN);
+    ast_node_t* placeholder = parser_terminal(_parser);
+    if (placeholder == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "catch placeholder expected"
+        );
+    }
+    ACCEPTV(RPAREN);
+    ACCEPTV(LBRACKET);
+    size_t index = 0;
+    ast_node_list_t body = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    body[0] = NULL;
+    ast_node_t* statement = parser_statement(_parser);
+    while (statement != NULL) {
+        body[index++] = statement;
+        body = (ast_node_list_t) realloc(body, (sizeof(ast_node_t*) * (index + 1)));
+        body[index] = NULL;
+        statement = parser_statement(_parser);
+    }
+    ended = _parser->current->position;
+    ACCEPTV(RBRACKET);
+    return ast_catch_node(position_merge(start, ended), error, placeholder, body);
+}
+
 ast_node_t* parser_expression(parser_t* _parser) {
-    return parser_logical(_parser);
+    return parser_catch(_parser);
 }
 
 ast_node_t* parser_mandatory_expression(parser_t* _parser) {

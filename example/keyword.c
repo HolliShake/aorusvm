@@ -17,6 +17,7 @@ const char* KEYWORDS[] = {
     KEY_TRUE,
     KEY_FALSE,
     KEY_NULL,
+    KEY_CATCH,
 };
 
 bool is_keyword(char* _value) {

@@ -239,6 +239,14 @@ DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lh
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_catch_node(position_t* _position, ast_node_t* _error, ast_node_t* _placeholder, ast_node_list_t _body) {
+    ast_node_t* node = ast_node_new(AstCatch, _position);
+    node->ast0 = _error;
+    node->ast1 = _placeholder;
+    node->array0 = _body;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_var_statement_node(position_t* _position, ast_node_list_t _names, ast_node_list_t _values) {
     ast_node_t* node = ast_node_new(AstVarStatement, _position);
     node->array0 = _names;

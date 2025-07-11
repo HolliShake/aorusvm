@@ -324,6 +324,17 @@ DLLEXPORT ast_node_t* ast_logical_and_node(position_t* _position, ast_node_t* _l
 DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
+ * Catch node.
+
+ * @param _position The position of the node.
+ * @param _error The error of the node.
+ * @param _placeholder The placeholder of the node.
+ * @param _body The body of the node.
+ * @return The catch node.
+ */
+DLLEXPORT ast_node_t* ast_catch_node(position_t* _position, ast_node_t* _error, ast_node_t* _placeholder, ast_node_list_t _body);
+
+/*
  * Variable statement node (Global variable declaration).
  *
  * @param _position The position of the node.

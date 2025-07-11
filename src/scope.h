@@ -9,6 +9,7 @@ typedef enum scope_type_enum {
     ScopeTypeGlobal,
     ScopeTypeLocal,
     ScopeTypeFunction,
+    ScopeTypeCatch,
     ScopeTypeSingle,
     ScopeTypeLoop,
     ScopeTypeArray,
@@ -101,6 +102,14 @@ bool scope_is_local(scope_t* _scope);
  * @return True if the scope is a function, false otherwise.
  */
 bool scope_is_function(scope_t* _scope);
+
+/*
+ * Check if a scope is a catch.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a catch, false otherwise.
+ */
+bool scope_is_catch(scope_t* _scope);
 
 /*
  * Check if a scope is a single.

@@ -189,6 +189,10 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
     }
 }
 
+DLLEXPORT bool object_is_error(object_t* _obj) {
+    return _obj->type == OBJECT_TYPE_ERROR;
+}
+
 DLLEXPORT bool object_is_number(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:

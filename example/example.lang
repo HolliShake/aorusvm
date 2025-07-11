@@ -99,8 +99,12 @@ func err(a, b, c) {
 
 var k = 0;
 
-var result = 100 / k;
-println(result);
+var result = (100 / k) catch(e) {
+    println("Catch:>>", e);
+    return 1 << 2;
+};
+
+println("RESULT:", result);
 
 
 println(err(1,2,3));

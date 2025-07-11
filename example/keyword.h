@@ -19,6 +19,7 @@
 #define KEY_TRUE "true"
 #define KEY_FALSE "false"
 #define KEY_NULL "null"
+#define KEY_CATCH "catch"
 
 extern const char* KEYWORDS[];
 

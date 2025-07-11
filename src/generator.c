@@ -158,6 +158,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBinaryXor:
         case AstLogicalAnd:
         case AstLogicalOr:
+        case AstCatch:
             return true;
         default:
             return false;
@@ -232,6 +233,22 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
 }
 
 INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expression) {
+    if (_expression == NULL) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "assignment expression must have an expression, but received NULL"
+        );
+    }
+    if (!generator_is_expression_type(_expression)) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "assignment expression must be an expression, but received %d", _expression->type
+        );
+    }
     switch (_expression->type) {
         case AstName:
             generator_emit_byte(_generator, OPCODE_LOAD_NAME);
@@ -285,6 +302,8 @@ INTERNAL void generator_assignment1(generator_t* _generator, scope_t* _scope, as
             );
     }
 }
+
+INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_node_t* _statement);
 
 INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
     switch (_expression->type) {
@@ -1108,6 +1127,92 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(_expression);
             break;
         }
+        case AstCatch: {
+            ast_node_t* error = _expression->ast0;
+            ast_node_t* placeholder = _expression->ast1;
+            ast_node_list_t body = _expression->array0;
+            if (error == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "catch error expected"
+                );
+            }
+            if (placeholder == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "catch placeholder expected"
+                );
+            }
+            if (body == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "catch body expected"
+                );
+            }
+            if (!generator_is_expression_type(error)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "catch error must be an expression"
+                );
+            }
+            if (placeholder->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "catch placeholder must be a name"
+                );
+            }
+            // Generate error code
+            generator_expression(_generator, _scope, error);
+            generator_emit_byte(_generator, OPCODE_JUMP_IF_NOT_ERROR_OR_POP);
+            int jump_start = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+
+            // Setup catch block
+            generator_emit_byte(_generator, OPCODE_SETUP_CATCH_BLOCK);
+            size_t size_address = _generator->bsize;
+            generator_emit_bytecode_size(_generator);
+            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, "catch");
+
+            // Store placeholder
+            generator_emit_byte(_generator, OPCODE_STORE_NAME);
+            generator_emit_raw_string(_generator, placeholder->str0);
+
+            scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
+
+            // Body
+            for (size_t i = 0; body[i] != NULL; i++) {
+                generator_statement(_generator, catch_scope, body[i]);
+            }
+
+            // Return placeholder
+            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+            generator_emit_byte(_generator, OPCODE_RETURN);
+            
+            scope_free(catch_scope);
+
+            // Set the bytecode size
+            generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
+
+            // Jump here if there is no error
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+
+            // Cleanup
+            free(placeholder);
+            free(body);
+            free(_expression);
+            break;
+        }
         default:
             PD("unsupported expression type %d, but received %d", _expression->type, _expression->type);
     }
@@ -1206,6 +1311,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 scope_put(_scope, name->str0, symbol);
                 free(name);
             }
+            // Cleanup
             free(names);
             free(values);
             free(_statement);
@@ -1528,7 +1634,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             break;
         }
         case AstReturnStatement: {
-            if (!scope_is_function(_scope)) {
+            bool is_func = false, is_catch = false;
+            if (!(is_func = scope_is_function(_scope)) && !(is_catch = scope_is_catch(_scope))) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -1538,7 +1645,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             // Find function scope and set returned flag
             scope_t* current;
-            for (current = _scope; current->type != ScopeTypeFunction; current = current->parent);
+            if (is_func) {
+                for (current = _scope; current->type != ScopeTypeFunction; current = current->parent);
+            } else if (is_catch) {
+                for (current = _scope; current->type != ScopeTypeCatch; current = current->parent);
+            }
+            
             current->is_returned = true;
             // Generate return value and return opcode
             ast_node_t* expr = _statement->ast0;
@@ -1556,6 +1668,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_emit_byte(_generator, OPCODE_LOAD_NULL);
             }
             generator_emit_byte(_generator, OPCODE_RETURN);
+
+            // Cleanup
             free(_statement);
             break;
         }
@@ -1578,6 +1692,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             generator_expression(_generator, _scope, _statement->ast0);
             generator_emit_byte(_generator, OPCODE_POPTOP);
+
+            // Cleanup
             free(_statement);
             break;
         }
@@ -1694,6 +1810,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // Free the function scope
             scope_free(local_scope);
             scope_free(function_scope);
+            // Cleanup
             free(name);
             free(params);
             free(body);
