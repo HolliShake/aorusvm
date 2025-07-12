@@ -3,6 +3,7 @@
 #include "array.h"
 #include "code.h"
 #include "hashmap.h"
+#include "range.h"
 #include "type.h"
 
 #ifndef OBJECT_H

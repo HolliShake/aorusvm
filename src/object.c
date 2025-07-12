@@ -50,7 +50,13 @@ DLLEXPORT object_t* object_new_bool(bool _value) {
 
 DLLEXPORT object_t* object_new_array(size_t _length) {
     object_t* obj = object_new(OBJECT_TYPE_ARRAY);
-    obj->value.opaque = array_new(_length);
+    obj->value.opaque = array_new_initialized(_length);
+    return obj;
+}
+
+DLLEXPORT object_t* object_new_range(long _start, long _end, long _step) {
+    object_t* obj = object_new(OBJECT_TYPE_RANGE);
+    obj->value.opaque = range_new(_start, _end, _step);
     return obj;
 }
 
@@ -119,6 +125,10 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             str = string_append(str, "]");
             return str;
         }
+        case OBJECT_TYPE_RANGE: {
+            range_t* range = (range_t*) _obj->value.opaque;
+            return string_format("range(%ld, %ld, %ld)", range->start, range->end, range->step);
+        }
         case OBJECT_TYPE_OBJECT: {
             char* str = string_allocate("{");
             hashmap_t* map = (hashmap_t*) _obj->value.opaque;
@@ -180,6 +190,8 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
             return false;
         case OBJECT_TYPE_ARRAY:
             return array_length((array_t*) _obj->value.opaque) > 0;
+        case OBJECT_TYPE_RANGE:
+            return true;
         case OBJECT_TYPE_OBJECT:
             return hashmap_size((hashmap_t*) _obj->value.opaque) > 0;
         case OBJECT_TYPE_ERROR:
@@ -228,6 +240,11 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
             }
             return true;
         }
+        case OBJECT_TYPE_RANGE: {
+            range_t* range1 = (range_t*) _obj1->value.opaque;
+            range_t* range2 = (range_t*) _obj2->value.opaque;
+            return range1->start == range2->start && range1->end == range2->end && range1->step == range2->step;
+        }
         case OBJECT_TYPE_OBJECT: {
             hashmap_t* map1 = (hashmap_t*) _obj1->value.opaque;
             hashmap_t* map2 = (hashmap_t*) _obj2->value.opaque;
@@ -262,6 +279,7 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
         case OBJECT_TYPE_NULL:
             return "null";
         case OBJECT_TYPE_ARRAY:
+        case OBJECT_TYPE_RANGE:
             return "array";
         case OBJECT_TYPE_OBJECT:
             return "object";
@@ -325,6 +343,10 @@ DLLEXPORT size_t object_hash(object_t* _obj) {
                 hash *= prime; // FNV prime
             }
             return (size_t) hash;
+        }
+        case OBJECT_TYPE_RANGE: {
+            range_t* range = (range_t*) _obj->value.opaque;
+            return (size_t) _obj->value.opaque ^ range->start ^ range->end ^ range->step;
         }
         case OBJECT_TYPE_OBJECT: {
             #if IS_64BIT

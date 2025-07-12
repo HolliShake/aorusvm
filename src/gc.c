@@ -110,7 +110,7 @@ void gc_collect(vm_t* _vm, env_t* _env) {
     gc_mark_vm_content(_vm);
 
     // mark the env
-    gc_mark_env_content(_env);
+    if (_env != NULL) gc_mark_env_content(_env);
 
     // collect the garbage
     gc_sweep(_vm, false);

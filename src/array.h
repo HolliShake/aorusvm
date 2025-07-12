@@ -7,6 +7,7 @@
 
 typedef struct array_struct {
     object_t** elements;
+    size_t     capacity;
     size_t     length;
 } array_t;
 
@@ -17,6 +18,14 @@ typedef struct array_struct {
  * @return The new array.
  */
 array_t* array_new(size_t _length);
+
+/*
+ * Create a new array with a given capacity.
+ *
+ * @param _capacity The capacity of the array.
+ * @return The new array.
+ */
+array_t* array_new_initialized(size_t _capacity);
 
 /*  
  * Free an array.

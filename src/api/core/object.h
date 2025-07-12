@@ -84,6 +84,15 @@ DLLEXPORT object_t* object_new_null();
 DLLEXPORT object_t* object_new_array(size_t _length);
 
 /*
+ * Create a new range object.
+ * @param _start The start of the range.
+ * @param _end The end of the range.
+ * @param _step The step of the range.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_range(long _start, long _end, long _step);
+
+/*
  * Create a new function object.
  * @param _param_count The number of parameters.
  * @param _bytecode The bytecode.

@@ -742,36 +742,6 @@ INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signa
     env_free(block_env);
 }
 
-INTERNAL void do_range(object_t* _lhs, object_t* _rhs) {
-    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
-        char* message = string_format(
-            "expected number, got %s and %s", 
-            object_type_to_string(_lhs), 
-            object_type_to_string(_rhs)
-        );
-        PUSH(object_new_error(message, true));
-        free(message);
-        return;
-    }
-
-    long lhs_value = number_coerce_to_long(_lhs);
-    long rhs_value = number_coerce_to_long(_rhs);
-    long size = (lhs_value < rhs_value) ? rhs_value - lhs_value : lhs_value - rhs_value;
-    object_t* array = object_new_array(size);
-    array_t* arr = (array_t*)array->value.opaque;
-
-    // Avoid branching in loop by determining increment direction once
-    long increment = (lhs_value < rhs_value) ? 1 : -1;
-    long start = lhs_value;
-
-    for (long i = 0; i < size; i++) {
-        array_set(arr, i, vm_to_heap(object_new_double(start + (i * increment))));
-    }
-
-    arr->length = size;
-    PUSH(array);
-}
-
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
     if (!(OBJECT_TYPE_COLLECTION(_obj))) {
         char* message = string_format(
@@ -1062,7 +1032,24 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             case OPCODE_RANGE: {
                 object_t* lhs = POPP();
                 object_t* rhs = POPP();
-                do_range(lhs, rhs);
+                if (!OBJECT_TYPE_NUMBER(lhs) || !OBJECT_TYPE_NUMBER(rhs)) {
+                    char* message = string_format(
+                        "expected number, got %s and %s", 
+                        object_type_to_string(lhs), 
+                        object_type_to_string(rhs)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
+                long start = number_coerce_to_long(lhs);
+                long ended = number_coerce_to_long(rhs);
+                long step = (start < ended) ? 1 : -1;
+                PUSH(object_new_range(
+                    start, 
+                    ended, 
+                    step
+                ));
                 break;
             }
             case OPCODE_INDEX: {
@@ -1082,6 +1069,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
+                    FORWARD(4);
                     break;
                 }
                 if (OBJECT_TYPE_FUNCTION(function)) {
@@ -1397,9 +1385,11 @@ DLLEXPORT object_t* vm_to_heap(object_t* _obj) {
     if (_obj->next != NULL) {
         PD("Object is already in the root (%s)", object_to_string(_obj));
     }
+
     instance->allocation_counter++;
     _obj->next = instance->root;
     instance->root = _obj;
+
     return _obj;
 }
 
