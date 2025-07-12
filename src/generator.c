@@ -136,6 +136,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstNull:
         case AstArray:
         case AstObject:
+        case AstGenerator:
         case AstIndex:
         case AstCall:
         case AstUnaryPlus:
@@ -511,6 +512,39 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             scope_free(object_scope);
             free(properties);
+            free(_expression);
+            break;
+        }
+        case AstGenerator: {
+            ast_node_t* lhs = _expression->ast0;
+            ast_node_t* rhs = _expression->ast1;
+            if (lhs == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "generator expression requires a left hand side, but received NULL"
+                );
+            }
+            if (rhs == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "generator expression requires a right hand side, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(lhs) || !generator_is_expression_type(rhs)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "generator expression requires both left and right operands to be expressions"
+                );
+            }
+            generator_expression(_generator, _scope, rhs);
+            generator_expression(_generator, _scope, lhs);
+            generator_emit_byte(_generator, OPCODE_GENERATE);
             free(_expression);
             break;
         }

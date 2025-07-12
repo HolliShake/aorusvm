@@ -100,7 +100,7 @@ func err(a, b, c) {
 var k = 0;
 
 var result = (100 / k) catch(e) {
-    println("Catch:>>", e);
+    println("catch:>>", e);
     return 1 << 2;
 };
 
@@ -108,5 +108,10 @@ println("RESULT:", result);
 
 
 println(err(1,2,3));
-println(">>", obj["Hello"], [1,2,3][1000]);
+println(">>", obj["Hello"], [1,2,3][1000] catch (err) {
+    println("index error:", err);
+});
+
+println(1 .. 100);
+
 println("Done!!!");

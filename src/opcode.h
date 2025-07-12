@@ -16,7 +16,8 @@ typedef enum opcode_enum {
     OPCODE_PUT_OBJECT                   = 86,   // No following bytes
     OPCODE_STORE_NAME                   = 87,   // Followed by the length of the name in bytes + 1 (for the null terminator)
     OPCODE_SET_NAME                     = 88,   // Followed by the length of the name in bytes + 1 (for the null terminator)
-    OPCODE_INDEX                        = 89,   // No following bytes
+    OPCODE_GENERATE                     = 89,   // No following bytes
+    OPCODE_INDEX                        = 90,   // No following bytes
     OPCODE_CALL                         = 91,   // Followed by 4 bytes (aka the number of arguments)
     OPCODE_INCREMENT                    = 92,   // No following bytes
     OPCODE_MUL                          = 93,   // No following bytes
