@@ -920,7 +920,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_ARRAY(array_src) && !OBJECT_TYPE_RANGE(array_src)) {
                     POPP();
                     char* message = string_format(
-                        "expected array, got %s", 
+                        "expected \"array\", got \"%s\"", 
                         object_to_string(array_src)
                     );
                     PUSH(object_new_error(message, true));
@@ -930,7 +930,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_ARRAY(array_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected array, got %s", 
+                        "expected \"array\", got \"%s\"", 
                         object_to_string(array_dst)
                     );
                     PUSH(object_new_error(message, true));
@@ -949,7 +949,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_ARRAY(arr)) {
                     POPP();
                     char* message = string_format(
-                        "expected array, got %s", 
+                        "expected \"array\", got \"%s\"", 
                         object_to_string(arr)
                     );
                     PUSH(object_new_error(message, true));
@@ -986,7 +986,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_OBJECT(obj_src)) {
                     POPP();
                     char* message = string_format(
-                        "expected object, got %s", 
+                        "expected \"object\", got \"%s\"", 
                         object_to_string(obj_src)
                     );
                     PUSH(object_new_error(message, true));
@@ -996,7 +996,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected object, got %s", 
+                        "expected \"object\", got \"%s\"", 
                         object_to_string(obj_dst)
                     );
                     PUSH(object_new_error(message, true));
@@ -1022,7 +1022,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected object, got %s", 
+                        "expected \"object\", got \"%s\"", 
                         object_to_string(obj_dst)
                     );
                     PUSH(object_new_error(message, true));
@@ -1034,11 +1034,19 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             }
             case OPCODE_RANGE: {
                 object_t* lhs = POPP();
-                object_t* rhs = POPP();
-                if (!OBJECT_TYPE_NUMBER(lhs) || !OBJECT_TYPE_NUMBER(rhs)) {
+                if (!OBJECT_TYPE_NUMBER(lhs)) {
                     char* message = string_format(
-                        "expected number, got %s and %s", 
-                        object_type_to_string(lhs), 
+                        "expected \"number\", got \"%s\"", 
+                        object_type_to_string(lhs)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
+                object_t* rhs = POPP();
+                if (!OBJECT_TYPE_NUMBER(rhs)) {
+                    char* message = string_format(
+                        "expected \"number\", got \"%s\"", 
                         object_type_to_string(rhs)
                     );
                     PUSH(object_new_error(message, true));
@@ -1067,7 +1075,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 if (!OBJECT_TYPE_CALLABLE(function)) {
                     POPP();
                     char* message = string_format(
-                        "expected function, got %s", 
+                        "expected \"function\", got \"%s\"", 
                         object_type_to_string(function)
                     );
                     PUSH(object_new_error(message, true));
@@ -1093,7 +1101,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 char* name = get_string(bytecode, ip);
                 if (!env_has(_env, name, true)) {
                     char* message = string_format(
-                        "variable %s not found", 
+                        "variable \"%s\" not found", 
                         name
                     );
                     PUSH(object_new_error(message, true));

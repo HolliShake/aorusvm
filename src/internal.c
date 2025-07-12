@@ -13,17 +13,23 @@ char* string_allocate(const char* _str) {
 
 char* string_append_char(char* _dst, char _c) {
     size_t len = strlen(_dst);
-    _dst = (char*) realloc(_dst, sizeof(char) * (len + 2));
-    ASSERTNULL(_dst, "failed to allocate memory for string");
-    _dst[len] = _c;
-    _dst[len + 1] = '\0';
-    return _dst;
+    char* new_dst = (char*) realloc(_dst, len + 2); // sizeof(char) is always 1
+    ASSERTNULL(new_dst, "failed to allocate memory for string");
+    new_dst[len] = _c;
+    new_dst[len + 1] = '\0';
+    return new_dst;
 }
 
 char* string_append(char* _dst, char* _src) {
-    _dst = (char*) realloc(_dst, sizeof(char) * (strlen(_dst) + strlen(_src) + 1));
+    size_t dst_len = strlen(_dst);
+    size_t src_len = strlen(_src);
+    
+    _dst = (char*) realloc(_dst, sizeof(char) * (dst_len + src_len + 1));
     ASSERTNULL(_dst, "failed to allocate memory for string");
-    strcat(_dst, _src);
+    
+    // Use memcpy instead of strcat for better performance
+    memcpy(_dst + dst_len, _src, src_len + 1);
+    
     return _dst;
 }
 
