@@ -584,6 +584,11 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
         return;
     }
 
+    if (object_equals(_lhs, _rhs)) {
+        PUSH_REF(instance->tobj);
+        return;
+    }
+
     PUSH_REF(instance->fobj);
     return;
     ERROR:;
@@ -789,6 +794,15 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
             return;
         }
         long index = number_coerce_to_long(_index);
+        if (index < 0 || index >= range_length(range)) {
+            char* message = string_format(
+                "index out of bounds", 
+                index
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
+        }
         object_t* result = range_get(range, index);
         PUSH_REF(result);
         return;
