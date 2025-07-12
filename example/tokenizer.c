@@ -88,14 +88,21 @@ token_t* tokenizer_number(tokenizer_t* _tokenizer) {
     }
     token_type_t type = TTINT;
     if (_tokenizer->look == '.') {
+        if (_tokenizer->index + 1 < _tokenizer->fsize && !tokenizer_is_digit(_tokenizer->fdata[_tokenizer->index + 1])) {
+            goto DONE;
+        }
         type = TTNUM;
         append_str(value, _tokenizer->look);
         tokenizer_forward(_tokenizer);
+        if (!tokenizer_is_digit(_tokenizer->look)) {
+            __THROW_ERROR(_tokenizer->fpath, _tokenizer->fdata, pos, "invalid number");
+        }
         while (!tokenizer_is_eof(_tokenizer) && tokenizer_is_digit(_tokenizer->look)) {
             append_str(value, _tokenizer->look);
             tokenizer_forward(_tokenizer);
         }
     }
+    DONE:;
     return token_new(type, value, pos);
 }
 
