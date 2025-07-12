@@ -111,10 +111,20 @@ println(">>", obj["Hello"], [1,2,3][1000] catch (err) {
     println("index error:", err);
 });
 
-println(">>", [...(0..5000)], "<<");
-
 println(panic == panic);
 
-panic("Foocc!!", (0..5)[200]);
+println(">>", [...(0..5)], "<<");
+
 
 println("Done!!!");
+
+const gg = 200;
+
+func accessGlobal() {
+    println(gg);
+}
+
+println("Calling!!");
+
+accessGlobal();
+

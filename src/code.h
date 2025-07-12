@@ -10,6 +10,8 @@ typedef struct code_struct {
     /**** generic  **/
     size_t   size;
     uint8_t* bytecode;
+    // Maybe a pointer to env?
+    void* opaque;
 } code_t;
 
 /*

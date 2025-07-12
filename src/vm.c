@@ -739,8 +739,12 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
 INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
     code_t *code = (code_t *) _closure->value.opaque;
-    env_t* block_env = env_new(_env);
+    env_t* block_env 
+        = env_new(_env);
+    code->opaque = block_env;
     *signal = vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    free(_closure);
+    free(code);
     if (*signal == VmBlockSignalCompleted) {
         POPP(); // pop block return value
     }
@@ -831,7 +835,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
 }
 
 INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
-    code_t *code = (code_t *) _function->value.opaque;
+    code_t* code = (code_t *) _function->value.opaque;
     if (code->param_count != _argc) {
         // pop all arguments, before returning error
         POPN(_argc);
@@ -844,7 +848,9 @@ INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
         free(message);
         return;
     }
-    env_t* func_env = env_new(_parent_env);
+    env_t* func_env = 
+        env_new(_parent_env);
+    code->opaque = func_env;
     vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
     env_free(func_env);
 }
@@ -900,7 +906,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
     while (ip < bytecode_size) {
         opcode_t opcode = bytecode[ip++];
 
-        if (instance->allocation_counter >= GC_ALLOCATION_THRESHOLD) {
+        if (instance->allocation_counter % GC_ALLOCATION_THRESHOLD == 0) {
             gc_collect(instance, _env);
         }
 
@@ -1118,7 +1124,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int argc = get_int(bytecode, ip);
                 object_t *function = POPP();
                 if (!OBJECT_TYPE_CALLABLE(function)) {
-                    POPP();
                     char* message = string_format(
                         "expected \"function\", got \"%s\"", 
                         object_type_to_string(function)
@@ -1494,7 +1499,8 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     VERIFY_VERSION(_bytecode);
 
     // Create a new environment for the main function
-    env_t* env = env_new(instance->env);
+    env_t* env = 
+        env_new(instance->env);
 
     code_t code = {
         .param_count = 0,
