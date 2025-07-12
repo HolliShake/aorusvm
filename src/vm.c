@@ -825,6 +825,22 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
     function(_argc);
 }
 
+INTERNAL void do_panic(int _argc) {
+    char* message = string_allocate("");
+    for (int i = 0; i < _argc; i++) {
+        object_t* arg = POPP();
+        message = string_append(message, object_to_string(arg));
+        if (i < _argc - 1) {
+            message = string_append(message, "\n");
+        }
+    }
+    fprintf(stderr, "panic: %s\n", message);
+    free(message);
+    vm_load_null();
+    gc_collect_all(instance, NULL);
+    exit(EXIT_FAILURE);
+}
+
 INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
     
@@ -1379,6 +1395,9 @@ DLLEXPORT void vm_init() {
     instance->fobj = object_new_bool(false);
     // env globals
     instance->env = env_new(NULL);
+    // define panic function
+    object_t* panic = object_new_native_function(1, do_panic);
+    vm_define_global("panic", panic);
 }
 
 DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
@@ -1435,8 +1454,7 @@ DLLEXPORT void vm_load_bool(bool _value) {
 }
 
 DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
-    PUSH(_value); // value
-    env_put(instance->env, _name, POPP());
+    env_put(instance->env, _name, vm_to_heap(_value));
 }
 
 DLLEXPORT void vm_run_main(uint8_t* _bytecode) {

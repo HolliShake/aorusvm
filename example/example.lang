@@ -111,6 +111,8 @@ println(">>", obj["Hello"], [1,2,3][1000] catch (err) {
     println("index error:", err);
 });
 
-println(">>", [...(2..100)], "<<");
+println(">>", [...(0..500000)], "<<");
+
+panic("Foocc!!");
 
 println("Done!!!");
