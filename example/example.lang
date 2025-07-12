@@ -1,8 +1,13 @@
 
 
-
-
 var x = 0..500000;
-println(x);
+println([...x]);
 
+
+println({
+    ...({
+        1: "One"
+    }),
+    2: "Two"
+});
 

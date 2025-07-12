@@ -108,46 +108,209 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             return string_allocate("null");
         }
         case OBJECT_TYPE_ARRAY: {
-            char* str = string_allocate("");
-            str = string_append(str, "[");
             array_t* array = (array_t*) _obj->value.opaque;
-            for (size_t i = 0; i < array_length((array_t*) _obj->value.opaque); i++) {
+            size_t len = array_length(array);
+            
+            // Start with a reasonable buffer size
+            size_t initial_capacity = 32 + len * 8; // Estimate ~8 chars per element
+            char* result = malloc(initial_capacity);
+            if (!result) return NULL;
+            
+            size_t capacity = initial_capacity;
+            size_t used = 0;
+            
+            // Start with opening bracket
+            result[used++] = '[';
+            
+            for (size_t i = 0; i < len; ++i) {
                 object_t* element = array_get(array, i);
+                
+                // Handle self-reference
                 if (element == _obj) {
-                    str = string_append(str, "<self>");
-                    continue;
+                    const char* self_ref = "<self>";
+                    size_t self_len = 6;
+                    
+                    // Ensure buffer has enough space
+                    if (used + self_len + 3 >= capacity) { // +3 for possible ", " and null terminator
+                        capacity = capacity * 2;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(result);
+                            return NULL;
+                        }
+                        result = new_buf;
+                    }
+                    
+                    memcpy(result + used, self_ref, self_len);
+                    used += self_len;
+                } else {
+                    // Get string representation of element
+                    char* str = object_to_string(element);
+                    if (!str) {
+                        free(result);
+                        return NULL;
+                    }
+                    
+                    size_t str_len = strlen(str);
+                    
+                    // Ensure buffer has enough space
+                    if (used + str_len + 3 >= capacity) { // +3 for possible ", " and null terminator
+                        capacity = capacity * 2 + str_len;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(str);
+                            free(result);
+                            return NULL;
+                        }
+                        result = new_buf;
+                    }
+                    
+                    memcpy(result + used, str, str_len);
+                    used += str_len;
+                    free(str);
                 }
-                str =string_append(str, object_to_string(element));
-                if (i < array_length(array) - 1) {
-                    str = string_append(str, ", ");
+                
+                // Add separator if not the last element
+                if (i < len - 1) {
+                    result[used++] = ',';
+                    result[used++] = ' ';
                 }
             }
-            str = string_append(str, "]");
-            return str;
+            
+            // Add closing bracket and null terminator
+            result[used++] = ']';
+            result[used] = '\0';
+            
+            // Trim excess memory if significantly oversized
+            if (capacity > used + 128) {
+                char* trimmed = realloc(result, used + 1);
+                if (trimmed) result = trimmed;
+            }
+            
+            return result;
         }
         case OBJECT_TYPE_RANGE: {
             range_t* range = (range_t*) _obj->value.opaque;
             return string_format("range(%ld, %ld, %ld)", range->start, range->end, range->step);
         }
         case OBJECT_TYPE_OBJECT: {
-            char* str = string_allocate("{");
             hashmap_t* map = (hashmap_t*) _obj->value.opaque;
+            size_t entries_count = hashmap_size(map);
+            
+            if (entries_count == 0) {
+                return string_allocate("{}");
+            }
+            
+            // Pre-allocate buffer with estimated size
+            size_t capacity = 32 + entries_count * 16; // Initial estimate
+            char* result = malloc(capacity);
+            if (!result) return NULL;
+            
+            size_t used = 0;
+            result[used++] = '{';
+            
             size_t entries_added = 0;
             for (size_t i = 0; i < map->bucket_count; i++) {
                 hashmap_node_t* node = map->buckets[i];
                 while (node) {
+                    // Add separator if not the first element
                     if (entries_added > 0) {
-                        str = string_append(str, ", ");
+                        if (used + 2 >= capacity) {
+                            capacity *= 2;
+                            char* new_buf = realloc(result, capacity);
+                            if (!new_buf) {
+                                free(result);
+                                return NULL;
+                            }
+                            result = new_buf;
+                        }
+                        result[used++] = ',';
+                        result[used++] = ' ';
                     }
-                    str = string_append(str, object_to_string(node->key));
-                    str = string_append(str, ": ");
-                    str = string_append(str, object_to_string(node->value));
+                    
+                    // Get string representation of key
+                    char* key_str = object_to_string(node->key);
+                    if (!key_str) {
+                        free(result);
+                        return NULL;
+                    }
+                    
+                    size_t key_len = strlen(key_str);
+                    
+                    // Ensure buffer has enough space for key
+                    if (used + key_len + 2 >= capacity) {
+                        capacity = capacity * 2 + key_len;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(key_str);
+                            free(result);
+                            return NULL;
+                        }
+                        result = new_buf;
+                    }
+                    
+                    // Copy key string
+                    memcpy(result + used, key_str, key_len);
+                    used += key_len;
+                    free(key_str);
+                    
+                    // Add ": " separator
+                    if (used + 2 >= capacity) {
+                        capacity *= 2;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(result);
+                            return NULL;
+                        }
+                        result = new_buf;
+                    }
+                    result[used++] = ':';
+                    result[used++] = ' ';
+                    
+                    // Get string representation of value
+                    char* val_str = object_to_string(node->value);
+                    if (!val_str) {
+                        free(result);
+                        return NULL;
+                    }
+                    
+                    size_t val_len = strlen(val_str);
+                    
+                    // Ensure buffer has enough space for value
+                    if (used + val_len >= capacity) {
+                        capacity = capacity * 2 + val_len;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(val_str);
+                            free(result);
+                            return NULL;
+                        }
+                        result = new_buf;
+                    }
+                    
+                    // Copy value string
+                    memcpy(result + used, val_str, val_len);
+                    used += val_len;
+                    free(val_str);
+                    
                     entries_added++;
                     node = node->next;
                 }
             }
-            str = string_append(str, "}");
-            return str;
+            
+            // Add closing brace and null terminator
+            if (used + 1 >= capacity) {
+                char* new_buf = realloc(result, used + 2);
+                if (!new_buf) {
+                    free(result);
+                    return NULL;
+                }
+                result = new_buf;
+            }
+            result[used++] = '}';
+            result[used] = '\0';
+            
+            return result;
         }
         case OBJECT_TYPE_FUNCTION: {
             char* str = string_allocate("function");

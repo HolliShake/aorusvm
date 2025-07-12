@@ -115,7 +115,24 @@ object_t* hashmap_get(hashmap_t* _hashmap, object_t* _key) {
 void hashmap_extend(hashmap_t* _hashmap, hashmap_t* _other) {
     ASSERTNULL(_hashmap, "hashmap is null");
     ASSERTNULL(_other, "other is null");
-
+    
+    // Early return if other hashmap is empty
+    if (_other->size == 0) return;
+    
+    // Pre-allocate space for the combined size
+    size_t combined_size = _hashmap->size + _other->size;
+    if (combined_size > _hashmap->bucket_count * LOAD_FACTOR_THRESHOLD) {
+        // Calculate new bucket count to avoid multiple rehashes
+        size_t new_bucket_count = _hashmap->bucket_count;
+        while (combined_size > new_bucket_count * LOAD_FACTOR_THRESHOLD) {
+            new_bucket_count *= 2;
+        }
+        
+        // Resize once before adding elements
+        hashmap_rehash(_hashmap);
+    }
+    
+    // Now add all elements without triggering additional rehashes
     for (size_t i = 0; i < _other->bucket_count; i++) {
         hashmap_node_t* node = _other->buckets[i];
         while (node) {

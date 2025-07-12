@@ -57,6 +57,7 @@ void array_set(array_t* _array, size_t _index, object_t* _element) {
         PD("index out of bounds %zu ~ %zu", _index, _array->length);
         return;
     }
+
     _array->elements[_index] = _element;
 }
 
@@ -100,12 +101,20 @@ object_t* array_pop(array_t* _array) {
 
 void array_extend(array_t* _array, array_t* _other_array) {
     if (!_array || !_other_array) return;
-
-    size_t required = _array->length + _other_array->length;
+    
+    // Early return if other array is empty
+    if (_other_array->length == 0) return;
+    
+    size_t other_len = _other_array->length;
+    size_t current_len = _array->length;
+    size_t required = current_len + other_len;
+    
+    // Resize if needed
     if (required > _array->capacity) {
+        // Calculate optimal capacity in one step
         size_t new_capacity = (_array->capacity == 0) ? required : _array->capacity;
         while (new_capacity < required) new_capacity *= 2;
-
+        
         object_t** new_elements = realloc(_array->elements, new_capacity * sizeof(object_t*));
         if (!new_elements) {
             PD("failed to allocate memory for array extend");
@@ -114,10 +123,9 @@ void array_extend(array_t* _array, array_t* _other_array) {
         _array->elements = new_elements;
         _array->capacity = new_capacity;
     }
-
-    for (size_t i = 0; i < _other_array->length; i++) {
-        _array->elements[_array->length + i] = _other_array->elements[i];
-    }
-
-    _array->length += _other_array->length;
+    
+    // Use memcpy for faster copying of pointers
+    memcpy(_array->elements + current_len, _other_array->elements, other_len * sizeof(object_t*));
+    
+    _array->length = required;
 }

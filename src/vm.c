@@ -917,7 +917,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
             case OPCODE_EXTEND_ARRAY: {
                 object_t* array_src = POPP();
                 object_t* array_dst = PEEK();
-                if (!OBJECT_TYPE_ARRAY(array_src)) {
+                if (!OBJECT_TYPE_ARRAY(array_src) && !OBJECT_TYPE_RANGE(array_src)) {
                     POPP();
                     char* message = string_format(
                         "expected array, got %s", 
@@ -937,7 +937,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                     free(message);
                     break;
                 }
-                array_extend((array_t*) array_dst->value.opaque, (array_t*) array_src->value.opaque);
+                array_t* src_array = (OBJECT_TYPE_ARRAY(array_src)) 
+                    ? (array_t*) array_src->value.opaque 
+                    : (array_t*) (range_to_array((range_t*) array_src->value.opaque))->value.opaque;
+                array_extend((array_t*) array_dst->value.opaque, src_array);
                 break;
             }
             case OPCODE_APPEND_ARRAY: {
