@@ -203,35 +203,9 @@ ast_node_t* parser_group(parser_t* _parser) {
     }
 }
 
-ast_node_t* parser_generator(parser_t* _parser) {
-    ast_node_t* node = parser_group(_parser);
-    if (node == NULL) {
-        return NULL;
-    }
-    while (CHECKV(DOTDOT)) {
-        char* op = _parser->current->value;
-        ACCEPTV(op);
-        ast_node_t* right = parser_group(_parser);
-        if (right == NULL) {
-            __THROW_ERROR(
-                _parser->fpath,
-                _parser->fdata,
-                _parser->current->position,
-                "missing right operand for %s", op
-            );
-        }
-        node = ast_generator_node(
-            position_merge(ast_position(node), ast_position(right)), 
-            node, 
-            right
-        );
-    }
-    return node;
-}
-
 ast_node_t* parser_member_or_call(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ast_node_t* node = parser_generator(_parser);
+    ast_node_t* node = parser_group(_parser);
     if (node == NULL) {
         return NULL;
     }
@@ -245,7 +219,7 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
             );
         } else if (CHECKV(LBRACE)) {
             ACCEPTV(LBRACE);
-            ast_node_t* index = parser_generator(_parser);
+            ast_node_t* index = parser_expression(_parser);
             if (index == NULL) {
                 __THROW_ERROR(
                     _parser->fpath,
@@ -323,15 +297,41 @@ ast_node_t* parser_unary(parser_t* _parser) {
     return parser_member_or_call(_parser);
 }
 
-ast_node_t* parser_multiplicative(parser_t* _parser) {
+ast_node_t* parser_generator(parser_t* _parser) {
     ast_node_t* node = parser_unary(_parser);
+    if (node == NULL) {
+        return NULL;
+    }
+    while (CHECKV(DOTDOT)) {
+        char* op = _parser->current->value;
+        ACCEPTV(op);
+        ast_node_t* right = parser_unary(_parser);
+        if (right == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing right operand for %s", op
+            );
+        }
+        node = ast_generator_node(
+            position_merge(ast_position(node), ast_position(right)), 
+            node, 
+            right
+        );
+    }
+    return node;
+}
+
+ast_node_t* parser_multiplicative(parser_t* _parser) {
+    ast_node_t* node = parser_generator(_parser);
     if (node == NULL) {
         return NULL;
     }
     while (CHECKV(MULTIPLY) || CHECKV(DIVIDE) || CHECKV(MODULO)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
-        ast_node_t* right = parser_unary(_parser);
+        ast_node_t* right = parser_generator(_parser);
         if (right == NULL) {
             __THROW_ERROR(
                 _parser->fpath,

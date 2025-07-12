@@ -756,7 +756,7 @@ INTERNAL void do_generate(object_t* _lhs, object_t* _rhs) {
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     object_t* array = object_new_array(0);
-    if (lhs_value <= rhs_value) {
+    if (lhs_value < rhs_value) {
         for (long i = lhs_value; i < rhs_value; i++) {
             array_push((array_t*) array->value.opaque, vm_to_heap(object_new_double(i)));
         }
