@@ -25,7 +25,7 @@ typedef enum object_type_enum {
 #define OBJECT_TYPE_RANGE(object) (object->type == OBJECT_TYPE_RANGE)
 #define OBJECT_TYPE_FUNCTION(object) (object->type == OBJECT_TYPE_FUNCTION)
 #define OBJECT_TYPE_OBJECT(object) (object->type == OBJECT_TYPE_OBJECT)
-#define OBJECT_TYPE_COLLECTION(object) (OBJECT_TYPE_ARRAY(object) || OBJECT_TYPE_OBJECT(object))
+#define OBJECT_TYPE_COLLECTION(object) (OBJECT_TYPE_ARRAY(object) || OBJECT_TYPE_OBJECT(object) || OBJECT_TYPE_RANGE(object))
 #define OBJECT_TYPE_NATIVE_FUNCTION(object) (object->type == OBJECT_TYPE_NATIVE_FUNCTION)
 #define OBJECT_TYPE_CALLABLE(object) (OBJECT_TYPE_FUNCTION(object) || OBJECT_TYPE_NATIVE_FUNCTION(object))
 #define OBJECT_TYPE_ERROR(object) (object->type == OBJECT_TYPE_ERROR)

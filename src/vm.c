@@ -743,9 +743,9 @@ INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signa
 }
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
-    if (!(OBJECT_TYPE_COLLECTION(_obj))) {
+    if (!OBJECT_TYPE_COLLECTION(_obj)) {
         char* message = string_format(
-            "expected collection, got %s", 
+            "expected collection, got \"%s\"", 
             object_to_string(_obj)
         );
         PUSH(object_new_error(message, true));
@@ -755,7 +755,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     if (OBJECT_TYPE_ARRAY(_obj)) {
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
-                "expected number, got %s", 
+                "expected number, got \"%s\"", 
                 object_to_string(_index)
             );
             PUSH(object_new_error(message, true));
@@ -777,6 +777,21 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         object_t* result = array_get(array, index);
         PUSH_REF(result);
         return;
+    } else if (OBJECT_TYPE_RANGE(_obj)) {
+        range_t* range = (range_t*) _obj->value.opaque;
+        if (!OBJECT_TYPE_NUMBER(_index)) {
+            char* message = string_format(
+                "expected number, got \"%s\"", 
+                object_to_string(_index)
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
+        }
+        long index = number_coerce_to_long(_index);
+        object_t* result = range_get(range, index);
+        PUSH_REF(result);
+        return;
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* map = (hashmap_t*) _obj->value.opaque;
         if (!hashmap_has(map, _index)) {
@@ -793,7 +808,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         return;
     }
     char* message = string_format(
-        "expected array or object, got %s", 
+        "expected array or object, got \"%s\"", 
         object_to_string(_obj)
     );
     PUSH(object_new_error(message, true));
