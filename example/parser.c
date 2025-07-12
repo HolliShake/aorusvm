@@ -314,7 +314,7 @@ ast_node_t* parser_generator(parser_t* _parser) {
                 "missing right operand for %s", op
             );
         }
-        node = ast_generator_node(
+        node = ast_range_node(
             position_merge(ast_position(node), ast_position(right)), 
             node, 
             right

@@ -106,16 +106,6 @@ DLLEXPORT ast_node_t* ast_object_property_node(position_t* _position, ast_node_t
 DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _properties);
 
 /*
- * Generator node.
- *
- * @param _position The position of the node.
- * @param _lhs The left hand side of the node.
- * @param _rhs The right hand side of the node.
- * @return The generator node.
- */
-DLLEXPORT ast_node_t* ast_generator_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
-
-/*
  * Index node.
  *
  * @param _position The position of the node.
@@ -152,6 +142,16 @@ DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _va
  * @return The unary spread node.
  */
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value);
+
+/*
+ * Range node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The range node.
+ */
+DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
  * Binary mul node.

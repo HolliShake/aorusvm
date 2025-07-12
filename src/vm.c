@@ -742,7 +742,7 @@ INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signa
     env_free(block_env);
 }
 
-INTERNAL void do_generate(object_t* _lhs, object_t* _rhs) {
+INTERNAL void do_range(object_t* _lhs, object_t* _rhs) {
     if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         char* message = string_format(
             "expected number, got %s and %s", 
@@ -753,20 +753,23 @@ INTERNAL void do_generate(object_t* _lhs, object_t* _rhs) {
         free(message);
         return;
     }
+
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
-    object_t* array = object_new_array(0);
-    if (lhs_value < rhs_value) {
-        for (long i = lhs_value; i < rhs_value; i++) {
-            array_push((array_t*) array->value.opaque, vm_to_heap(object_new_double(i)));
-        }
-    } else {
-        for (long i = lhs_value; i > rhs_value; i--) {
-            array_push((array_t*) array->value.opaque, vm_to_heap(object_new_double(i)));
-        }
+    long size = (lhs_value < rhs_value) ? rhs_value - lhs_value : lhs_value - rhs_value;
+    object_t* array = object_new_array(size);
+    array_t* arr = (array_t*)array->value.opaque;
+
+    // Avoid branching in loop by determining increment direction once
+    long increment = (lhs_value < rhs_value) ? 1 : -1;
+    long start = lhs_value;
+
+    for (long i = 0; i < size; i++) {
+        array_set(arr, i, vm_to_heap(object_new_double(start + (i * increment))));
     }
+
+    arr->length = size;
     PUSH(array);
-    return;
 }
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
@@ -1056,10 +1059,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 hashmap_put((hashmap_t*) obj_dst->value.opaque, key, val);
                 break;
             }
-            case OPCODE_GENERATE: {
+            case OPCODE_RANGE: {
                 object_t* lhs = POPP();
                 object_t* rhs = POPP();
-                do_generate(lhs, rhs);
+                do_range(lhs, rhs);
                 break;
             }
             case OPCODE_INDEX: {
