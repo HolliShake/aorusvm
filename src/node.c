@@ -305,6 +305,21 @@ DLLEXPORT ast_node_t* ast_do_while_statement_node(position_t* _position, ast_nod
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_for_statement_node(position_t* _position, ast_node_t* _initializer, ast_node_t* _iterable, ast_node_t* _body) {
+    ast_node_t* node = ast_node_new(AstForStatement, _position);
+    node->ast0 = _initializer;
+    node->ast1 = _iterable;
+    node->ast2 = _body;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_for_multiple_initializer_node(position_t* _position, ast_node_t* _k, ast_node_t* _v) {
+    ast_node_t* node = ast_node_new(AstForMultipleInitializer, _position);
+    node->ast0 = _k;
+    node->ast1 = _v;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_return_statement_node(position_t* _position, ast_node_t* _expr) {
     ast_node_t* node = ast_node_new(AstReturnStatement, _position);
     node->ast0 = _expr;

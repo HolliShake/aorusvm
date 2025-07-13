@@ -26,6 +26,10 @@ INTERNAL void gc_free_object(object_t* _obj) {
         free(_obj->value.opaque);
     } else if (OBJECT_TYPE_ARRAY(_obj)) {
         array_free((array_t*) _obj->value.opaque);
+    } else if (OBJECT_TYPE_RANGE(_obj)) {
+        range_free((range_t*) _obj->value.opaque);
+    } else if (OBJECT_TYPE_ITERATOR(_obj)) {
+        iterator_free((iterator_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_FUNCTION(_obj)) {
@@ -51,6 +55,9 @@ INTERNAL void gc_mark_object(object_t* _obj) {
         for (size_t i = 0; i < array_length(array); i++) {
             gc_mark_object(array_get(array, i));
         }
+    } else if (OBJECT_TYPE_ITERATOR(_obj)) {
+        iterator_t* iterator = (iterator_t*) _obj->value.opaque;
+        gc_mark_object(iterator->obj);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* hashmap = (hashmap_t*) _obj->value.opaque;
         for (size_t i = 0; i < hashmap->bucket_count; i++) {
@@ -65,14 +72,14 @@ INTERNAL void gc_mark_object(object_t* _obj) {
                 node = next;
             }
         }
-    } else if (OBJECT_TYPE_ERROR(_obj)) {
-        gc_mark_object((object_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_FUNCTION(_obj)) {
         code_t* code = (code_t*) _obj->value.opaque;
         if (code->environment != NULL) {
             gc_mark_env_content(code->environment);
         }
-    }
+    } else if (OBJECT_TYPE_ERROR(_obj)) {
+        gc_mark_object((object_t*) _obj->value.opaque);
+    } 
 }
 
 INTERNAL void gc_mark_vm_content(vm_t* _vm) {
@@ -94,6 +101,12 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
         }
         free(list);
         current = current->parent;
+    }
+    if (_env->parent != NULL) {
+        gc_mark_env_content(_env->parent);
+    }
+    if (_env->closure != NULL) {
+        gc_mark_env_content(_env->closure);
     }
 }
 

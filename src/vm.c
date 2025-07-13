@@ -1333,6 +1333,43 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 FORWARD(get_int(bytecode, ip));
                 break;
             }
+            case OPCODE_GET_ITERATOR_OR_JUMP: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t* obj = POPP();
+                if (!OBJECT_TYPE_COLLECTION(obj)) {
+                    FORWARD(jump_offset);
+                    break;
+                }
+                PUSH(object_new_iterator(obj));
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_HAS_NEXT: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t* obj = PEEK();
+                if (!OBJECT_TYPE_ITERATOR(obj)) {
+                    PD("expected iterator, got %s", object_type_to_string(obj));
+                }
+                if (!iterator_has_next(obj)) {
+                    FORWARD(jump_offset);
+                    break;
+                }
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_GET_NEXT_VALUE: 
+            case OPCODE_GET_NEXT_KEY_VALUE: {
+                object_t* obj = PEEK();
+                if (!OBJECT_TYPE_ITERATOR(obj)) {
+                    PD("expected iterator, got %s", object_type_to_string(obj));
+                }
+                object_t** values = iterator_next(obj);
+                if (opcode == OPCODE_GET_NEXT_KEY_VALUE) {
+                    PUSH_REF(values[1]); // value
+                }
+                PUSH_REF(values[0]); // key
+                break;
+            }
             case OPCODE_POPTOP: {
                 POPP();
                 break;
@@ -1422,7 +1459,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 break;
             }
             default: {
-                DUMP_BYTECODE(bytecode, bytecode_size);
+                // DUMP_BYTECODE(bytecode, bytecode_size);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
             }
         }

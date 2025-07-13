@@ -14,6 +14,8 @@
 #define KEY_FOR "for"
 #define KEY_WHILE "while"
 #define KEY_DO "do"
+#define KEY_FOR "for"
+#define KEY_IN "in"
 #define KEY_BREAK "break"
 #define KEY_CONTINUE "continue"
 #define KEY_TRUE "true"

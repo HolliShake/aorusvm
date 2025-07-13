@@ -52,6 +52,8 @@ typedef enum ast_node_type_struct {
     AstIfStatement,
     AstWhileStatement,
     AstDoWhileStatement,
+    AstForStatement,
+    AstForMultipleInitializer,
     AstReturnStatement,
     AstExpressionStatement,
     AstBlockStatement,

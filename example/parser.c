@@ -696,6 +696,7 @@ ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool 
 ast_node_t* parser_if_statement(parser_t* _parser);
 ast_node_t* parser_while_statement(parser_t* _parser);
 ast_node_t* parser_do_while_statement(parser_t* _parser);
+ast_node_t* parser_for_statement(parser_t* _parser);
 ast_node_t* parser_block_statement(parser_t* _parser);
 ast_node_t* parser_return_statement(parser_t* _parser);
 
@@ -715,6 +716,8 @@ ast_node_t* parser_statement(parser_t* _parser) {
         return parser_while_statement(_parser);
     } else if (CHECKV(KEY_DO)) {
         return parser_do_while_statement(_parser);
+    } else if (CHECKV(KEY_FOR)) {
+        return parser_for_statement(_parser);
     } else if (CHECKV(LBRACKET)) {
         return parser_block_statement(_parser);
     } else if (CHECKV(KEY_RETURN)) {
@@ -998,6 +1001,61 @@ ast_node_t* parser_do_while_statement(parser_t* _parser) {
     ACCEPTV(RPAREN);
     ended = ast_position(body);
     return ast_do_while_statement_node(position_merge(start, ended), expr, body);
+}
+
+ast_node_t* parser_for_initializer(parser_t* _parser) {
+    ast_node_t* k = parser_terminal(_parser);
+    if (k == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "for initializer expected"
+        );
+    }
+    if (!CHECKV(COMMA)) {
+        return k;
+    }
+    ACCEPTV(COMMA);
+    ast_node_t* v = parser_terminal(_parser);
+    if (v == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "for variable expected"
+        );
+    }
+    return ast_for_multiple_initializer_node(position_merge(ast_position(k), ast_position(v)), k, v);
+}
+
+ast_node_t* parser_for_statement(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_FOR);
+    ACCEPTV(LPAREN);
+    ast_node_t* initializer = parser_for_initializer(_parser);
+    ACCEPTV(KEY_IN);
+    ast_node_t* iterable = parser_expression(_parser);
+    if (iterable == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "for iterable expected"
+        );
+    }
+    ACCEPTV(RPAREN);
+    ast_node_t* body = parser_statement(_parser);
+    if (body == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "for body expected"
+        );
+    }
+    ended = ast_position(body);
+    return ast_for_statement_node(position_merge(start, ended), initializer, iterable, body);
 }
 
 ast_node_t* parser_block_statement(parser_t* _parser) {

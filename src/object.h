@@ -3,6 +3,7 @@
 #include "array.h"
 #include "code.h"
 #include "hashmap.h"
+#include "iterator.h"
 #include "range.h"
 #include "type.h"
 
@@ -20,5 +21,8 @@ typedef struct object_struct {
     bool marked;
     object_t *next;
 } object_t;
+
+// Iterator object should be an internal object.
+object_t* object_new_iterator(object_t* _obj);
 
 #endif

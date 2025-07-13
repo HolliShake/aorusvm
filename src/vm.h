@@ -1,5 +1,9 @@
-#include "array.h"
 #include "api/core/vm.h"
+#include "array.h"
+#include "hashmap.h"
+#include "iterator.h"
+#include "object.h"
+#include "range.h"
 
 #ifndef VM_H
 #define VM_H

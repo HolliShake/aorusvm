@@ -86,6 +86,12 @@ DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
     return obj;
 }
 
+object_t* object_new_iterator(object_t* _obj) {
+    object_t* obj = object_new(OBJECT_TYPE_ITERATOR);
+    obj->value.opaque = iterator_new(_obj);
+    return obj;
+}
+
 DLLEXPORT char* object_to_string(object_t* _obj) {
     if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
@@ -431,7 +437,7 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
 }
 
 DLLEXPORT char* object_type_to_string(object_t* _obj) {
-    if (_obj == NULL) return string_allocate("<cnull>");
+    if (_obj == NULL) return "<cnull>";
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return "int";
@@ -446,6 +452,8 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
         case OBJECT_TYPE_ARRAY:
         case OBJECT_TYPE_RANGE:
             return "array";
+        case OBJECT_TYPE_ITERATOR:
+            return string_format("<iterator.%s/>", object_type_to_string(_obj->value.opaque));
         case OBJECT_TYPE_OBJECT:
             return "object";
         case OBJECT_TYPE_FUNCTION:
@@ -455,7 +463,7 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
         case OBJECT_TYPE_ERROR:
             return "error";
         default:
-            return "unknown";
+            return string_format("<unknown.%d/>", _obj->type);
     }
 }
 

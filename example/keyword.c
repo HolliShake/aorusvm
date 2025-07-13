@@ -12,12 +12,15 @@ const char* KEYWORDS[] = {
     KEY_FOR,
     KEY_WHILE,
     KEY_DO,
+    KEY_FOR,
+    KEY_IN,
     KEY_BREAK,
     KEY_CONTINUE,
     KEY_TRUE,
     KEY_FALSE,
     KEY_NULL,
     KEY_CATCH,
+    NULL
 };
 
 bool is_keyword(char* _value) {

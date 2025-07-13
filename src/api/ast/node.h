@@ -410,6 +410,27 @@ DLLEXPORT ast_node_t* ast_while_statement_node(position_t* _position, ast_node_t
 DLLEXPORT ast_node_t* ast_do_while_statement_node(position_t* _position, ast_node_t* _cond, ast_node_t* _body);
 
 /*
+ * For statement node.
+ *
+ * @param _position The position of the node.
+ * @param _initializer The initializer of the node.
+ * @param _iterable The iterable of the node.
+ * @param _body The body of the node.
+ * @return The for statement node.
+ */
+DLLEXPORT ast_node_t* ast_for_statement_node(position_t* _position, ast_node_t* _initializer, ast_node_t* _iterable, ast_node_t* _body);
+
+/*
+ * For initializer node.
+ *
+ * @param _position The position of the node.
+ * @param _k The k of the node.
+ * @param _v The v of the node.
+ * @return The for initializer node.
+ */
+DLLEXPORT ast_node_t* ast_for_multiple_initializer_node(position_t* _position, ast_node_t* _k, ast_node_t* _v);
+
+/*
  * Return statement node.
  *
  * @param _position The position of the node.

@@ -12,7 +12,8 @@ typedef enum object_type_enum {
     OBJECT_TYPE_FUNCTION,
     OBJECT_TYPE_NATIVE_FUNCTION,
     OBJECT_TYPE_NULL,
-    OBJECT_TYPE_ERROR
+    OBJECT_TYPE_ERROR,
+    OBJECT_TYPE_ITERATOR
 } object_type_t;
 
 #define OBJECT_TYPE_INT(object) (object->type == OBJECT_TYPE_INT)
@@ -29,5 +30,6 @@ typedef enum object_type_enum {
 #define OBJECT_TYPE_NATIVE_FUNCTION(object) (object->type == OBJECT_TYPE_NATIVE_FUNCTION)
 #define OBJECT_TYPE_CALLABLE(object) (OBJECT_TYPE_FUNCTION(object) || OBJECT_TYPE_NATIVE_FUNCTION(object))
 #define OBJECT_TYPE_ERROR(object) (object->type == OBJECT_TYPE_ERROR)
+#define OBJECT_TYPE_ITERATOR(object) (object->type == OBJECT_TYPE_ITERATOR)
 
 #endif

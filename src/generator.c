@@ -124,6 +124,8 @@ INTERNAL void generator_set_8bytes(generator_t* _generator, size_t start, long _
     }
 }
 
+#define generator_is_statement_type(type) (!generator_is_expression_type(type))
+
 INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
@@ -1820,6 +1822,135 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             break;
         }
+        case AstForStatement: {
+            ast_node_t* initializer = _statement->ast0;
+            ast_node_t* iterable = _statement->ast1;
+            ast_node_t* body = _statement->ast2;
+            if (initializer == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "for statement must have an initializer"
+                );
+            }
+            if (iterable == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "for statement must have an iterable"
+                );
+            }
+            if (body == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "for statement must have a body"
+                );
+            }
+            if (!generator_is_expression_type(iterable)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "for statement must have a valid iterable"
+                );
+            }
+            if (!generator_is_statement_type(body)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "for statement must have a valid body"
+                );
+            }
+            // Emit the iterable
+            generator_expression(_generator, _scope, iterable);
+            // Emit get iterator
+            generator_emit_byte(_generator, OPCODE_GET_ITERATOR_OR_JUMP);
+            size_t jump_if_not_iterable = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+
+            // Check if has next
+            size_t has_next_address = _generator->bsize;
+            generator_emit_byte(_generator, OPCODE_HAS_NEXT);
+            size_t jump_if_no_next = _generator->bsize;
+            generator_allocate_nbytes(_generator, 4);
+
+            // Emit the initializer
+            if (initializer->type == AstName) {
+                generator_emit_byte(_generator, OPCODE_GET_NEXT_VALUE);
+
+                generator_emit_byte(_generator, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, initializer->str0);
+            } else if (initializer->type == AstForMultipleInitializer) {
+                generator_emit_byte(_generator, OPCODE_GET_NEXT_KEY_VALUE);
+                ast_node_t* init_l = initializer->ast0;
+                ast_node_t* init_r = initializer->ast1;
+                if (init_l == NULL) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+                if (init_r == NULL) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+                if (init_l->type != AstName || init_r->type != AstName) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+                // For Key
+                generator_emit_byte(_generator, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, init_l->str0);
+                // For Value
+                generator_emit_byte(_generator, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, init_r->str0);
+            } else {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    initializer->position, 
+                    "for statement must have a valid initializer"
+                );
+            }
+
+            // Emit the body
+            generator_statement(_generator, _scope, body);
+
+            // Jump backward to the has next address
+            generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
+            generator_emit_raw_int(_generator, has_next_address);
+
+            // Jump here if no next
+            generator_set_4bytes(_generator, jump_if_no_next, _generator->bsize - jump_if_no_next);
+            
+            // Emit pop top to pop iterator
+            generator_emit_byte(_generator, OPCODE_POPTOP);
+
+            // Jump here if not iterable
+            generator_set_4bytes(_generator, jump_if_not_iterable, _generator->bsize - jump_if_not_iterable);
+
+            // Cleanup
+            free(initializer->str0);
+            free(initializer);
+            free(_statement->position);
+            free(_statement);
+            break;
+        }
         case AstReturnStatement: {
             bool is_func = false, is_catch = false;
             if (!(is_func = scope_is_function(_scope)) && !(is_catch = scope_is_catch(_scope))) {
@@ -2038,6 +2169,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(name);
             free(params);
             free(body);
+            free(_statement->position);
             free(_statement);
             break;
         }
@@ -2061,6 +2193,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // Cleanup
             scope_free(block_scope);
             free(statements);
+            free(_statement->position);
             free(_statement);
             break;
         }

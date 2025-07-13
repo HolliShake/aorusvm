@@ -54,6 +54,11 @@ typedef enum opcode_enum {
     OPCODE_DUPTOP                       = 124,  // No following bytes
     OPCODE_ROT2                         = 125,  // No following bytes
     OPCODE_SAVE_CAPTURES                = 126,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
+    OPCODE_GET_ITERATOR_OR_JUMP         = 127,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_HAS_NEXT                     = 128,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_GET_NEXT_VALUE               = 129,  // No following bytes
+    OPCODE_GET_NEXT_KEY_VALUE           = 130,  // No following bytes
+    // NOTE: 255 is the last opcode
 } opcode_t;
 
 #endif

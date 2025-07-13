@@ -30,6 +30,7 @@
         "tokenizer.h": "c",
         "file.h": "c",
         "env.h": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "compare": "c"
     }
 }

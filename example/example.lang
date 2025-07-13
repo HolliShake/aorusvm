@@ -59,7 +59,7 @@ pp(println);
 var n = 1;
 do {
     
-    println(">> Hello World!", ++n);
+    println(">> Hello \0 World!", ++n);
     
 } while (n < 23 || true)
 
@@ -142,6 +142,13 @@ println(ret(2, 4)());
 println(ret(2, 8)());
 println(fact(5));
 
+println(0..2000);
 
-const o = scan(">> ");
-println("\"input:\"", o);
+const r = 0..500;
+
+for (k in { "Hello": "World!", 1: "One" }) {
+    println(">>", k);
+}
+
+println(k);
+
