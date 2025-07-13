@@ -21,15 +21,20 @@ typedef struct generator_struct {
 } generator_t;
 
 
+#define EXPECT(_size) if (_generator->bsize != _size) PD("INCORRECT ALLOCATION: BSIZE: %zu != %d", _generator->bsize, _size);
+
 #define SAVEBASE(out) \
-    size_t out = _generator->reset_base; \
-    { _generator->reset_base = _generator->bsize; } \
+    size_t out##_base = _generator->reset_base; \
+    { _generator->reset_base = 0; } \
 
 #define RESTOREBASE(out) \
-    _generator->reset_base = out; \
+    {_generator->reset_base = out##_base;} \
+
+#define CALCULATED_JUMP() ((_generator->reset_base - (1 /*1 for the jump instruction*/ + 4 /*for the jump offset*/ + 1  /*for the jump target(index starts at 0)*/ + 1)))
+
 
 INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size) {
-    _generator->bytecode = (uint8_t*) realloc(_generator->bytecode, sizeof(uint8_t) * ((_generator->bsize + 1) + _size));
+    _generator->bytecode = (uint8_t*) realloc(_generator->bytecode, sizeof(uint8_t) * (_generator->bsize + _size));
     ASSERTNULL(_generator->bytecode, "failed to allocate memory for bytecode");
 }
 
@@ -37,6 +42,7 @@ INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size
 INTERNAL void generator_emit_raw_int(generator_t* _generator, size_t _value) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
+        _generator->reset_base++;
         _generator->bytecode[_generator->bsize++] = (_value >> (i * 8)) & 0xFF;
     }
 }
@@ -44,16 +50,19 @@ INTERNAL void generator_emit_raw_int(generator_t* _generator, size_t _value) {
 INTERNAL void generator_allocate_nbytes(generator_t* _generator, size_t _nbytes) {
     generator_resize_bytecode_by(_generator, _nbytes);
     _generator->bsize += _nbytes;
+    _generator->reset_base += _nbytes;
 }
 
 INTERNAL void generator_emit_byte(generator_t* _generator, uint8_t _value) {
     generator_resize_bytecode_by(_generator, 1);
+    _generator->reset_base++;
     _generator->bytecode[_generator->bsize++] = _value;
 }
 
 INTERNAL void generator_emit_magic_bytes(generator_t* _generator) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
+        _generator->reset_base++;
         _generator->bytecode[_generator->bsize++] = (MAGIC_NUMBER >> (i * 8)) & 0xFF;
     }
 }
@@ -61,6 +70,7 @@ INTERNAL void generator_emit_magic_bytes(generator_t* _generator) {
 INTERNAL void generator_emit_version_bytes(generator_t* _generator) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
+        _generator->reset_base++;
         _generator->bytecode[_generator->bsize++] = (VERSION >> (i * 8)) & 0xFF;
     }
 }
@@ -68,25 +78,29 @@ INTERNAL void generator_emit_version_bytes(generator_t* _generator) {
 INTERNAL void generator_emit_bytecode_size(generator_t* _generator) {
     generator_resize_bytecode_by(_generator, 8);
     for (size_t i = 0; i < 8; i++) {
+        _generator->reset_base++;
         _generator->bytecode[_generator->bsize++] = (_generator->bsize >> (i * 8)) & 0xFF;
     }
 }
 
 INTERNAL void generator_emit_raw_string(generator_t* _generator, char* _value) {
-    generator_resize_bytecode_by(_generator, strlen(_value) + 1);
-    for (size_t i = 0; _value[i] != '\0'; i++) {
-        _generator->bytecode[_generator->bsize++] = _value[i];
+    size_t len = strlen(_value);
+    generator_resize_bytecode_by(_generator, len + 1);
+    for (size_t i = 0; i < len; i++) {
+        _generator->bytecode[_generator->bsize + i] = _value[i];
     }
-    _generator->bytecode[_generator->bsize++] = 0;
+    _generator->bytecode[_generator->bsize + len] = 0;
+    _generator->bsize += len + 1;
+    _generator->reset_base += len + 1;
 }
 
 INTERNAL void generator_emit_int(generator_t* _generator, int _value) {
     generator_resize_bytecode_by(_generator, 5);
     _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_INT;
-    _generator->bytecode[_generator->bsize++] = _value & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >>  8) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 16) & 0xFF;
-    _generator->bytecode[_generator->bsize++] = (_value >> 24) & 0xFF;
+    for (size_t i = 0; i < 4; i++) {
+        _generator->bytecode[_generator->bsize++] = (_value >> (i * 8)) & 0xFF;
+    }
+    _generator->reset_base += 5;
 }
 
 INTERNAL void generator_emit_double(generator_t* _generator, double _value) {
@@ -101,15 +115,18 @@ INTERNAL void generator_emit_double(generator_t* _generator, double _value) {
     for (size_t i = 0; i < 8; i++) {
         _generator->bytecode[_generator->bsize++] = double_bytes.bytes[i];
     }
+    _generator->reset_base += 9;
 }
 
 INTERNAL void generator_emit_string(generator_t* _generator, char* _value) {
     generator_resize_bytecode_by(_generator, strlen(_value) + 2);
     _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_STRING;
-    for (size_t i = 0; _value[i] != '\0'; i++) {
-        _generator->bytecode[_generator->bsize++] = _value[i];
+    for (size_t i = 0; i < strlen(_value); i++) {
+        _generator->bytecode[_generator->bsize + i] = _value[i];
     }
-    _generator->bytecode[_generator->bsize++] = 0;
+    _generator->bytecode[_generator->bsize + strlen(_value)] = 0;
+    _generator->bsize += strlen(_value) + 1;
+    _generator->reset_base += strlen(_value) + 1;
 }
 
 INTERNAL void generator_set_4bytes(generator_t* _generator, size_t start, int _value) {
@@ -525,6 +542,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             break;
         }
         case AstFunctionExpression: {
+            SAVEBASE(offset);
             bool is_async = _expression->type == AstAsyncFunctionNode;
             ast_node_t* name       = _expression->ast0;
             ast_node_list_t params = _expression->array0;
@@ -658,6 +676,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(params);
             free(body);
             free(_expression);
+            RESTOREBASE(offset);
             break;
         }
         case AstIndex: {
@@ -1352,22 +1371,27 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             // Generate error code
             generator_expression(_generator, _scope, error);
-            generator_emit_byte(_generator, OPCODE_JUMP_IF_NOT_ERROR_OR_POP);
+            generator_emit_byte(_generator, OPCODE_JUMP_IF_NOT_ERROR);
             int jump_start = _generator->bsize;
             generator_allocate_nbytes(_generator, 4);
-
+            
             // Setup catch block
+            SAVEBASE(offset);
+            scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
+            scope_t* local_scope = scope_new(catch_scope, ScopeTypeLocal);
+            // Setup block and reserve space for metadata
             generator_emit_byte(_generator, OPCODE_SETUP_CATCH_BLOCK);
+            // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
             generator_emit_bytecode_size(_generator);
+            // Reserve n bytes for the file name
             generator_emit_raw_string(_generator, _generator->fpath);
+            // Reserve n bytes for the module name
             generator_emit_raw_string(_generator, "catch");
 
             // Store placeholder
             generator_emit_byte(_generator, OPCODE_STORE_NAME);
             generator_emit_raw_string(_generator, placeholder->str0);
-
-            scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
 
             // Body
             bool has_visible_return = false;
@@ -1379,7 +1403,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, catch_scope, body[i]);
+                generator_statement(_generator, local_scope, body[i]);
             }
 
             // Return placeholder
@@ -1387,14 +1411,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 generator_emit_byte(_generator, OPCODE_LOAD_NULL);
                 generator_emit_byte(_generator, OPCODE_RETURN);
             }
-            
+
+            scope_free(local_scope);
             scope_free(catch_scope);
+
+            RESTOREBASE(offset);
 
             // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
 
             // Jump here if there is no error
-            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
+            generator_set_4bytes(_generator, jump_start, CALCULATED_JUMP());
 
             // Cleanup
             free(placeholder);
@@ -1518,6 +1545,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "if statement must have a condition, a true value, and a false value"
                 );
             }
+            size_t start = _generator->bsize;
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
                 generator_expression(_generator, _scope, cond);
@@ -1527,21 +1555,22 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_allocate_nbytes(_generator, 4);
                 // true
                 generator_statement(_generator, _scope, tvalue);
-                // Jump to endif from true
-                generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
-                int jump_endif_from_true = _generator->bsize;
-                generator_allocate_nbytes(_generator, 4);
+                // Jump to endif after true
+                bool has_else = fvalue != NULL;
+                int jump_endif_from_true = 0;
+                if (has_else) {
+                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+                    jump_endif_from_true = _generator->bsize;
+                    generator_allocate_nbytes(_generator, 4);
+                }
                 // false?
-                generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start);
-                if (fvalue != NULL) {
+                generator_set_4bytes(_generator, jump_start, CALCULATED_JUMP());
+                if (has_else) {
                     generator_statement(_generator, _scope, fvalue);
                 }
-                // Jump to endif from false
-                generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
-                int jump_endif_from_false = _generator->bsize;
-                generator_allocate_nbytes(_generator, 4);
-                generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true);
-                generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                if (has_else) {
+                    generator_set_4bytes(_generator, jump_endif_from_true, CALCULATED_JUMP());
+                }
                 free(_statement);
                 break;
             } else {
@@ -1581,8 +1610,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    generator_set_4bytes(_generator, jump_start_l, CALCULATED_JUMP());
+                    generator_set_4bytes(_generator, jump_start_r, CALCULATED_JUMP());
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -1590,8 +1619,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    generator_set_4bytes(_generator, jump_endif_from_true , CALCULATED_JUMP());
+                    generator_set_4bytes(_generator, jump_endif_from_false, CALCULATED_JUMP());
                     free(cond);
                     free(_statement);
                 } else {
@@ -1605,14 +1634,14 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     int jump_start_r = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // true
-                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_l, CALCULATED_JUMP());
                     generator_statement(_generator, _scope, tvalue);
                     // Jump to endif from true
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_true = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
+                    generator_set_4bytes(_generator, jump_start_r, CALCULATED_JUMP());
                     if (fvalue != NULL) {
                         generator_statement(_generator, _scope, fvalue);
                     }
@@ -1620,8 +1649,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
                     generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true );
-                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
+                    generator_set_4bytes(_generator, jump_endif_from_true , CALCULATED_JUMP());
+                    generator_set_4bytes(_generator, jump_endif_from_false, CALCULATED_JUMP());
                     free(cond);
                     free(_statement);
                 }
@@ -1652,9 +1681,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 generator_statement(_generator, while_scope, body);
                 // Jump to the start of the while loop
                 generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                generator_emit_raw_int(_generator, loop_start);
+                generator_emit_raw_int(_generator, CALCULATED_JUMP());
                 // Jump to the end of the while loop
-                generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
+                generator_set_4bytes(_generator, jump_endwhile_if_false, CALCULATED_JUMP());
                 scope_free(while_scope);
                 free(_statement);
             } else {
@@ -2076,6 +2105,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
         }
         case AstFunctionNode: 
         case AstAsyncFunctionNode: {
+            SAVEBASE(offset);
             bool is_async = _statement->type == AstAsyncFunctionNode;
             ast_node_t* name       = _statement->ast0;
             ast_node_list_t params = _statement->array0;
@@ -2230,20 +2260,25 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(body);
             free(_statement->position);
             free(_statement);
+            RESTOREBASE(offset);
             break;
         }
         case AstBlockStatement: {
+            SAVEBASE(offset);
             ast_node_list_t statements = _statement->array0;
             scope_t* block_scope = scope_new(_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
             generator_emit_byte(_generator, OPCODE_SETUP_BLOCK);
+            // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
             generator_emit_bytecode_size(_generator);
+            // Reserve n bytes for the file name
             generator_emit_raw_string(_generator, _generator->fpath);
+            // Reserve n bytes for the module name
             generator_emit_raw_string(_generator, "block");
             // Compile all statements in block
-            for (ast_node_t** stmt = statements; *stmt; stmt++) {
-                generator_statement(_generator, block_scope, *stmt);
+            for (size_t i = 0; statements[i] != NULL; i++) {
+                generator_statement(_generator, block_scope, statements[i]);
             }
             // Emit complete and finalize
             generator_emit_byte(_generator, OPCODE_LOAD_NULL);
@@ -2254,6 +2289,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(statements);
             free(_statement->position);
             free(_statement);
+            RESTOREBASE(offset);
             break;
         }
         default:
@@ -2262,17 +2298,21 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 }
 
 INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
+    SAVEBASE(offset);
     ast_node_list_t children = _program->array0;
     // Reserve 4 bytes for the magic number
     generator_emit_magic_bytes(_generator);
     // Reserve 4 bytes for the version
     generator_emit_version_bytes(_generator);
     // Reserve 8 bytes for the bytecode size
-    generator_emit_bytecode_size(_generator);
+    size_t size_address = _generator->bsize;
+    generator_emit_bytecode_size(_generator); 
     // Reserve n bytes for the file name
     generator_emit_raw_string(_generator, _generator->fpath);
     // Reserve n bytes for the module name
-    generator_emit_raw_string(_generator, path_get_file_name(_generator->fpath));
+    char* file_name = path_get_file_name(_generator->fpath);
+    generator_emit_raw_string(_generator, file_name);
+    free(file_name);
     // Emit the bytecode
     scope_t* scope = scope_new(NULL, ScopeTypeGlobal);
     for (size_t i = 0; children[i] != NULL; i++) {
@@ -2290,8 +2330,9 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
     // write the bytecode to the file
     generator_emit_byte(_generator, OPCODE_LOAD_NULL);
     generator_emit_byte(_generator, OPCODE_RETURN);
+    RESTOREBASE(offset);
     // Set the bytecode size
-    generator_set_8bytes(_generator, 8, _generator->bsize);
+    generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
     // Free the children and the program
     free(children);
     free(_program);

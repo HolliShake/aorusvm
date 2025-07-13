@@ -1,5 +1,6 @@
 #include "api/core/vm.h"
 #include "array.h"
+#include "decompiler.h"
 #include "hashmap.h"
 #include "iterator.h"
 #include "object.h"
@@ -10,7 +11,7 @@
 
 typedef enum vm_block_signal_t {
     VmBlockSignalReturned,
-    VmBlockSignalCompleted,
+    VmBlockSignalComplete,
     VmBlockSignalPending,
 } vm_block_signal_t;
 

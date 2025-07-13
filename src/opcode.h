@@ -40,7 +40,7 @@ typedef enum opcode_enum {
     OPCODE_POP_JUMP_IF_TRUE             = 110,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_IF_FALSE_OR_POP         = 111,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_IF_TRUE_OR_POP          = 112,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_JUMP_IF_NOT_ERROR_OR_POP     = 113,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_JUMP_IF_NOT_ERROR            = 113,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_FORWARD                 = 114,  // Followed by 4 bytes (aka jump offset)
     OPCODE_ABSOLUTE_JUMP                = 115,  // Followed by 4 bytes (aka jump offset)
     OPCODE_POPTOP                       = 116,  // No following bytes

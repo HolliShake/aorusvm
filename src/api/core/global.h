@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <execinfo.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -67,5 +68,20 @@
     } \
 } \
 
+#define PRINT_STACK_TRACE() { \
+    void *buffer[100]; \
+    int nptrs = backtrace(buffer, 100); \
+    char **symbols = backtrace_symbols(buffer, nptrs); \
+    if (symbols == NULL) { \
+        perror("backtrace_symbols"); \
+        exit(EXIT_FAILURE); \
+    } \
+    printf("Stack trace (depth: %d):\n", nptrs); \
+    for (int i = 0; i < nptrs; i++) { \
+        printf("  [%d] %s\n", i, symbols[i]); \
+    } \
+    printf("Function origin: %s\n", __func__); \
+    free(symbols); \
+} 
 
 #endif

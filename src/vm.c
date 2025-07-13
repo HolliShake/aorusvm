@@ -58,7 +58,7 @@
 
 // Get bytecode size (bytes 8 - 15)
 #define VERIFY_BYTECODE_SIZE(bytecode, outvariable) { \
-    long size = get_long(bytecode, 8); \
+    long size = get_long(bytecode, 0); \
     if (size == 0) { \
         PD("bytecode size is 0"); \
     } \
@@ -81,7 +81,7 @@
 
 vm_t *instance = NULL;
 
-INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code);
+INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code);
 
 INTERNAL bool vm_object_is_in_root(object_t* _obj) {
     object_t* current = instance->root;
@@ -736,20 +736,16 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  * @param _env The environment.
  * @param _closure The closure.
  */
-INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* signal) {
+INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* _signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
     code_t *code = (code_t *) _closure->value.opaque;
     env_t* block_env 
         = env_new(_parent_env);
     block_env->closure = code->environment;
-    *signal = vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    *_signal = vm_execute(block_env, 0, code);
+    if (*_signal == VmBlockSignalComplete) POPP();
     block_env->closure = NULL;
     env_free(block_env);
-    free(_closure);
-    free(code);
-    if (*signal == VmBlockSignalCompleted) {
-        POPP(); // pop block return value
-    }
 }
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
@@ -852,7 +848,7 @@ INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     env_t* func_env = 
         env_new(_parent_env);
     func_env->closure = code->environment;
-    vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
+    vm_execute(func_env, 0, code);
     func_env->closure = NULL;
     env_free(func_env);
 }
@@ -878,34 +874,35 @@ INTERNAL void do_panic(int _argc) {
     exit(EXIT_FAILURE);
 }
 
-INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _ip, code_t* _code) {
+INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
     
     // Get bytecode size
     size_t bytecode_size;
     VERIFY_BYTECODE_SIZE(_code->bytecode, bytecode_size);
 
+    if (bytecode_size != _code->size) PD("bytecode size mismatch");
+
     char* file_path = 
-        get_string(_code->bytecode, _header_size);
+        get_string(_code->bytecode, 8);
 
     // Add 1 to skip the null terminator of file_path string
     char* exec_name = 
-        get_string(_code->bytecode, _header_size + strlen(file_path) + 1);
+        get_string(_code->bytecode, 8 + strlen(file_path) + 1);
 
-    // printf("file_path: '%s'\n", file_path);
-    // printf("exec_name: '%s'\n", exec_name);
+    // printf("EXEC: '%s' size: %zu\n", exec_name, bytecode_size);
 
     // Calculate the starting IP
     size_t ip = 
-        _header_size + 
+        (8) + 
         (strlen(file_path) + 1) + 
         (strlen(exec_name) + 1) + 
-        _ip;
+        (_ip);
 
     // Shallow copy the bytecode
     uint8_t *bytecode = _code->bytecode;
 
-    while (ip < bytecode_size) {
+    while (ip < _code->size) {
         opcode_t opcode = bytecode[ip++];
 
         if (instance->allocation_counter % GC_ALLOCATION_THRESHOLD == 0) {
@@ -1158,6 +1155,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
+                    FORWARD(strlen(name) + 1);
                     break;
                 }
                 env_t* env = _env;
@@ -1276,7 +1274,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = POPP();
                 if (!object_is_truthy(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                 } else {
                     FORWARD(4);
                 }
@@ -1286,7 +1284,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = POPP();
                 if (object_is_truthy(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                 } else {
                     FORWARD(4);
                 }
@@ -1296,7 +1294,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = PEEK();
                 if (!object_is_truthy(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                 } else {
                     POPP();
                     FORWARD(4);
@@ -1307,19 +1305,18 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 int jump_offset = get_int(bytecode, ip);
                 object_t *obj = PEEK();
                 if (object_is_truthy(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                 } else {
                     POPP();
                     FORWARD(4);
                 }
                 break;
             }
-            case OPCODE_JUMP_IF_NOT_ERROR_OR_POP: {
+            case OPCODE_JUMP_IF_NOT_ERROR: {
                 int jump_offset = get_int(bytecode, ip);
                 object_t* obj = PEEK();
                 if (!object_is_error(obj)) {
-                    POPP();
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                 } else {
                     FORWARD(4);
                 }
@@ -1330,14 +1327,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 break;
             }
             case OPCODE_JUMP_FORWARD: {
-                FORWARD(get_int(bytecode, ip));
+                JUMP(get_int(bytecode, ip));
                 break;
             }
             case OPCODE_GET_ITERATOR_OR_JUMP: {
                 int jump_offset = get_int(bytecode, ip);
                 object_t* obj = POPP();
                 if (!OBJECT_TYPE_COLLECTION(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                     break;
                 }
                 PUSH(object_new_iterator(obj));
@@ -1351,7 +1348,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                     PD("expected iterator, got %s", object_type_to_string(obj));
                 }
                 if (!iterator_has_next(obj)) {
-                    FORWARD(jump_offset);
+                    JUMP(jump_offset);
                     break;
                 }
                 FORWARD(4);
@@ -1365,7 +1362,8 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 }
                 object_t** values = iterator_next(obj);
                 if (opcode == OPCODE_GET_NEXT_KEY_VALUE) {
-                    PUSH_REF(values[1]); // value
+                    if (values[1] != NULL) PUSH_REF(values[1]) // value
+                    else PUSH_REF(instance->null);
                 }
                 PUSH_REF(values[0]); // key
                 break;
@@ -1378,7 +1376,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 return VmBlockSignalReturned;
             }
             case OPCODE_COMPLETE_BLOCK: {
-                return VmBlockSignalCompleted;
+                return VmBlockSignalComplete;
             }
             case OPCODE_MAKE_FUNCTION: 
             case OPCODE_MAKE_ASYNC_FUNCTION: {
@@ -1402,11 +1400,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);
                 FORWARD(function_size);
-                if (signal == VmBlockSignalCompleted) {
-                    break;
-                } else {
-                    return VmBlockSignalReturned;
-                }
+                if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
+                if (signal == VmBlockSignalComplete) break;
+                PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
                 size_t function_size = get_long(bytecode, ip);
@@ -1459,7 +1455,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 break;
             }
             default: {
-                // DUMP_BYTECODE(bytecode, bytecode_size);
+                decompile(bytecode, false);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
             }
         }
@@ -1525,7 +1521,7 @@ DLLEXPORT object_t* vm_to_heap(object_t* _obj) {
 DLLEXPORT void vm_push(object_t* _obj) {
     ASSERTNULL(instance->evaluation_stack, "Evaluation stack is not initialized");
     if (instance->sp >= EVALUATION_STACK_SIZE) {
-        PD("Stackoverflow");
+        PD("Stackoverflow: TOP(%s)", object_to_string(PEEK()));
     } 
     if (_obj->next != NULL) {
         PD("Object is already in the root (%s)", object_to_string(_obj));
@@ -1563,18 +1559,18 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     // Verify version
     VERIFY_VERSION(_bytecode);
 
-    code_t code = {
-        .param_count = 0,
-        .size = get_long(_bytecode, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION),
-        .bytecode = _bytecode,
-        .environment = env_new(NULL)
-    };
+    code_t* code = code_new_module(
+        _bytecode+LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION, 
+        get_long(_bytecode, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION)
+    );
 
     // Create a new environment for the main function
+    decompile(code->bytecode, false);
+    return;
     env_t* env = 
         env_new(instance->env);
-    env->closure = code.environment;
-    vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, &code);
+    env->closure = code->environment;
+    vm_execute(env, 0, code);
     env->closure = NULL;
     env_free(env);
 

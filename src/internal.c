@@ -117,14 +117,18 @@ double number_coerce_to_double(object_t* _obj) {
 
 #pragma region PathC
 char* path_get_file_name(char* _path) {
-    char* file_name = strrchr(_path, PATH_SEPARATOR);
-    file_name = file_name ? file_name + 1 : _path;
-    // Remove file extension if present
-    char* dot = strrchr(file_name, '.');
-    if (dot != NULL) {
-        *dot = '\0';
-    }
-    return file_name;
+    const char* last_sep = strrchr(_path, PATH_SEPARATOR);
+    const char* base = last_sep ? last_sep + 1 : _path;
+
+    // Find and remove extension (if any)
+    const char* dot = strrchr(base, '.');
+    size_t len = dot ? (size_t)(dot - base) : strlen(base);
+
+    char* result = malloc(len + 1);
+    strncpy(result, base, len);
+    result[len] = '\0';
+
+    return result;
 }
 #pragma endregion
 

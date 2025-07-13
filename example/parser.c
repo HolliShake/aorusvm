@@ -1055,7 +1055,13 @@ ast_node_t* parser_for_statement(parser_t* _parser) {
         );
     }
     ended = ast_position(body);
-    return ast_for_statement_node(position_merge(start, ended), initializer, iterable, body);
+    ast_node_t* for_node = ast_for_statement_node(position_merge(start, ended), initializer, iterable, body);
+    ast_node_list_t statements = (ast_node_list_t) malloc(sizeof(ast_node_t*) * 2);
+    statements[0] = for_node;
+    statements[1] = NULL;
+    // Wrap into block statement to avoid scope issues
+    // return ast_block_statement_node(position_merge(start, ended), statements);
+    return for_node;
 }
 
 ast_node_t* parser_block_statement(parser_t* _parser) {
