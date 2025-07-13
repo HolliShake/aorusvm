@@ -1866,6 +1866,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "for statement must have a valid body"
                 );
             }
+            scope_t* for_scope = scope_new(_scope, ScopeTypeLoop);
             // Emit the iterable
             generator_expression(_generator, _scope, iterable);
             // Emit get iterator
@@ -1885,6 +1886,24 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 
                 generator_emit_byte(_generator, OPCODE_STORE_NAME);
                 generator_emit_raw_string(_generator, initializer->str0);
+
+                if (scope_has(for_scope, initializer->str0, false)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+
+                scope_value_t symbol = {
+                    .name      = initializer->str0,
+                    .is_const  = false,
+                    .is_global = true,
+                    .position  = initializer->position
+                };
+                scope_put(for_scope, initializer->str0, symbol);
+                free(initializer->str0);
             } else if (initializer->type == AstForMultipleInitializer) {
                 generator_emit_byte(_generator, OPCODE_GET_NEXT_KEY_VALUE);
                 ast_node_t* init_l = initializer->ast0;
@@ -1919,6 +1938,27 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 // For Value
                 generator_emit_byte(_generator, OPCODE_STORE_NAME);
                 generator_emit_raw_string(_generator, init_r->str0);
+
+                if (scope_has(for_scope, init_l->str0, false)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+
+                scope_value_t symbol = {
+                    .name      = init_l->str0,
+                    .is_const  = false,
+                    .is_global = true,
+                    .position  = init_l->position
+                };
+                scope_put(for_scope, init_l->str0, symbol);
+                free(init_l->str0);
+                free(init_r->str0);
+                free(init_l);
+                free(init_r);
             } else {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -1929,7 +1969,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
 
             // Emit the body
-            generator_statement(_generator, _scope, body);
+            generator_statement(_generator, for_scope, body);
 
             // Jump backward to the has next address
             generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
@@ -1944,8 +1984,9 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // Jump here if not iterable
             generator_set_4bytes(_generator, jump_if_not_iterable, _generator->bsize - jump_if_not_iterable);
 
+            // Free the scope
+            scope_free(for_scope);
             // Cleanup
-            free(initializer->str0);
             free(initializer);
             free(_statement->position);
             free(_statement);
