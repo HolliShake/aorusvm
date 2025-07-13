@@ -234,7 +234,7 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
     } \
 }
 
-INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expression) {
+INTERNAL void generator_assignment0(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
     if (_expression == NULL) {
         __THROW_ERROR(
             _generator->fpath,
@@ -258,6 +258,9 @@ INTERNAL void generator_assignment0(generator_t* _generator, ast_node_t* _expres
                 _generator, 
                 _expression->str0
             );
+            if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
+                scope_save_capture(_scope, _expression->str0);
+            }
             break;
         default:
             __THROW_ERROR(
@@ -755,7 +758,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "unary expression must be an expression, but received %d", expression->type
                 );
             }
-            generator_assignment0(_generator, expression);
+            generator_assignment0(_generator, _scope, expression);
             generator_emit_byte(_generator, OPCODE_INCREMENT);
             generator_assignment1(_generator, _scope, expression);
             free(_expression);
