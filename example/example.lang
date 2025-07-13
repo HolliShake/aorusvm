@@ -9,8 +9,9 @@ z;
 
 if (3 < 2) {
     2 + 2;
-} else 
+} else  {
     3 + 6;
+}
 
 func add(a, b) {
    return a + b;
