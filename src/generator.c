@@ -2127,6 +2127,10 @@ DLLEXPORT uint8_t* generator_generate(generator_t* _generator, ast_node_t* _prog
     return _generator->bytecode;
 }
 
+DLLEXPORT size_t generator_get_bytecode_size(generator_t* _generator) {
+    return _generator->bsize;
+}
+
 DLLEXPORT void generator_free(generator_t* _generator) {
     free(_generator->fpath);
     free(_generator->fdata);
