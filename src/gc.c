@@ -2,6 +2,8 @@
 
 size_t gc_collected_count = 0;
 
+INTERNAL void gc_mark_env_content(env_t* _env);
+
 INTERNAL size_t gc_total_objects(object_t* root) {
     if (root == NULL) {
         return 0;
@@ -26,6 +28,13 @@ INTERNAL void gc_free_object(object_t* _obj) {
         array_free((array_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
+    } else if (OBJECT_TYPE_FUNCTION(_obj)) {
+        code_t* code = (code_t*) _obj->value.opaque;
+        if (code->environment != NULL) {
+            env_free(code->environment);
+        }
+        free(code->bytecode);
+        free(code);
     }
     free(_obj);
 }
@@ -58,6 +67,11 @@ INTERNAL void gc_mark_object(object_t* _obj) {
         }
     } else if (OBJECT_TYPE_ERROR(_obj)) {
         gc_mark_object((object_t*) _obj->value.opaque);
+    } else if (OBJECT_TYPE_FUNCTION(_obj)) {
+        code_t* code = (code_t*) _obj->value.opaque;
+        if (code->environment != NULL) {
+            gc_mark_env_content(code->environment);
+        }
     }
 }
 

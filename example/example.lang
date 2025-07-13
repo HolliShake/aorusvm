@@ -130,12 +130,13 @@ accessGlobal();
 
 
 func ret(a, b) {
+    println(a, b);
     return func() {
         return a + b + 1000;
     };
 }
 
 println(ret(2, 4)());
-
+println(ret(2, 8)());
 println(fact(5));
 

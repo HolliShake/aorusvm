@@ -601,6 +601,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 free(param);
             }
             // Compile body
+            bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
                 ast_node_t* statement = body[i];
                 if (generator_is_expression_type(statement)) {
@@ -611,6 +612,13 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                         "function body must contain statement only, but received %d", statement->type
                     );
                 }
+                if (body[i]->type == AstReturnStatement && has_visible_return) {
+                    for (size_t j = i; body[j] != NULL; j++) {
+                        ast_node_free(body[j]);
+                    }
+                    break;
+                }
+                if (body[i]->type == AstReturnStatement) has_visible_return = true;
                 generator_statement(_generator, local_scope, statement);
             }
             // Emit the return opcode
@@ -1971,6 +1979,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 free(param);
             }
             // Compile body
+            bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
                 ast_node_t* statement = body[i];
                 if (generator_is_expression_type(statement)) {
@@ -1981,6 +1990,13 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "function body must contain statement only, but received %d", statement->type
                     );
                 }
+                if (body[i]->type == AstReturnStatement && has_visible_return) {
+                    for (size_t j = i; body[j] != NULL; j++) {
+                        ast_node_free(body[j]);
+                    }
+                    break;
+                }
+                if (body[i]->type == AstReturnStatement) has_visible_return = true;
                 generator_statement(_generator, local_scope, statement);
             }
             // Emit the return opcode
