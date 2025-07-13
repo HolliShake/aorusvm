@@ -128,12 +128,13 @@ println("Calling!!");
 
 accessGlobal();
 
-
 func ret(a, b) {
     println(a, b);
     return func() {
         return a + b + 1000;
     };
+
+    [...(0..100)];
 }
 
 println(ret(2, 4)());

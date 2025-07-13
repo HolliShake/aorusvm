@@ -621,9 +621,11 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
                 generator_statement(_generator, local_scope, statement);
             }
-            // Emit the return opcode
-            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-            generator_emit_byte(_generator, OPCODE_RETURN);
+            if (!has_visible_return) {
+                // Emit the return opcode
+                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, OPCODE_RETURN);
+            }
             // Save into symbol table
             scope_value_t symbol = {
                 .name      = name->str0,
@@ -1999,9 +2001,11 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
                 generator_statement(_generator, local_scope, statement);
             }
-            // Emit the return opcode
-            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-            generator_emit_byte(_generator, OPCODE_RETURN);
+            if (!has_visible_return) {
+                // Emit the return opcode
+                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, OPCODE_RETURN);
+            }
             // Save into symbol table
             scope_value_t symbol = {
                 .name      = name->str0,
