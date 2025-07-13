@@ -113,7 +113,7 @@ println(">>", obj["Hello"], [1,2,3][1000] catch (err) {
 
 println(panic == panic);
 
-println(">>", [...(0..5)], "<<");
+println(">>", [...(0..50)], "<<");
 
 
 println("Done!!!");
@@ -129,9 +129,13 @@ println("Calling!!");
 accessGlobal();
 
 
-const ADD = func(a, b) {
-    return a + b;
-};
+func ret(a, b) {
+    return func() {
+        return a + b + 1000;
+    };
+}
 
-println(ADD(2, 5));
+println(ret(2, 4)());
+
+println(fact(5));
 

@@ -37,6 +37,9 @@ typedef struct scope_struct {
     scope_node_t** buckets;
     size_t         bucket_count;
     size_t         size;
+    // Captures
+    size_t         capture_count;
+    char**         captures;
     // Carry flags
     bool           is_returned;
 } scope_t;
@@ -59,6 +62,15 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type);
  * @return True if the scope has the value, false otherwise.
  */
 bool scope_has(scope_t* _scope, char* _name, bool _recurse);
+
+/*
+ * Check if a scope has a value in a function.
+ *
+ * @param _scope The scope to check.
+ * @param _name The name of the value.
+ * @return True if the scope has the value, false otherwise.
+ */
+bool scope_function_has(scope_t* _scope, char* _name);
 
 /*
  * Put a value into a scope.
@@ -141,6 +153,14 @@ bool scope_is_array(scope_t* _scope);
  * @return True if the scope is an object, false otherwise.
  */
 bool scope_is_object(scope_t* _scope);
+
+/*
+ * Check if a scope is a capture.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a capture, false otherwise.
+ */
+bool scope_save_capture(scope_t* _scope, char* _name);
 
 /*
  * Free a scope.

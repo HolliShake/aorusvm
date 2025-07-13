@@ -13,6 +13,9 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type) {
     ASSERTNULL(scope->buckets, "failed to allocate memory for buckets");
     scope->bucket_count = SCOPE_BUCKET_COUNT;
     scope->size = 0;
+    scope->capture_count = 0;
+    scope->captures = (char**) malloc(sizeof(char*));
+    scope->captures[0] = NULL;
     return scope;
 }
 
@@ -48,6 +51,18 @@ bool scope_has(scope_t* _scope, char* _name, bool _recurse) {
         }
         _scope = _recurse ? _scope->parent : NULL;
     } while (_scope);
+    return false;
+}
+
+bool scope_function_has(scope_t* _scope, char* _name) {
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeLocal && current->parent != NULL && current->parent->type == ScopeTypeFunction) {
+            if (scope_has(current, _name, false)) return true;
+            return false;
+        }
+        current = current->parent;
+    }
     return false;
 }
 
@@ -139,6 +154,29 @@ bool scope_is_object(scope_t* _scope) {
     return _scope->type == ScopeTypeObject;
 }
 
+bool scope_save_capture(scope_t* _scope, char* _name) {
+    // Save only the captures into a function scope
+    scope_t* current = _scope;
+    while (current != NULL) {
+        bool exists = false;
+        for (size_t i = 0; i < current->capture_count; i++) {
+            if (strcmp(current->captures[i], _name) == 0) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) return true;
+        if (current->type == ScopeTypeFunction) {
+            current->captures[current->capture_count++] = strdup(_name);
+            current->captures = (char**) realloc(current->captures, sizeof(char*) * (current->capture_count + 1));
+            current->captures[current->capture_count] = NULL;
+            return true;
+        }
+        current = current->parent;
+    }
+    return false;
+}
+
 void scope_free(scope_t* _scope) {
     for (size_t i = 0; i < _scope->bucket_count; i++) {
         scope_node_t* node = _scope->buckets[i];
@@ -148,6 +186,10 @@ void scope_free(scope_t* _scope) {
             node = next;
         }
     }
+    for (size_t i = 0; i < _scope->capture_count; i++) {
+        free(_scope->captures[i]);
+    }
+    free(_scope->captures);
     free(_scope->buckets);
     free(_scope);
 }

@@ -315,6 +315,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 _generator, 
                 _expression->str0
             );
+            if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
+                scope_save_capture(_scope, _expression->str0);
+            }
             free(_expression->str0);
             free(_expression);
             break;
@@ -546,14 +549,6 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "function must have a body, but received NULL"
                 );
             }
-            if (scope_has(_scope, name->str0, true)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "function %s is already defined", name->str0
-                );
-            }
             // Make function
             generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
             // Reserve n bytes for the parameter count
@@ -584,6 +579,23 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                         "function parameter must be a valid identifier, but received %d", param->type
                     );
                 }
+                if (scope_function_has(local_scope, param->str0)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        param->position, 
+                        "function parameter %s is already defined", param->str0
+                    );
+                }
+                // Save into symbol table
+                scope_value_t symbol = {
+                    .name      = param->str0,
+                    .is_const  = false,
+                    .is_global = true,
+                    .position  = param->position
+                };
+                scope_put(local_scope, param->str0, symbol);
+                // Emit the store name opcode
                 generator_emit_byte(_generator, OPCODE_STORE_NAME);
                 generator_emit_raw_string(_generator, param->str0);
                 free(param);
@@ -614,6 +626,15 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             scope_put(_scope, name->str0, symbol);
             // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - function_start);
+            // Save captures
+            if (function_scope->capture_count > 0) {
+                // Emit opcode save captures
+                generator_emit_byte(_generator, OPCODE_SAVE_CAPTURES);
+                generator_emit_raw_int(_generator, function_scope->capture_count);
+                for (size_t i = 0; i < function_scope->capture_count; i++) {
+                    generator_emit_raw_string(_generator, function_scope->captures[i]);
+                }
+            }
             // Free the function scope
             scope_free(local_scope);
             scope_free(function_scope);
@@ -1928,6 +1949,23 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "function parameter must be a valid identifier, but received %d", param->type
                     );
                 }
+                if (scope_function_has(local_scope, param->str0)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        param->position, 
+                        "function parameter %s is already defined", param->str0
+                    );
+                }
+                // Save into symbol table
+                scope_value_t symbol = {
+                    .name      = param->str0,
+                    .is_const  = false,
+                    .is_global = true,
+                    .position  = param->position
+                };
+                scope_put(local_scope, param->str0, symbol);
+                // Emit the store name opcode
                 generator_emit_byte(_generator, OPCODE_STORE_NAME);
                 generator_emit_raw_string(_generator, param->str0);
                 free(param);
@@ -1958,6 +1996,16 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             scope_put(_scope, name->str0, symbol);
             // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - function_start);
+            // Save captures
+            if (function_scope->capture_count > 0) {
+                // Emit opcode save captures
+                generator_emit_byte(_generator, OPCODE_SAVE_CAPTURES);
+                generator_emit_raw_int(_generator, function_scope->capture_count);
+                for (size_t i = 0; i < function_scope->capture_count; i++) {
+                    generator_emit_raw_string(_generator, function_scope->captures[i]);
+                }
+            }
+            // Emit the store name opcode
             generator_emit_byte(_generator, OPCODE_STORE_NAME);
             generator_emit_raw_string(_generator, name->str0);
             // Free the function scope

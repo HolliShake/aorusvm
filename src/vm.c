@@ -736,19 +736,20 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  * @param _env The environment.
  * @param _closure The closure.
  */
-INTERNAL void do_block(env_t* _env, object_t* _closure, vm_block_signal_t* signal) {
+INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
     code_t *code = (code_t *) _closure->value.opaque;
     env_t* block_env 
-        = env_new(_env);
-    code->opaque = block_env;
+        = env_new(_parent_env);
+    block_env->closure = code->environment;
     *signal = vm_execute(block_env, LENGTH_OF_BYTECODE_SIZE, 0, code);
+    block_env->closure = NULL;
+    env_free(block_env);
     free(_closure);
     free(code);
     if (*signal == VmBlockSignalCompleted) {
         POPP(); // pop block return value
     }
-    env_free(block_env);
 }
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
@@ -850,8 +851,9 @@ INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     }
     env_t* func_env = 
         env_new(_parent_env);
-    code->opaque = func_env;
+    func_env->closure = code->environment;
     vm_execute(func_env, 4+LENGTH_OF_BYTECODE_SIZE, 0, code);
+    func_env->closure = NULL;
     env_free(func_env);
 }
 
@@ -1393,6 +1395,32 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _header_size, size_t _
                 instance->evaluation_stack[instance->sp-2] = A;
                 break;
             }
+            case OPCODE_SAVE_CAPTURES: {
+                object_t* obj = PEEK();
+                if (!OBJECT_TYPE_FUNCTION(obj)) {
+                    PD("expected function, got %s", object_type_to_string(obj));
+                }
+
+                code_t* code = (code_t*) obj->value.opaque;
+
+                int capture_count = get_int(bytecode, ip);
+                int length = 4;
+                for (int i = 0; i < capture_count; i++) {
+                    char* name = get_string(bytecode, ip+length);
+                    // Store only if it's not in the environment
+                    if (!env_has(_env, name, true)) {
+                        // Handled dynamically by the name resolver
+                        length += strlen(name) + 1;
+                        free(name);
+                        continue;
+                    }
+                    env_put(code->environment, name, env_get(_env, name));
+                    length += strlen(name) + 1;
+                    free(name);
+                }
+                FORWARD(length);
+                break;
+            }
             default: {
                 DUMP_BYTECODE(bytecode, bytecode_size);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
@@ -1439,8 +1467,7 @@ DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
 }
 
 DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
-    const bool is_local = env_has(_env, _name, false);
-    if (!env_has(_env, _name, !is_local)) {
+    if (!env_has(_env, _name, true)) {
         PD("variable %s not found", _name);
     }
     PUSH_REF(env_get(_env, _name));
@@ -1499,17 +1526,20 @@ DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
     // Verify version
     VERIFY_VERSION(_bytecode);
 
-    // Create a new environment for the main function
-    env_t* env = 
-        env_new(instance->env);
-
     code_t code = {
         .param_count = 0,
         .size = get_long(_bytecode, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION),
-        .bytecode = _bytecode
+        .bytecode = _bytecode,
+        .environment = env_new(NULL)
     };
 
+    // Create a new environment for the main function
+    env_t* env = 
+        env_new(instance->env);
+    env->closure = code.environment;
     vm_execute(env, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION+LENGTH_OF_BYTECODE_SIZE, 0, &code);
+    env->closure = NULL;
+    env_free(env);
 
     // Evaluation stack must contain 1 object
     if (instance->sp != 1) {

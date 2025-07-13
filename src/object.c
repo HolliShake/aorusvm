@@ -87,6 +87,7 @@ DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
 }
 
 DLLEXPORT char* object_to_string(object_t* _obj) {
+    if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return string_format("%d", _obj->value.i32);
@@ -430,6 +431,7 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
 }
 
 DLLEXPORT char* object_type_to_string(object_t* _obj) {
+    if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
             return "int";
@@ -456,6 +458,7 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
             return "unknown";
     }
 }
+
 DLLEXPORT size_t object_hash(object_t* _obj) {
     switch (_obj->type) {
         case OBJECT_TYPE_INT:

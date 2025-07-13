@@ -53,6 +53,7 @@ typedef enum opcode_enum {
     OPCODE_COMPLETE_BLOCK               = 123,  // No following bytes
     OPCODE_DUPTOP                       = 124,  // No following bytes
     OPCODE_ROT2                         = 125,  // No following bytes
+    OPCODE_SAVE_CAPTURES                = 126,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
 } opcode_t;
 
 #endif

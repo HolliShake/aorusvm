@@ -16,7 +16,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
     ASSERTNULL(env->buckets, "failed to allocate memory for buckets");
     env->bucket_count = ENV_BUCKET_COUNT;
     env->size = 0;
-    env->ref_count = 0;
+    env->closure = NULL;
     return env;
 }
 
@@ -42,19 +42,33 @@ INTERNAL void env_rehash(env_t* _env) {
 }
 
 DLLEXPORT bool env_has(env_t* _env, char* _name, bool _recurse) {
+    if (_env == NULL) return false;
+    
+    env_t* current_env = _env;
     size_t hash = hash64(_name);
+    
     do {
-        env_node_t* node = _env->buckets[hash % _env->bucket_count];
+        size_t index = hash % current_env->bucket_count;
+        env_node_t* node = current_env->buckets[index];
+        
         while (node) {
             if (strcmp(node->name, _name) == 0) return true;
             node = node->next;
         }
-        _env = _recurse ? _env->parent : NULL;
-    } while (_env);
+        
+        // Check closure environment if it exists
+        if (current_env->closure != NULL && env_has(current_env->closure, _name, _recurse)) {
+            return true;
+        }
+        
+        current_env = _recurse ? current_env->parent : NULL;
+    } while (current_env);
+    
     return false;
 }
 
 DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
+    if (_env == NULL) return;
     size_t hash = hash64(_name);
     size_t index = hash % _env->bucket_count;
     env_node_t* node = _env->buckets[index];
@@ -71,7 +85,7 @@ DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
     // Create new node and insert at head of chain
     node = malloc(sizeof(env_node_t));
     ASSERTNULL(node, "failed to allocate memory for env node");
-    node->name = _name;
+    node->name = strdup(_name);
     node->value = _value;
     node->next = _env->buckets[index];
     _env->buckets[index] = node;
@@ -83,17 +97,33 @@ DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
 }
 
 DLLEXPORT object_t* env_get(env_t* _env, char* _name) {
+    if (_env == NULL) return NULL;
     size_t hash = hash64(_name);
-    while (_env) {
-        env_node_t* node = _env->buckets[hash % _env->bucket_count];
+    env_t* current_env = _env;
+    
+    while (current_env) {
+        // Check in current environment
+        size_t index = hash % current_env->bucket_count;
+        env_node_t* node = current_env->buckets[index];
         while (node) {
             if (strcmp(node->name, _name) == 0) {
                 return node->value;
             }
             node = node->next;
         }
-        _env = _env->parent;
+        
+        // Check in closure environment if it exists
+        if (current_env->closure != NULL) {
+            object_t* closure_value = env_get(current_env->closure, _name);
+            if (closure_value != NULL) {
+                return closure_value;
+            }
+        }
+        
+        // Move up to parent environment
+        current_env = current_env->parent;
     }
+    
     return NULL;
 }
 
@@ -111,6 +141,8 @@ DLLEXPORT void env_free(env_t* _env) {
             node = next;
         }
     }
+    free(_env->buckets);
+    free(_env);
 }
 
 object_t** env_get_object_list(env_t* _env) {
@@ -131,10 +163,64 @@ object_t** env_get_object_list(env_t* _env) {
     return list;
 }
 
-void env_inc_ref(env_t* _env) {
-    _env->ref_count++;
-}
-
-void env_dec_ref(env_t* _env) {
-    _env->ref_count--;
+void env_dump_symbols(env_t* _env) {
+    printf("+-------------------------+\n");
+    printf("|        ENV DUMP         |\n");
+    printf("+-------------------------+\n");
+    if (_env == NULL) return;
+    if (_env->parent != NULL) {
+        printf("| [PARENT]                |\n");
+        for (size_t i = 0; i < _env->parent->bucket_count; i++) {
+            env_node_t* node = _env->parent->buckets[i];
+            while (node) {
+                if (strlen(node->name) > 24) {
+                    printf("| %.20s... |\n", node->name);
+                } else {
+                    printf("| %s", node->name);
+                    for (size_t j = 0; j < 24 - strlen(node->name); j++) {
+                        printf(" ");
+                    }
+                    printf("|\n");
+                }
+                node = node->next;
+            }
+        }
+    }
+    if (_env->closure != NULL) {
+        printf("+-------------------------+\n");
+        printf("| [CLOSURE]               |\n");
+        for (size_t i = 0; i < _env->closure->bucket_count; i++) {
+            env_node_t* node = _env->closure->buckets[i];
+            while (node) {
+                if (strlen(node->name) > 24) {
+                    printf("| %.20s... |\n", node->name);
+                } else {
+                    printf("| %s", node->name);
+                    for (size_t j = 0; j < 24 - strlen(node->name); j++) {
+                        printf(" ");
+                    }
+                    printf("|\n");
+                }
+                node = node->next; 
+            }
+        }
+    }
+    printf("+-------------------------+\n");
+    printf("| [LOCALS]                |\n");
+    for (size_t i = 0; i < _env->bucket_count; i++) {
+        env_node_t* node = _env->buckets[i];
+        while (node) {
+            if (strlen(node->name) > 24) {
+                printf("| %.20s... |\n", node->name);
+            } else {
+                printf("| %s", node->name);
+                for (size_t j = 0; j < 24 - strlen(node->name); j++) {
+                    printf(" ");
+                }
+                printf("|\n");
+            }
+            node = node->next;
+        }
+    }
+    printf("+-------------------------+\n");
 }

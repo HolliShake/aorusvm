@@ -11,7 +11,7 @@ typedef struct code_struct {
     /**** generic  **/
     size_t   size;
     uint8_t* bytecode;
-    // Maybe a pointer to env?
+    // Maybe a pointer to env? for captures
     env_t* environment;
 } code_t;
 
