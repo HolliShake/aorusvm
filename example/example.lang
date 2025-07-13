@@ -66,10 +66,10 @@ do {
 var jj = 1;
 
 
-var arr = [...[1, 2, 3, 4, 5]];
-var arr2 = [...arr, ...arr, 6, 7, 8];
+var arr1 = [...[1, 2, 3, 4, 5]];
+var arr2 = [...arr1, ...arr1, 6, 7, 8];
 
-println(arr);
+println(arr1);
 println(">>", arr2);
 
 var obj1 = {
