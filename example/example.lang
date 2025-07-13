@@ -146,7 +146,7 @@ println(0..2000);
 
 const r = 0..500;
 
-for (k in { "Hello": "World!", 1: "One" }) {
+for (k, v in { "Hello": "World!", 1: "One" }) {
     println(">>", k);
 }
 

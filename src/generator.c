@@ -1898,7 +1898,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 
                 scope_value_t symbol = {
                     .name      = initializer->str0,
-                    .is_const  = false,
+                    .is_const  = true,
                     .is_global = true,
                     .position  = initializer->position
                 };
@@ -1948,13 +1948,31 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     );
                 }
 
-                scope_value_t symbol = {
+                scope_value_t symbol0 = {
                     .name      = init_l->str0,
-                    .is_const  = false,
+                    .is_const  = true,
                     .is_global = true,
                     .position  = init_l->position
                 };
-                scope_put(for_scope, init_l->str0, symbol);
+                scope_put(for_scope, init_l->str0, symbol0);
+
+                if (scope_has(for_scope, init_r->str0, false)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        initializer->position, 
+                        "for statement must have a valid initializer"
+                    );
+                }
+
+                scope_value_t symbol1 = {
+                    .name      = init_r->str0,
+                    .is_const  = true,
+                    .is_global = true,
+                    .position  = init_r->position
+                };
+                scope_put(for_scope, init_r->str0, symbol1);
+
                 free(init_l->str0);
                 free(init_r->str0);
                 free(init_l);
