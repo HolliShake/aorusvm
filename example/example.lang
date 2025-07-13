@@ -144,4 +144,4 @@ println(fact(5));
 
 
 const o = scan(">> ");
-println("input:", o);
+println("\"input:\"", o);
