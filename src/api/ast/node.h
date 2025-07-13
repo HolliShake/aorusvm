@@ -106,6 +106,16 @@ DLLEXPORT ast_node_t* ast_object_property_node(position_t* _position, ast_node_t
 DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _properties);
 
 /*
+ * Function expression node.
+
+ * @param _position The position of the node.
+ * @param _parameters The parameters of the function.
+ * @param _body The body of the function.
+ * @return The function expression node.
+ */
+DLLEXPORT ast_node_t* ast_function_expression_node(position_t* _position, ast_node_list_t _parameters, ast_node_list_t _body);
+
+/*
  * Index node.
  *
  * @param _position The position of the node.

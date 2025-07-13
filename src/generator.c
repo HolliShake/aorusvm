@@ -136,7 +136,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstNull:
         case AstArray:
         case AstObject:
-        case AstRange:
+        case AstFunctionExpression:
         case AstIndex:
         case AstCall:
         case AstUnaryPlus:
@@ -159,6 +159,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBinaryXor:
         case AstLogicalAnd:
         case AstLogicalOr:
+        case AstRange:
         case AstCatch:
             return true;
         default:
@@ -515,36 +516,111 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(_expression);
             break;
         }
-        case AstRange: {
-            ast_node_t* lhs = _expression->ast0;
-            ast_node_t* rhs = _expression->ast1;
-            if (lhs == NULL) {
+        case AstFunctionExpression: {
+            bool is_async = _expression->type == AstAsyncFunctionNode;
+            ast_node_t* name       = _expression->ast0;
+            ast_node_list_t params = _expression->array0;
+            ast_node_list_t body   = _expression->array1;
+            // Validate name
+            if (name->type != AstName) {
                 __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "range expression requires a left hand side, but received NULL"
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "function name must be a valid identifier"
                 );
             }
-            if (rhs == NULL) {
+            if (params == NULL) {
                 __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "range expression requires a right hand side, but received NULL"
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "function must have parameters, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(lhs) || !generator_is_expression_type(rhs)) {
+            if (body == NULL) {
                 __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "range expression requires both left and right operands to be expressions"
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "function must have a body, but received NULL"
                 );
             }
-            generator_expression(_generator, _scope, rhs);
-            generator_expression(_generator, _scope, lhs);
-            generator_emit_byte(_generator, OPCODE_RANGE);
+            if (scope_has(_scope, name->str0, true)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _expression->position, 
+                    "function %s is already defined", name->str0
+                );
+            }
+            // Make function
+            generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
+            // Reserve n bytes for the parameter count
+            size_t param_count;
+            for (param_count = 0; params[param_count] != NULL; param_count++);
+            // Reserve n bytes for the parameter count
+            size_t function_start = _generator->bsize;
+            generator_emit_raw_int(_generator, param_count);
+            // Reserve 8 bytes for the bytecode size
+            size_t size_address = _generator->bsize;
+            // Reserve 8 bytes for the bytecode size
+            generator_emit_bytecode_size(_generator);
+            // Reserve n bytes for the file name
+            generator_emit_raw_string(_generator, _generator->fpath);
+            // Reserve n bytes for the module name
+            generator_emit_raw_string(_generator, name->str0);
+            // Create function scope
+            scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
+            scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
+            // Compile parameters
+            for (size_t i = 0; params[i] != NULL; i++) {
+                ast_node_t* param = params[i];
+                if (param->type != AstName) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        param->position, 
+                        "function parameter must be a valid identifier, but received %d", param->type
+                    );
+                }
+                generator_emit_byte(_generator, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, param->str0);
+                free(param);
+            }
+            // Compile body
+            for (size_t i = 0; body[i] != NULL; i++) {
+                ast_node_t* statement = body[i];
+                if (generator_is_expression_type(statement)) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        statement->position, 
+                        "function body must contain statement only, but received %d", statement->type
+                    );
+                }
+                generator_statement(_generator, local_scope, statement);
+            }
+            // Emit the return opcode
+            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+            generator_emit_byte(_generator, OPCODE_RETURN);
+            // Save into symbol table
+            scope_value_t symbol = {
+                .name      = name->str0,
+                .is_const  = false,
+                .is_global = true,
+                .position  = name->position
+            };
+            scope_put(_scope, name->str0, symbol);
+            // Set the bytecode size
+            generator_set_8bytes(_generator, size_address, _generator->bsize - function_start);
+            // Free the function scope
+            scope_free(local_scope);
+            scope_free(function_scope);
+            // Cleanup
+            free(name);
+            free(params);
+            free(body);
             free(_expression);
             break;
         }
@@ -1158,6 +1234,39 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 _expression->ast1
             );
             generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
+            free(_expression);
+            break;
+        }
+        case AstRange: {
+            ast_node_t* lhs = _expression->ast0;
+            ast_node_t* rhs = _expression->ast1;
+            if (lhs == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "range expression requires a left hand side, but received NULL"
+                );
+            }
+            if (rhs == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "range expression requires a right hand side, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(lhs) || !generator_is_expression_type(rhs)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "range expression requires both left and right operands to be expressions"
+                );
+            }
+            generator_expression(_generator, _scope, rhs);
+            generator_expression(_generator, _scope, lhs);
+            generator_emit_byte(_generator, OPCODE_RANGE);
             free(_expression);
             break;
         }

@@ -88,7 +88,7 @@ DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _pr
 }
 
 DLLEXPORT ast_node_t* ast_function_expression_node(position_t* _position, ast_node_list_t _parameters, ast_node_list_t _body) {
-    ast_node_t* node = ast_node_new(AstFunctionNode, _position);
+    ast_node_t* node = ast_node_new(AstFunctionExpression, _position);
     node->ast0 = ast_name_node(_position, "function");
     node->array0 = _parameters;
     node->array1 = _body;

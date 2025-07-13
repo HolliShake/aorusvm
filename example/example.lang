@@ -128,3 +128,10 @@ println("Calling!!");
 
 accessGlobal();
 
+
+const ADD = func(a, b) {
+    return a + b;
+};
+
+println(ADD(2, 5));
+

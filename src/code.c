@@ -6,7 +6,7 @@ code_t* code_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecod
     code->param_count = _param_count;
     code->size = _size;
     code->bytecode = _bytecode;
-    code->opaque = NULL;
+    code->environment = NULL;
     return code;
 }
 
@@ -15,7 +15,7 @@ code_t* code_new_module(uint8_t* _bytecode, size_t _size) {
     code->param_count = 0;
     code->size = _size;
     code->bytecode = _bytecode;
-    code->opaque = NULL;
+    code->environment = NULL;
     return code;
 }
 

@@ -1439,7 +1439,8 @@ DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
 }
 
 DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
-    if (!env_has(_env, _name, true)) {
+    const bool is_local = env_has(_env, _name, false);
+    if (!env_has(_env, _name, !is_local)) {
         PD("variable %s not found", _name);
     }
     PUSH_REF(env_get(_env, _name));

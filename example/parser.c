@@ -188,12 +188,64 @@ ast_node_t* parser_object(parser_t* _parser) {
     return ast_object_node(position_merge(start, ended), properties);
 }
 
+ast_node_t* parser_function_expression(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_FUNC);
+    ACCEPTV(LPAREN);
+    size_t index = 0;
+    ast_node_list_t parameters = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    parameters[0] = NULL;
+
+    ast_node_t* parameter = parser_terminal(_parser);
+
+    if (parameter != NULL) {
+        parameters[index++] = parameter;
+        parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 1)));
+        parameters[index] = NULL;
+        while (CHECKV(COMMA)) {
+            ACCEPTV(COMMA);
+            ast_node_t* parameter = parser_terminal(_parser);
+            if (parameter == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "function parameter expected"
+                );
+            }
+            parameters[index++] = parameter;
+            parameters = (ast_node_list_t) realloc(parameters, (sizeof(ast_node_t*) * (index + 1)));
+            parameters[index] = NULL;
+        }
+    }
+    ACCEPTV(RPAREN);
+    index = 0;
+    ast_node_list_t body = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    body[0] = NULL;
+
+    ACCEPTV(LBRACKET);
+
+    ast_node_t* statement = parser_statement(_parser);
+
+    while (statement != NULL) {
+        body[index++] = statement;
+        body = (ast_node_list_t) realloc(body, (sizeof(ast_node_t*) * (index + 1)));
+        body[index] = NULL;
+        statement = parser_statement(_parser);
+    }
+    ended = _parser->current->position;
+    ACCEPTV(RBRACKET);
+    return ast_function_expression_node(position_merge(start, ended), parameters, body);
+}
+
 ast_node_t* parser_group(parser_t* _parser) {
     if (CHECKV(LBRACE)) {
         return parser_array(_parser);
     } else if (CHECKV(LBRACKET)) {
         return parser_object(_parser);
-    }  else if (CHECKV(LPAREN)) {
+    } else if (CHECKV(KEY_FUNC)) {
+        return parser_function_expression(_parser);
+    } else if (CHECKV(LPAREN)) {
         ACCEPTV(LPAREN);
         ast_node_t* node = parser_mandatory_expression(_parser);
         ACCEPTV(RPAREN);

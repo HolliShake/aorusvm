@@ -1,3 +1,4 @@
+#include "api/core/env.h"
 #include "api/core/global.h"
 
 #ifndef CODE_H
@@ -11,7 +12,7 @@ typedef struct code_struct {
     size_t   size;
     uint8_t* bytecode;
     // Maybe a pointer to env?
-    void* opaque;
+    env_t* environment;
 } code_t;
 
 /*

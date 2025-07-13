@@ -15,6 +15,8 @@ typedef struct env_struct {
     env_node_t** buckets;
     size_t bucket_count;
     size_t size;
+    // ref count
+    int ref_count;
 } env_t;
 
 /*
@@ -24,5 +26,19 @@ typedef struct env_struct {
  * @return The object list.
  */
 object_t** env_get_object_list(env_t* _env);
+
+/*
+ * Increment the reference count of the environment.
+ *
+ * @param _env The environment.
+ */
+void env_inc_ref(env_t* _env);
+
+/*
+ * Decrement the reference count of the environment.
+ *
+ * @param _env The environment.
+ */
+void env_dec_ref(env_t* _env);
 
 #endif

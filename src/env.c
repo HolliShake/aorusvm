@@ -16,6 +16,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
     ASSERTNULL(env->buckets, "failed to allocate memory for buckets");
     env->bucket_count = ENV_BUCKET_COUNT;
     env->size = 0;
+    env->ref_count = 0;
     return env;
 }
 
@@ -128,4 +129,12 @@ object_t** env_get_object_list(env_t* _env) {
     }
 
     return list;
+}
+
+void env_inc_ref(env_t* _env) {
+    _env->ref_count++;
+}
+
+void env_dec_ref(env_t* _env) {
+    _env->ref_count--;
 }
