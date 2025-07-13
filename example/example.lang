@@ -143,4 +143,5 @@ println(ret(2, 8)());
 println(fact(5));
 
 
-const o = 0;
+const o = scan(">> ");
+println("input:", o);

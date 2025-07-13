@@ -35,11 +35,28 @@ void println_function(size_t _arg_count) {
 
 // The built-in scan function.
 void scan_function(size_t _arg_count) {
-    for (size_t i = 0; i < _arg_count; i++); // ignore the arguments
+    char* message = string_allocate("");
+    for (size_t i = 0; i < _arg_count; i++) {
+        object_t* obj = vm_pop();
+        char* str = object_to_string(obj);
+        message = string_append(message, str);
+        free(str);
+        if (i < _arg_count - 1) {
+            message = string_append(message, " ");
+        }
+    }
     char* input = malloc(1024);
-    printf(">> ");
+    if (input == NULL) {
+        printf("Error: Failed to allocate memory for input\n");
+        vm_load_null();
+        free(message);
+        return;
+    }
+    printf("%s", message);
     scanf("%[^\n]", input);
+    getchar(); // Clear the newline character from input buffer
     vm_push(object_new_string(input));
+    free(message);
     free(input);
 }
 
