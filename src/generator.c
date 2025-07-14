@@ -2,6 +2,7 @@
 #include "api/core/vm.h"
 #include "error.h"
 #include "eval.h"
+#include "func.h"
 #include "internal.h"
 #include "node.h"
 #include "opcode.h"
@@ -17,21 +18,11 @@ typedef struct generator_struct {
     size_t   fsize;
     uint8_t* bytecode;
     size_t   bsize;
-    size_t   reset_base;
+    size_t   codelen;
 } generator_t;
 
 
 #define EXPECT(_size) if (_generator->bsize != _size) PD("INCORRECT ALLOCATION: BSIZE: %zu != %d", _generator->bsize, _size);
-
-#define SAVEBASE(out) \
-    size_t out##_base = _generator->reset_base; \
-    { _generator->reset_base = 0; } \
-
-#define RESTOREBASE(out) \
-    {_generator->reset_base = out##_base;} \
-
-#define CALCULATED_JUMP() ((_generator->reset_base - (1 /*1 for the jump instruction*/ + 4 /*for the jump offset*/ + 1  /*for the jump target(index starts at 0)*/ + 1)))
-
 
 INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size) {
     _generator->bytecode = (uint8_t*) realloc(_generator->bytecode, sizeof(uint8_t) * (_generator->bsize + _size));
@@ -39,71 +30,71 @@ INTERNAL void generator_resize_bytecode_by(generator_t* _generator, size_t _size
 }
 
 
-INTERNAL void generator_emit_raw_int(generator_t* _generator, size_t _value) {
+INTERNAL void generator_emit_raw_int(generator_t* _generator, func_ctx_t* _fctx, size_t _value) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
-        _generator->reset_base++;
+        _fctx->codelen++;
         _generator->bytecode[_generator->bsize++] = (_value >> (i * 8)) & 0xFF;
     }
 }
 
-INTERNAL void generator_allocate_nbytes(generator_t* _generator, size_t _nbytes) {
+INTERNAL void generator_allocate_nbytes(generator_t* _generator, func_ctx_t* _fctx, size_t _nbytes) {
     generator_resize_bytecode_by(_generator, _nbytes);
     _generator->bsize += _nbytes;
-    _generator->reset_base += _nbytes;
+    _fctx->codelen += _nbytes;
 }
 
-INTERNAL void generator_emit_byte(generator_t* _generator, uint8_t _value) {
+INTERNAL void generator_emit_byte(generator_t* _generator, func_ctx_t* _fctx, uint8_t _value) {
     generator_resize_bytecode_by(_generator, 1);
-    _generator->reset_base++;
+    _fctx->codelen++;
     _generator->bytecode[_generator->bsize++] = _value;
 }
 
-INTERNAL void generator_emit_magic_bytes(generator_t* _generator) {
+INTERNAL void generator_emit_magic_bytes(generator_t* _generator, func_ctx_t* _fctx) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
-        _generator->reset_base++;
+        _fctx->codelen++;
         _generator->bytecode[_generator->bsize++] = (MAGIC_NUMBER >> (i * 8)) & 0xFF;
     }
 }
 
-INTERNAL void generator_emit_version_bytes(generator_t* _generator) {
+INTERNAL void generator_emit_version_bytes(generator_t* _generator, func_ctx_t* _fctx) {
     generator_resize_bytecode_by(_generator, 4);
     for (size_t i = 0; i < 4; i++) {
-        _generator->reset_base++;
+        _fctx->codelen++;
         _generator->bytecode[_generator->bsize++] = (VERSION >> (i * 8)) & 0xFF;
     }
 }
 
-INTERNAL void generator_emit_bytecode_size(generator_t* _generator) {
+INTERNAL void generator_emit_bytecode_size(generator_t* _generator, func_ctx_t* _fctx) {
     generator_resize_bytecode_by(_generator, 8);
     for (size_t i = 0; i < 8; i++) {
-        _generator->reset_base++;
+        _fctx->codelen++;
         _generator->bytecode[_generator->bsize++] = (_generator->bsize >> (i * 8)) & 0xFF;
     }
 }
 
-INTERNAL void generator_emit_raw_string(generator_t* _generator, char* _value) {
+INTERNAL void generator_emit_raw_string(generator_t* _generator, func_ctx_t* _fctx, char* _value) {
     size_t len = strlen(_value);
-    generator_resize_bytecode_by(_generator, len + 1);
+    size_t full_len = len + 1;
+    generator_resize_bytecode_by(_generator, full_len);
     for (size_t i = 0; i < len; i++) {
-        _generator->bytecode[_generator->bsize + i] = _value[i];
+        _generator->bytecode[_generator->bsize++] = _value[i];
     }
-    _generator->bytecode[_generator->bsize + len] = 0;
-    _generator->bsize += len + 1;
-    _generator->reset_base += len + 1;
+    _generator->bytecode[_generator->bsize++] = 0;
+    _fctx->codelen += full_len;
 }
 
-INTERNAL void generator_emit_int(generator_t* _generator, int _value) {
+INTERNAL void generator_emit_int(generator_t* _generator, func_ctx_t* _fctx, int _value) {
     generator_resize_bytecode_by(_generator, 5);
     _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_INT;
     for (size_t i = 0; i < 4; i++) {
         _generator->bytecode[_generator->bsize++] = (_value >> (i * 8)) & 0xFF;
     }
-    _generator->reset_base += 5;
+    _fctx->codelen += 5;
 }
 
-INTERNAL void generator_emit_double(generator_t* _generator, double _value) {
+INTERNAL void generator_emit_double(generator_t* _generator, func_ctx_t* _fctx, double _value) {
     generator_resize_bytecode_by(_generator, 9);
     union double_bytes_t {
         double f64;
@@ -115,10 +106,10 @@ INTERNAL void generator_emit_double(generator_t* _generator, double _value) {
     for (size_t i = 0; i < 8; i++) {
         _generator->bytecode[_generator->bsize++] = double_bytes.bytes[i];
     }
-    _generator->reset_base += 9;
+    _fctx->codelen += 9;
 }
 
-INTERNAL void generator_emit_string(generator_t* _generator, char* _value) {
+INTERNAL void generator_emit_string(generator_t* _generator, func_ctx_t* _fctx, char* _value) {
     generator_resize_bytecode_by(_generator, strlen(_value) + 2);
     _generator->bytecode[_generator->bsize++] = OPCODE_LOAD_STRING;
     for (size_t i = 0; i < strlen(_value); i++) {
@@ -126,7 +117,7 @@ INTERNAL void generator_emit_string(generator_t* _generator, char* _value) {
     }
     _generator->bytecode[_generator->bsize + strlen(_value)] = 0;
     _generator->bsize += strlen(_value) + 1;
-    _generator->reset_base += strlen(_value) + 1;
+    _fctx->codelen += strlen(_value) + 1;
 }
 
 INTERNAL void generator_set_4bytes(generator_t* _generator, size_t start, int _value) {
@@ -215,24 +206,40 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
     return _expression->type == AstLogicalAnd || _expression->type == AstLogicalOr;
 }
 
+INTERNAL int generator_here(generator_t* _generator) {
+    return _generator->bsize;
+}
+
+INTERNAL int generator_emit_jump(generator_t* _generator, func_ctx_t* _fctx, opcode_t _opcode) {
+    generator_emit_byte(_generator, _fctx, _opcode);
+    int start = (int) _generator->bsize;
+    if (start != _generator->bsize) PD("address overflow: %d != %zu", start, _generator->bsize);
+    generator_emit_raw_int(_generator, _fctx, 0);
+    return start;
+}
+
+INTERNAL void generator_label(generator_t* _generator, func_ctx_t* _fctx, size_t _start) {
+    generator_set_4bytes(_generator, _start, _fctx->codelen);
+}
+
 #define FOLD_CONSTANT_EXPRESSION(expression) { \
     eval_result_t result = eval_eval(expression); \
     switch (result.type) { \
         case EvalInt: \
-            generator_emit_int(_generator, result.value.i32); \
+            generator_emit_int(_generator, _fctx, result.value.i32); \
             break; \
         case EvalDouble: \
-            generator_emit_double(_generator, result.value.f64); \
+            generator_emit_double(_generator, _fctx, result.value.f64); \
             break; \
         case EvalBoolean: \
-            generator_emit_byte(_generator, OPCODE_LOAD_BOOL); \
-            generator_emit_byte(_generator, result.value.i32 == 1); \
+            generator_emit_byte(_generator, _fctx, OPCODE_LOAD_BOOL); \
+            generator_emit_byte(_generator, _fctx, result.value.i32 == 1); \
             break; \
         case EvalString: \
-            generator_emit_string(_generator, (char*) result.value.ptr); \
+            generator_emit_string(_generator, _fctx, (char*) result.value.ptr); \
             break; \
         case EvalNull: \
-            generator_emit_byte(_generator, OPCODE_LOAD_NULL); \
+            generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL); \
             break; \
         case EvalZeroDivision: \
             __THROW_ERROR( \
@@ -253,7 +260,7 @@ INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
     } \
 }
 
-INTERNAL void generator_assignment0(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
+INTERNAL void generator_assignment0(generator_t* _generator, func_ctx_t* _fctx, scope_t* _scope, ast_node_t* _expression) {
     if (_expression == NULL) {
         __THROW_ERROR(
             _generator->fpath,
@@ -272,9 +279,10 @@ INTERNAL void generator_assignment0(generator_t* _generator, scope_t* _scope, as
     }
     switch (_expression->type) {
         case AstName:
-            generator_emit_byte(_generator, OPCODE_LOAD_NAME);
+            generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NAME);
             generator_emit_raw_string(
                 _generator, 
+                _fctx,
                 _expression->str0
             );
             if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
@@ -291,7 +299,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, scope_t* _scope, as
     }
 }
 
-INTERNAL void generator_assignment1(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
+INTERNAL void generator_assignment1(generator_t* _generator, func_ctx_t* _fctx, scope_t* _scope, ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
             if (!scope_has(_scope, _expression->str0, true)) {
@@ -311,9 +319,10 @@ INTERNAL void generator_assignment1(generator_t* _generator, scope_t* _scope, as
                     "constant variable %s cannot be re-assigned", _expression->str0
                 );
             }
-            generator_emit_byte(_generator, OPCODE_SET_NAME);
+            generator_emit_byte(_generator, _fctx, OPCODE_SET_NAME);
             generator_emit_raw_string(
                 _generator, 
+                _fctx,
                 _expression->str0
             );
             break;
@@ -327,14 +336,15 @@ INTERNAL void generator_assignment1(generator_t* _generator, scope_t* _scope, as
     }
 }
 
-INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_node_t* _statement);
+INTERNAL void generator_statement(generator_t* _generator, func_ctx_t* _fctx, scope_t* _scope, ast_node_t* _statement);
 
-INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast_node_t* _expression) {
+INTERNAL void generator_expression(generator_t* _generator, func_ctx_t* _fctx, scope_t* _scope, ast_node_t* _expression) {
     switch (_expression->type) {
         case AstName:
-            generator_emit_byte(_generator, OPCODE_LOAD_NAME);
+            generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NAME);
             generator_emit_raw_string(
                 _generator, 
+                _fctx,
                 _expression->str0
             );
             if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
@@ -347,6 +357,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
         case AstFloat:
             generator_emit_int(
                 _generator, 
+                _fctx,
                 (int) _expression->value.i32
             );
             free(_expression);
@@ -355,6 +366,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
         case AstDouble:
             generator_emit_double(
                 _generator, 
+                _fctx,
                 (double) _expression->value.i64
             );
             free(_expression);
@@ -370,6 +382,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_emit_string(
                 _generator, 
+                _fctx,
                 _expression->str0
             );
             free(_expression);
@@ -377,10 +390,12 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
         case AstBoolean:
             generator_emit_byte(
                 _generator, 
+                _fctx,
                 OPCODE_LOAD_BOOL
             );
             generator_emit_byte(
                 _generator, 
+                _fctx,
                 _expression->value.i32 == 1
             );
             free(_expression);
@@ -388,6 +403,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
         case AstNull:
             generator_emit_byte(
                 _generator, 
+                _fctx,
                 OPCODE_LOAD_NULL
             );
             free(_expression);
@@ -409,25 +425,25 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             if (!has_spread) {
                 for (i = count; i > 0; i--) {
                     ast_node_t* element = elements[i-1];
-                    generator_expression(_generator, array_scope, element);
+                    generator_expression(_generator, _fctx, array_scope, element);
                 }
-                generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
-                generator_emit_raw_int(_generator, count);
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_ARRAY);
+                generator_emit_raw_int(_generator, _fctx, count);
             } else {
                 // Dynamic array with possible spread
-                generator_emit_byte(_generator, OPCODE_LOAD_ARRAY);
-                generator_emit_raw_int(_generator, 0); // Start from empty array
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_ARRAY);
+                generator_emit_raw_int(_generator, _fctx, 0); // Start from empty array
 
                 for (i = 0; i < count; i++) {
                     ast_node_t* element = elements[i];
 
                     if (element->type == AstUnarySpread) {
-                        generator_expression(_generator, array_scope, element->ast0);
-                        generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
+                        generator_expression(_generator, _fctx, array_scope, element->ast0);
+                        generator_emit_byte(_generator, _fctx, OPCODE_EXTEND_ARRAY);
                         free(element);
                     } else {
-                        generator_expression(_generator, array_scope, element);
-                        generator_emit_byte(_generator, OPCODE_APPEND_ARRAY);
+                        generator_expression(_generator, _fctx, array_scope, element);
+                        generator_emit_byte(_generator, _fctx, OPCODE_APPEND_ARRAY);
                     }
                 }
             }
@@ -472,9 +488,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 );
             }
             // Or ignore it!!!
-            generator_expression(_generator, _scope, value); // value
-            generator_expression(_generator, _scope, key); // key
-            generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
+            generator_expression(_generator, _fctx, _scope, value); // value
+            generator_expression(_generator, _fctx, _scope, key); // key
+            generator_emit_byte(_generator, _fctx, OPCODE_PUT_OBJECT);
             free(_expression);
             break;
         }
@@ -503,23 +519,23 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                             "object property expected"
                         );
                     }
-                    generator_expression(_generator, object_scope, property->ast1); // value
-                    generator_expression(_generator, object_scope, property->ast0); // key
+                    generator_expression(_generator, _fctx, object_scope, property->ast1); // value
+                    generator_expression(_generator, _fctx, object_scope, property->ast0); // key
                     free(property);
                 }
-                generator_emit_byte(_generator, OPCODE_LOAD_OBJECT);
-                generator_emit_raw_int(_generator, count);
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_OBJECT);
+                generator_emit_raw_int(_generator, _fctx, count);
             } else {
                 // Dynamic object with possible spread
-                generator_emit_byte(_generator, OPCODE_LOAD_OBJECT);
-                generator_emit_raw_int(_generator, 0); // Start from empty object
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_OBJECT);
+                generator_emit_raw_int(_generator, _fctx, 0); // Start from empty object
 
                 for (i = 0; i < count; i++) {
                     ast_node_t* property = properties[i];
 
                     if (property->type == AstUnarySpread) {
-                        generator_expression(_generator, object_scope, property->ast0);
-                        generator_emit_byte(_generator, OPCODE_EXTEND_OBJECT);
+                        generator_expression(_generator, _fctx, object_scope, property->ast0);
+                        generator_emit_byte(_generator, _fctx, OPCODE_EXTEND_OBJECT);
                     } else {
                         if (property->type != AstObjectProperty) {
                             __THROW_ERROR(
@@ -529,9 +545,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                                 "object property expected"
                             );
                         }
-                        generator_expression(_generator, object_scope, property->ast1); // value
-                        generator_expression(_generator, object_scope, property->ast0); // key
-                        generator_emit_byte(_generator, OPCODE_PUT_OBJECT);
+                        generator_expression(_generator, _fctx, object_scope, property->ast1); // value
+                        generator_expression(_generator, _fctx, object_scope, property->ast0); // key
+                        generator_emit_byte(_generator, _fctx, OPCODE_PUT_OBJECT);
                     }
                     free(property);
                 }
@@ -542,7 +558,7 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             break;
         }
         case AstFunctionExpression: {
-            SAVEBASE(offset);
+            func_ctx_t* _fctx = func_ctx_new();
             bool is_async = _expression->type == AstAsyncFunctionNode;
             ast_node_t* name       = _expression->ast0;
             ast_node_list_t params = _expression->array0;
@@ -573,21 +589,21 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 );
             }
             // Make function
-            generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
+            generator_emit_byte(_generator, _fctx, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
             // Reserve n bytes for the parameter count
             size_t param_count;
             for (param_count = 0; params[param_count] != NULL; param_count++);
             // Reserve n bytes for the parameter count
             size_t function_start = _generator->bsize;
-            generator_emit_raw_int(_generator, param_count);
+            generator_emit_raw_int(_generator, _fctx, param_count);
             // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
             // Reserve 8 bytes for the bytecode size
-            generator_emit_bytecode_size(_generator);
+            generator_emit_bytecode_size(_generator, _fctx);
             // Reserve n bytes for the file name
-            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, _fctx, _generator->fpath);
             // Reserve n bytes for the module name
-            generator_emit_raw_string(_generator, name->str0);
+            generator_emit_raw_string(_generator, _fctx, name->str0);
             // Create function scope
             scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
             scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
@@ -619,8 +635,8 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 };
                 scope_put(local_scope, param->str0, symbol);
                 // Emit the store name opcode
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, param->str0);
+                generator_emit_byte(_generator, _fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, _fctx, param->str0);
                 free(param);
             }
             // Compile body
@@ -642,12 +658,12 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, local_scope, statement);
+                generator_statement(_generator, _fctx, local_scope, statement); // statement
             }
             if (!has_visible_return) {
                 // Emit the return opcode
-                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-                generator_emit_byte(_generator, OPCODE_RETURN);
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, _fctx, OPCODE_RETURN);
             }
             // Save into symbol table
             scope_value_t symbol = {
@@ -662,10 +678,10 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             // Save captures
             if (function_scope->capture_count > 0) {
                 // Emit opcode save captures
-                generator_emit_byte(_generator, OPCODE_SAVE_CAPTURES);
-                generator_emit_raw_int(_generator, function_scope->capture_count);
+                generator_emit_byte(_generator, _fctx, OPCODE_SAVE_CAPTURES);
+                generator_emit_raw_int(_generator, _fctx, function_scope->capture_count);
                 for (size_t i = 0; i < function_scope->capture_count; i++) {
-                    generator_emit_raw_string(_generator, function_scope->captures[i]);
+                    generator_emit_raw_string(_generator, _fctx, function_scope->captures[i]);
                 }
             }
             // Free the function scope
@@ -676,7 +692,6 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             free(params);
             free(body);
             free(_expression);
-            RESTOREBASE(offset);
             break;
         }
         case AstIndex: {
@@ -706,9 +721,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "index expression requires both object and index to be expressions"
                 );
             }
-            generator_expression(_generator, _scope, obj);
-            generator_expression(_generator, _scope, index);
-            generator_emit_byte(_generator, OPCODE_INDEX);
+            generator_expression(_generator, _fctx, _scope, obj);
+            generator_expression(_generator, _fctx, _scope, index);
+            generator_emit_byte(_generator, _fctx, OPCODE_INDEX);
             free(_expression);
             break;
         }
@@ -753,11 +768,11 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                         "call expression must be an expression, but received %d", argument->type
                     );
                 }
-                generator_expression(_generator, _scope, argument);
+                generator_expression(_generator, _fctx, _scope, argument);
             }
-            generator_expression(_generator, _scope, function);
-            generator_emit_byte(_generator, OPCODE_CALL);
-            generator_emit_raw_int(_generator, param_count);
+            generator_expression(_generator, _fctx, _scope, function);
+            generator_emit_byte(_generator, _fctx, OPCODE_CALL);
+            generator_emit_raw_int(_generator, _fctx, param_count);
             free(_expression);
             break;
         }
@@ -779,9 +794,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "unary expression must be an expression, but received %d", expression->type
                 );
             }
-            generator_assignment0(_generator, _scope, expression);
-            generator_emit_byte(_generator, OPCODE_INCREMENT);
-            generator_assignment1(_generator, _scope, expression);
+            generator_assignment0(_generator, _fctx, _scope, expression);
+            generator_emit_byte(_generator, _fctx, OPCODE_INCREMENT);
+            generator_assignment1(_generator, _fctx, _scope, expression);
             free(_expression);
             break;
         }
@@ -804,8 +819,8 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 );
             }
             // Or ignore it!!!
-            generator_expression(_generator, _scope, expression);
-            generator_emit_byte(_generator, OPCODE_EXTEND_ARRAY);
+            generator_expression(_generator, _fctx, _scope, expression);
+            generator_emit_byte(_generator, _fctx, OPCODE_EXTEND_ARRAY);
             free(_expression);
             break;
         }
@@ -832,15 +847,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_MUL);
+            generator_emit_byte(_generator, _fctx, OPCODE_MUL);
             free(_expression);
             break;
         }
@@ -867,15 +884,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_DIV);
+            generator_emit_byte(_generator, _fctx, OPCODE_DIV);
             free(_expression);
             break;
         }
@@ -894,15 +913,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_MOD);
+            generator_emit_byte(_generator, _fctx, OPCODE_MOD);
             free(_expression);
             break;
         }
@@ -929,15 +950,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_ADD);
+            generator_emit_byte(_generator, _fctx, OPCODE_ADD);
             free(_expression);
             break;
         }
@@ -964,15 +987,23 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
+                _scope,
+                _expression->ast0
+            );
+            generator_expression(
+                _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_SUB);
+            generator_emit_byte(_generator, _fctx, OPCODE_SUB);
             free(_expression);
             break;
         }
@@ -999,15 +1030,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_SHL);
+            generator_emit_byte(_generator, _fctx, OPCODE_SHL);
             free(_expression);
             break;
         }
@@ -1034,15 +1067,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_SHR);
+            generator_emit_byte(_generator, _fctx, OPCODE_SHR);
             free(_expression);
             break;
         }
@@ -1069,15 +1104,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_LT);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_LT);
             free(_expression);
             break;
         }
@@ -1096,15 +1133,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_LTE);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_LTE);
             free(_expression);
             break;
         }
@@ -1123,15 +1162,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_GT);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_GT);
             free(_expression);
             break;
         }
@@ -1150,15 +1191,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_GTE);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_GTE);
             free(_expression);
             break;
         }
@@ -1177,15 +1220,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_EQ);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_EQ);
             free(_expression);
             break;
         }
@@ -1204,15 +1249,17 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_emit_byte(_generator, OPCODE_CMP_NE);
+            generator_emit_byte(_generator, _fctx, OPCODE_CMP_NE);
             free(_expression);
             break;
         }
@@ -1239,18 +1286,20 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
-            generator_emit_byte(_generator, OPCODE_JUMP_IF_FALSE_OR_POP);
+            generator_emit_byte(_generator, _fctx, OPCODE_JUMP_IF_FALSE_OR_POP);
             int jump_start = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
+            generator_allocate_nbytes(_generator, _fctx, 4);
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->codelen);
             free(_expression);
             break;
         }
@@ -1277,18 +1326,20 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
             }
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast0
             );
-            generator_emit_byte(_generator, OPCODE_JUMP_IF_TRUE_OR_POP);
+            generator_emit_byte(_generator, _fctx, OPCODE_JUMP_IF_TRUE_OR_POP);
             int jump_start = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
+            generator_allocate_nbytes(_generator, _fctx, 4);
             generator_expression(
                 _generator, 
+                _fctx,
                 _scope,
                 _expression->ast1
             );
-            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->reset_base);
+            generator_set_4bytes(_generator, jump_start, _generator->bsize - jump_start - _generator->codelen);
             free(_expression);
             break;
         }
@@ -1319,9 +1370,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     "range expression requires both left and right operands to be expressions"
                 );
             }
-            generator_expression(_generator, _scope, rhs);
-            generator_expression(_generator, _scope, lhs);
-            generator_emit_byte(_generator, OPCODE_RANGE);
+            generator_expression(_generator, _fctx, _scope, rhs);
+            generator_expression(_generator, _fctx, _scope, lhs);
+            generator_emit_byte(_generator, _fctx, OPCODE_RANGE);
             free(_expression);
             break;
         }
@@ -1370,29 +1421,25 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                 );
             }
             // Generate error code
-            generator_expression(_generator, _scope, error);
-            generator_emit_byte(_generator, OPCODE_JUMP_IF_NOT_ERROR);
-            int jump_start = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
+            generator_expression(_generator, _fctx, _scope, error);
+            int end = generator_emit_jump(_generator, _fctx, OPCODE_JUMP_IF_NOT_ERROR);
             
+            func_ctx_t* _catch_ctx = func_ctx_new();
             // Setup catch block
-            SAVEBASE(offset);
             scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
             scope_t* local_scope = scope_new(catch_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
-            generator_emit_byte(_generator, OPCODE_SETUP_CATCH_BLOCK);
+            generator_emit_byte(_generator, _catch_ctx, OPCODE_SETUP_CATCH_BLOCK);
             // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
-            generator_emit_bytecode_size(_generator);
+            generator_emit_bytecode_size(_generator, _catch_ctx);
             // Reserve n bytes for the file name
-            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, _catch_ctx, _generator->fpath);
             // Reserve n bytes for the module name
-            generator_emit_raw_string(_generator, "catch");
-
+            generator_emit_raw_string(_generator, _catch_ctx, "catch");
             // Store placeholder
-            generator_emit_byte(_generator, OPCODE_STORE_NAME);
-            generator_emit_raw_string(_generator, placeholder->str0);
-
+            generator_emit_byte(_generator, _catch_ctx, OPCODE_STORE_NAME);
+            generator_emit_raw_string(_generator, _catch_ctx, placeholder->str0);
             // Body
             bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
@@ -1403,26 +1450,20 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, local_scope, body[i]);
+                generator_statement(_generator, _catch_ctx, _scope, body[i]);
             }
-
             // Return placeholder
             if (!has_visible_return) {
-                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-                generator_emit_byte(_generator, OPCODE_RETURN);
+                generator_emit_byte(_generator, _catch_ctx, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, _catch_ctx, OPCODE_RETURN);
             }
-
-            scope_free(local_scope);
-            scope_free(catch_scope);
-
-            RESTOREBASE(offset);
-
+            // Jump here if there is no error
+            generator_label(_generator, _catch_ctx, end);
             // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
-
-            // Jump here if there is no error
-            generator_set_4bytes(_generator, jump_start, CALCULATED_JUMP());
-
+            // Free the scopes
+            scope_free(local_scope);
+            scope_free(catch_scope);
             // Cleanup
             free(placeholder);
             free(body);
@@ -1434,7 +1475,9 @@ INTERNAL void generator_expression(generator_t* _generator, scope_t* _scope, ast
     }
 }
 
-INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_node_t* _statement) {
+//==================================
+
+INTERNAL void generator_statement(generator_t* _generator, func_ctx_t* _fctx, scope_t* _scope, ast_node_t* _statement) {
     switch (_statement->type) {
         case AstVarStatement:
         case AstConstStatement:
@@ -1508,14 +1551,14 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 // Generate value code
                 if (value) {
-                    generator_expression(_generator, _scope, value);
+                    generator_expression(_generator, _fctx, _scope, value);
                 } else {
-                    generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+                    generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL);
                 }
 
                 // Store value
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, name->str0);
+                generator_emit_byte(_generator, _fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, _fctx, name->str0);
 
                 // Add to scope
                 scope_value_t symbol = {
@@ -1545,32 +1588,21 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "if statement must have a condition, a true value, and a false value"
                 );
             }
-            size_t start = _generator->bsize;
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
-                generator_expression(_generator, _scope, cond);
+                generator_expression(_generator, _fctx, _scope, cond);
                 // Jump if false
-                generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
-                int jump_start = _generator->bsize;
-                generator_allocate_nbytes(_generator, 4);
+                int to_then = generator_emit_jump(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                 // true
-                generator_statement(_generator, _scope, tvalue);
+                generator_statement(_generator, _fctx, _scope, tvalue);
                 // Jump to endif after true
-                bool has_else = fvalue != NULL;
-                int jump_endif_from_true = 0;
-                if (has_else) {
-                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
-                    jump_endif_from_true = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
-                }
+                int to_end = generator_emit_jump(_generator, _fctx, OPCODE_JUMP_FORWARD);
                 // false?
-                generator_set_4bytes(_generator, jump_start, CALCULATED_JUMP());
-                if (has_else) {
-                    generator_statement(_generator, _scope, fvalue);
+                generator_label(_generator, _fctx, to_then);
+                if (fvalue != NULL) {
+                    generator_statement(_generator, _fctx, _scope, fvalue);
                 }
-                if (has_else) {
-                    generator_set_4bytes(_generator, jump_endif_from_true, CALCULATED_JUMP());
-                }
+                generator_label(_generator, _fctx, to_end);
                 free(_statement);
                 break;
             } else {
@@ -1594,63 +1626,63 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_l);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is true, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // true
-                    generator_statement(_generator, _scope, tvalue);
+                    generator_statement(_generator, _fctx, _scope, tvalue);
                     // Jump to endif from true
-                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+                    generator_emit_byte(_generator, _fctx, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_true = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_l, CALCULATED_JUMP());
-                    generator_set_4bytes(_generator, jump_start_r, CALCULATED_JUMP());
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     if (fvalue != NULL) {
-                        generator_statement(_generator, _scope, fvalue);
+                        generator_statement(_generator, _fctx, _scope, fvalue);
                     }
                     // Jump to endif from false
-                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+                    generator_emit_byte(_generator, _fctx, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , CALCULATED_JUMP());
-                    generator_set_4bytes(_generator, jump_endif_from_false, CALCULATED_JUMP());
+                    generator_allocate_nbytes(_generator, _fctx, 4);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true);
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
                     free(cond);
                     free(_statement);
                 } else {
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
+                    generator_expression(_generator, _fctx, _scope, cond_l); // cond_l
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_TRUE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is false, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r); // cond_r
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // true
-                    generator_set_4bytes(_generator, jump_start_l, CALCULATED_JUMP());
-                    generator_statement(_generator, _scope, tvalue);
+                    generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
+                    generator_statement(_generator, _fctx, _scope, tvalue); // tvalue   
                     // Jump to endif from true
-                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+                    generator_emit_byte(_generator, _fctx, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_true = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // false?
-                    generator_set_4bytes(_generator, jump_start_r, CALCULATED_JUMP());
+                    generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     if (fvalue != NULL) {
-                        generator_statement(_generator, _scope, fvalue);
+                        generator_statement(_generator, _fctx, _scope, fvalue); // fvalue
                     }
                     // Jump to endif from false
-                    generator_emit_byte(_generator, OPCODE_JUMP_FORWARD);
+                    generator_emit_byte(_generator, _fctx, OPCODE_JUMP_FORWARD);
                     int jump_endif_from_false = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
-                    generator_set_4bytes(_generator, jump_endif_from_true , CALCULATED_JUMP());
-                    generator_set_4bytes(_generator, jump_endif_from_false, CALCULATED_JUMP());
+                    generator_allocate_nbytes(_generator, _fctx, 4);
+                    generator_set_4bytes(_generator, jump_endif_from_true , _generator->bsize - jump_endif_from_true);
+                    generator_set_4bytes(_generator, jump_endif_from_false, _generator->bsize - jump_endif_from_false);
                     free(cond);
                     free(_statement);
                 }
@@ -1672,18 +1704,18 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             size_t loop_start = _generator->bsize;
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
-                generator_expression(_generator, _scope, cond);
+                generator_expression(_generator, _fctx, _scope, cond);
                 // Jump if false
-                generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                 int jump_endwhile_if_false = _generator->bsize;
-                generator_allocate_nbytes(_generator, 4);
+                generator_allocate_nbytes(_generator, _fctx, 4);
                 // Body
-                generator_statement(_generator, while_scope, body);
+                generator_statement(_generator, _fctx, while_scope, body);
                 // Jump to the start of the while loop
-                generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                generator_emit_raw_int(_generator, CALCULATED_JUMP());
+                generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                generator_emit_raw_int(_generator, _fctx, _generator->bsize - loop_start);
                 // Jump to the end of the while loop
-                generator_set_4bytes(_generator, jump_endwhile_if_false, CALCULATED_JUMP());
+                generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
                 scope_free(while_scope);
                 free(_statement);
             } else {
@@ -1707,20 +1739,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_l);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is true, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // true
-                    generator_statement(_generator, while_scope, body);
+                    generator_statement(_generator, _fctx, while_scope, body);
                     // Jump to the start of the while loop
-                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                    generator_emit_raw_int(_generator, loop_start);
+                    generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, _fctx, loop_start);
                     // Jump to the end of the while loop
                     generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
@@ -1728,22 +1760,22 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     free(cond);
                     free(_statement);
                 } else {
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_TRUE);
+                    generator_expression(_generator, _fctx, _scope, cond_l);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_TRUE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is false, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // Set if true
                     generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     // true
-                    generator_statement(_generator, while_scope, body);
+                    generator_statement(_generator, _fctx, while_scope, body);
                     // Jump to the start of the while loop
-                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                    generator_emit_raw_int(_generator, loop_start);
+                    generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, _fctx, loop_start);
                     // Set if false
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     scope_free(while_scope);
@@ -1768,16 +1800,16 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             size_t loop_start = _generator->bsize;
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Body
-                generator_statement(_generator, do_while_scope, body);
+                generator_statement(_generator, _fctx, do_while_scope, body);
                 // Condition
-                generator_expression(_generator, _scope, cond);
+                generator_expression(_generator, _fctx, _scope, cond);
                 // Jump if false
-                generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                 int jump_endwhile_if_false = _generator->bsize;
-                generator_allocate_nbytes(_generator, 4);
+                generator_allocate_nbytes(_generator, _fctx, 4);
                 // Jump to the start of the do while loop
-                generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                generator_emit_raw_int(_generator, loop_start);
+                generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                generator_emit_raw_int(_generator, _fctx, loop_start);
                 // Jump to the end of the do while loop
                 generator_set_4bytes(_generator, jump_endwhile_if_false, _generator->bsize - jump_endwhile_if_false);
                 scope_free(do_while_scope);
@@ -1805,20 +1837,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 bool is_logical_and = cond->type == AstLogicalAnd;
                 if (is_logical_and) {
                     // Body
-                    generator_statement(_generator, do_while_scope, body);
+                    generator_statement(_generator, _fctx, do_while_scope, body);
                     // Condition
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_l);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is true, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // Loop
-                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                    generator_emit_raw_int(_generator, loop_start);
+                    generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, _fctx, loop_start);
                     // Jump to the end of the do while loop
                     generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
@@ -1827,24 +1859,25 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     free(_statement);
                 } else {
                     // Body
-                    generator_statement(_generator, do_while_scope, body);
+                    generator_statement(_generator, _fctx, do_while_scope, body);
                     // Condition
-                    generator_expression(_generator, _scope, cond_l);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_l);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_l = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // If left is false, then evaluate right
-                    generator_expression(_generator, _scope, cond_r);
-                    generator_emit_byte(_generator, OPCODE_POP_JUMP_IF_FALSE);
+                    generator_expression(_generator, _fctx, _scope, cond_r);
+                    generator_emit_byte(_generator, _fctx, OPCODE_POP_JUMP_IF_FALSE);
                     int jump_start_r = _generator->bsize;
-                    generator_allocate_nbytes(_generator, 4);
+                    generator_allocate_nbytes(_generator, _fctx, 4);
                     // Loop
-                    generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-                    generator_emit_raw_int(_generator, loop_start);
+                    generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+                    generator_emit_raw_int(_generator, _fctx, loop_start);
                     // Jump to the end of the do while loop
                     generator_set_4bytes(_generator, jump_start_l, _generator->bsize - jump_start_l);
                     generator_set_4bytes(_generator, jump_start_r, _generator->bsize - jump_start_r);
                     scope_free(do_while_scope);
+                    // Cleanup
                     free(cond);
                     free(_statement);
                 }
@@ -1897,25 +1930,23 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             }
             scope_t* for_scope = scope_new(_scope, ScopeTypeLoop);
             // Emit the iterable
-            generator_expression(_generator, _scope, iterable);
+            generator_expression(_generator, _fctx, _scope, iterable); // iterable  
             // Emit get iterator
-            generator_emit_byte(_generator, OPCODE_GET_ITERATOR_OR_JUMP);
+            generator_emit_byte(_generator, _fctx, OPCODE_GET_ITERATOR_OR_JUMP);
             size_t jump_if_not_iterable = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
+            generator_allocate_nbytes(_generator, _fctx, 4);
 
             // Check if has next
             size_t has_next_address = _generator->bsize;
-            generator_emit_byte(_generator, OPCODE_HAS_NEXT);
+            generator_emit_byte(_generator, _fctx, OPCODE_HAS_NEXT);
             size_t jump_if_no_next = _generator->bsize;
-            generator_allocate_nbytes(_generator, 4);
+            generator_allocate_nbytes(_generator, _fctx, 4);
 
             // Emit the initializer
             if (initializer->type == AstName) {
-                generator_emit_byte(_generator, OPCODE_GET_NEXT_VALUE);
-
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, initializer->str0);
-
+                generator_emit_byte(_generator, _fctx, OPCODE_GET_NEXT_VALUE);
+                generator_emit_byte(_generator, _fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, _fctx, initializer->str0);
                 if (scope_has(for_scope, initializer->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
@@ -1924,7 +1955,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "for statement must have a valid initializer"
                     );
                 }
-
+                // Save into symbol table
                 scope_value_t symbol = {
                     .name      = initializer->str0,
                     .is_const  = true,
@@ -1932,9 +1963,10 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     .position  = initializer->position
                 };
                 scope_put(for_scope, initializer->str0, symbol);
+                // Cleanup
                 free(initializer->str0);
             } else if (initializer->type == AstForMultipleInitializer) {
-                generator_emit_byte(_generator, OPCODE_GET_NEXT_KEY_VALUE);
+                generator_emit_byte(_generator, _fctx, OPCODE_GET_NEXT_KEY_VALUE);
                 ast_node_t* init_l = initializer->ast0;
                 ast_node_t* init_r = initializer->ast1;
                 if (init_l == NULL) {
@@ -1962,12 +1994,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     );
                 }
                 // For Key
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, init_l->str0);
+                generator_emit_byte(_generator, _fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, _fctx, init_l->str0);
                 // For Value
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, init_r->str0);
-
+                generator_emit_byte(_generator, _fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, _fctx, init_r->str0); // init_r->str0
+                // Check if the symbol is already defined
                 if (scope_has(for_scope, init_l->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
@@ -1993,7 +2025,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "for statement must have a valid initializer"
                     );
                 }
-
+                // Save into symbol table
                 scope_value_t symbol1 = {
                     .name      = init_r->str0,
                     .is_const  = true,
@@ -2001,7 +2033,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     .position  = init_r->position
                 };
                 scope_put(for_scope, init_r->str0, symbol1);
-
+                // Cleanup
                 free(init_l->str0);
                 free(init_r->str0);
                 free(init_l);
@@ -2014,23 +2046,17 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "for statement must have a valid initializer"
                 );
             }
-
             // Emit the body
-            generator_statement(_generator, for_scope, body);
-
+            generator_statement(_generator, _fctx, for_scope, body);
             // Jump backward to the has next address
-            generator_emit_byte(_generator, OPCODE_ABSOLUTE_JUMP);
-            generator_emit_raw_int(_generator, has_next_address);
-
+            generator_emit_byte(_generator, _fctx, OPCODE_ABSOLUTE_JUMP);
+            generator_emit_raw_int(_generator, _fctx, has_next_address);
             // Jump here if no next
             generator_set_4bytes(_generator, jump_if_no_next, _generator->bsize - jump_if_no_next);
-            
             // Emit pop top to pop iterator
-            generator_emit_byte(_generator, OPCODE_POPTOP);
-
+            generator_emit_byte(_generator, _fctx, OPCODE_POPTOP);
             // Jump here if not iterable
             generator_set_4bytes(_generator, jump_if_not_iterable, _generator->bsize - jump_if_not_iterable);
-
             // Free the scope
             scope_free(for_scope);
             // Cleanup
@@ -2069,12 +2095,11 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 );
             }
             if (expr != NULL) {
-                generator_expression(_generator, _scope, expr);
+                generator_expression(_generator, _fctx, _scope, expr);
             } else {
-                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL);
             }
-            generator_emit_byte(_generator, OPCODE_RETURN);
-
+            generator_emit_byte(_generator, _fctx, OPCODE_RETURN);
             // Cleanup
             free(_statement);
             break;
@@ -2096,16 +2121,15 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     "expression statement must be an expression, but received %d", _statement->ast0->type
                 );
             }
-            generator_expression(_generator, _scope, _statement->ast0);
-            generator_emit_byte(_generator, OPCODE_POPTOP);
-
+            generator_expression(_generator, _fctx, _scope, _statement->ast0);
+            generator_emit_byte(_generator, _fctx, OPCODE_POPTOP);
             // Cleanup
             free(_statement);
             break;
         }
         case AstFunctionNode: 
         case AstAsyncFunctionNode: {
-            SAVEBASE(offset);
+            func_ctx_t* fctx = func_ctx_new();
             bool is_async = _statement->type == AstAsyncFunctionNode;
             ast_node_t* name       = _statement->ast0;
             ast_node_list_t params = _statement->array0;
@@ -2153,21 +2177,21 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 );
             }
             // Make function
-            generator_emit_byte(_generator, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
+            generator_emit_byte(_generator, fctx, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
             // Reserve n bytes for the parameter count
             size_t param_count;
             for (param_count = 0; params[param_count] != NULL; param_count++);
             // Reserve n bytes for the parameter count
             size_t function_start = _generator->bsize;
-            generator_emit_raw_int(_generator, param_count);
+            generator_emit_raw_int(_generator, fctx, param_count);
             // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
             // Reserve 8 bytes for the bytecode size
-            generator_emit_bytecode_size(_generator);
+            generator_emit_bytecode_size(_generator, fctx);
             // Reserve n bytes for the file name
-            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, fctx, _generator->fpath);
             // Reserve n bytes for the module name
-            generator_emit_raw_string(_generator, name->str0);
+            generator_emit_raw_string(_generator, fctx, name->str0);
             // Create function scope
             scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
             scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
@@ -2182,7 +2206,7 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                         "function parameter must be a valid identifier, but received %d", param->type
                     );
                 }
-                if (scope_function_has(local_scope, param->str0)) {
+                if (scope_has(local_scope, param->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
                         _generator->fdata, 
@@ -2199,8 +2223,8 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                 };
                 scope_put(local_scope, param->str0, symbol);
                 // Emit the store name opcode
-                generator_emit_byte(_generator, OPCODE_STORE_NAME);
-                generator_emit_raw_string(_generator, param->str0);
+                generator_emit_byte(_generator, fctx, OPCODE_STORE_NAME);
+                generator_emit_raw_string(_generator, fctx, param->str0);
                 free(param);
             }
             // Compile body
@@ -2222,12 +2246,12 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, local_scope, statement);
+                generator_statement(_generator, fctx, local_scope, statement);
             }
             if (!has_visible_return) {
                 // Emit the return opcode
-                generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-                generator_emit_byte(_generator, OPCODE_RETURN);
+                generator_emit_byte(_generator, fctx, OPCODE_LOAD_NULL);
+                generator_emit_byte(_generator, fctx, OPCODE_RETURN);
             }
             // Save into symbol table
             scope_value_t symbol = {
@@ -2242,15 +2266,15 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             // Save captures
             if (function_scope->capture_count > 0) {
                 // Emit opcode save captures
-                generator_emit_byte(_generator, OPCODE_SAVE_CAPTURES);
-                generator_emit_raw_int(_generator, function_scope->capture_count);
+                generator_emit_byte(_generator, fctx, OPCODE_SAVE_CAPTURES);
+                generator_emit_raw_int(_generator, fctx, function_scope->capture_count);
                 for (size_t i = 0; i < function_scope->capture_count; i++) {
-                    generator_emit_raw_string(_generator, function_scope->captures[i]);
+                    generator_emit_raw_string(_generator, fctx, function_scope->captures[i]);
                 }
             }
             // Emit the store name opcode
-            generator_emit_byte(_generator, OPCODE_STORE_NAME);
-            generator_emit_raw_string(_generator, name->str0);
+            generator_emit_byte(_generator, fctx, OPCODE_STORE_NAME);
+            generator_emit_raw_string(_generator, fctx, name->str0);
             // Free the function scope
             scope_free(local_scope);
             scope_free(function_scope);
@@ -2260,36 +2284,36 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
             free(body);
             free(_statement->position);
             free(_statement);
-            RESTOREBASE(offset);
             break;
         }
         case AstBlockStatement: {
-            SAVEBASE(offset);
+            func_ctx_t* _fctx = func_ctx_new();
             ast_node_list_t statements = _statement->array0;
             scope_t* block_scope = scope_new(_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
-            generator_emit_byte(_generator, OPCODE_SETUP_BLOCK);
+            generator_emit_byte(_generator, _fctx, OPCODE_SETUP_BLOCK);
             // Reserve 8 bytes for the bytecode size
             size_t size_address = _generator->bsize;
-            generator_emit_bytecode_size(_generator);
+            generator_emit_bytecode_size(_generator, _fctx);
             // Reserve n bytes for the file name
-            generator_emit_raw_string(_generator, _generator->fpath);
+            generator_emit_raw_string(_generator, _fctx, _generator->fpath);
             // Reserve n bytes for the module name
-            generator_emit_raw_string(_generator, "block");
+            generator_emit_raw_string(_generator, _fctx, "block");
             // Compile all statements in block
             for (size_t i = 0; statements[i] != NULL; i++) {
-                generator_statement(_generator, block_scope, statements[i]);
+                generator_statement(_generator, _fctx, block_scope, statements[i]);
             }
             // Emit complete and finalize
-            generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-            generator_emit_byte(_generator, OPCODE_COMPLETE_BLOCK);
+            generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL);
+            generator_emit_byte(_generator, _fctx, OPCODE_COMPLETE_BLOCK);
+            // Set the bytecode size
             generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
-            // Cleanup
+            // Free the block scope
             scope_free(block_scope);
+            // Cleanup
             free(statements);
             free(_statement->position);
             free(_statement);
-            RESTOREBASE(offset);
             break;
         }
         default:
@@ -2298,20 +2322,20 @@ INTERNAL void generator_statement(generator_t* _generator, scope_t* _scope, ast_
 }
 
 INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
-    SAVEBASE(offset);
+    func_ctx_t* _fctx = func_ctx_new();
     ast_node_list_t children = _program->array0;
     // Reserve 4 bytes for the magic number
-    generator_emit_magic_bytes(_generator);
+    generator_emit_magic_bytes(_generator, _fctx);
     // Reserve 4 bytes for the version
-    generator_emit_version_bytes(_generator);
+    generator_emit_version_bytes(_generator, _fctx);
     // Reserve 8 bytes for the bytecode size
     size_t size_address = _generator->bsize;
-    generator_emit_bytecode_size(_generator); 
+    generator_emit_bytecode_size(_generator, _fctx); 
     // Reserve n bytes for the file name
-    generator_emit_raw_string(_generator, _generator->fpath);
+    generator_emit_raw_string(_generator, _fctx, _generator->fpath);
     // Reserve n bytes for the module name
     char* file_name = path_get_file_name(_generator->fpath);
-    generator_emit_raw_string(_generator, file_name);
+    generator_emit_raw_string(_generator, _fctx, file_name); // file_name
     free(file_name);
     // Emit the bytecode
     scope_t* scope = scope_new(NULL, ScopeTypeGlobal);
@@ -2325,18 +2349,18 @@ INTERNAL void generator_program(generator_t* _generator, ast_node_t* _program) {
                 "program must contain statements only, but received %d", child->type
             );
         }
-        generator_statement(_generator, scope, child);
+        generator_statement(_generator, _fctx, scope, child);
     }
     // write the bytecode to the file
-    generator_emit_byte(_generator, OPCODE_LOAD_NULL);
-    generator_emit_byte(_generator, OPCODE_RETURN);
-    RESTOREBASE(offset);
+    generator_emit_byte(_generator, _fctx, OPCODE_LOAD_NULL);
+    generator_emit_byte(_generator, _fctx, OPCODE_RETURN);
     // Set the bytecode size
     generator_set_8bytes(_generator, size_address, _generator->bsize - size_address);
-    // Free the children and the program
+    // Free the scope
+    scope_free(scope);
+    // Cleanup
     free(children);
     free(_program);
-    scope_free(scope);
 }
 
 // -----------------------------
@@ -2348,7 +2372,6 @@ DLLEXPORT generator_t* generator_new(char* _fpath, char* _fdata) {
     generator->fdata = string_allocate(_fdata);
     generator->fsize = strlen(_fdata);
     generator->bsize = 0;
-    generator->reset_base = 0;
     generator->bytecode = (uint8_t*) malloc(sizeof(uint8_t) * 1);
     ASSERTNULL(generator->bytecode, "failed to allocate memory for bytecode");
     // Return instance

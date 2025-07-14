@@ -156,6 +156,7 @@ void decompile(uint8_t* _bytecode, bool _with_header) {
             }
             case OPCODE_INDEX: {
                 PRINT_OPCODE("index\n");
+                break;
             }
             case OPCODE_CALL: {
                 int argc = decompiler_get_int(_bytecode, ip);
@@ -233,7 +234,11 @@ void decompile(uint8_t* _bytecode, bool _with_header) {
             }
             case OPCODE_POP_JUMP_IF_FALSE: {
                 int jump_offset = decompiler_get_int(_bytecode, ip);
-                PRINT_OPCODE("pop_jump_if_false: (jump_to_offset = %d)\n", jump_offset);
+                PRINT_OPCODE("pop_jump_if_false: (jump_to_offset = %d) => ", jump_offset);
+                for (int i = 0; i < 4; i++) {
+                    printf("%d ", _bytecode[ip + i]);
+                }
+                printf("\n");
                 FORWARD(4);
                 break;
             }

@@ -32,6 +32,7 @@
         "env.h": "c",
         "cstdint": "c",
         "compare": "c",
-        "iterator.h": "c"
+        "iterator.h": "c",
+        "func.h": "c"
     }
 }
