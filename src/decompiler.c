@@ -313,28 +313,16 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
-                size_t function_size = decompiler_get_long(_bytecode, ip);
-                FORWARD(8);
-                char* file_path = decompiler_get_string(_bytecode, ip);
-                FORWARD(strlen(file_path) + 1);
-                char* block_name = decompiler_get_string(_bytecode, ip);
-                FORWARD(strlen(block_name) + 1);
-                
-                uint8_t* block_bytecode = malloc(function_size);
-                memcpy(block_bytecode, _bytecode + ip - 8 - strlen(file_path) - 1 - strlen(block_name) - 1, function_size);
-                
-                PRINT_OPCODE("setup_catch_block: %s\n", block_name);
+                code_t* block_bytecode = (code_t*) decompile_get_memory(_bytecode, ip);
+                PRINT_OPCODE("setup_catch_block: %s\n", block_bytecode->block_name);
                 printf("+-----------------+\n");
                 printf("| SET CATCH BLOCK |\n");
                 printf("+-----------------+\n");
-                // decompile(block_bytecode, false);
+                decompile(block_bytecode, false);
                 printf("+-----------------+\n");
                 printf("| END CATCH BLOCK |\n");
                 printf("+-----------------+\n");
-                
-                free(file_path);
-                free(block_name);
-                free(block_bytecode);
+                FORWARD(8);
                 break;
             }
             case OPCODE_RETURN: {

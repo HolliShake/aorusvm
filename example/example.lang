@@ -126,3 +126,8 @@ const r = 0..500;
 
 
 println(k);
+
+var zero = 0;
+2 / zero catch (e) {
+    2 + 2;
+};

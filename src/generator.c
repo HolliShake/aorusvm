@@ -1235,9 +1235,9 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             break;
         }
         case AstCatch: {
-            ast_node_t* error = _expression->ast0;
+            ast_node_t* error       = _expression->ast0;
             ast_node_t* placeholder = _expression->ast1;
-            ast_node_list_t body = _expression->array0;
+            ast_node_list_t body    = _expression->array0;
             if (error == NULL) {
                 __THROW_ERROR(
                     _generator->fpath,
@@ -1294,7 +1294,9 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             scope_t* catch_scope = scope_new(_scope, ScopeTypeCatch);
             scope_t* local_scope = scope_new(catch_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
-            emit(_catch, OPCODE_SETUP_CATCH_BLOCK);
+            emit(_code, OPCODE_SETUP_CATCH_BLOCK);
+            emit_memory(_code, _catch);
+            
             // Store placeholder
             emit(_catch, OPCODE_STORE_NAME);
             emit_string(_catch, placeholder->str0);
