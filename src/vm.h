@@ -1,5 +1,6 @@
 #include "api/core/vm.h"
 #include "array.h"
+#include "code.h"
 #include "decompiler.h"
 #include "hashmap.h"
 #include "iterator.h"

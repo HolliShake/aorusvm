@@ -8,6 +8,7 @@
  * @note This file is part of the aorusvm project.
  */
 
+#include "code.h"
 #include "env.h"
 #include "global.h"
 #include "object.h"
@@ -101,6 +102,6 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value);
  * @param _bytecode The bytecode.
  * @param _bytecode_size The size of the bytecode.
  */
-DLLEXPORT void vm_run_main(uint8_t* _bytecode);
+DLLEXPORT void vm_run_main(code_t* _bytecode);
 
 #endif

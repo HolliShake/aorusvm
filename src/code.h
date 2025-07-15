@@ -5,35 +5,46 @@
 #define CODE_H
 
 typedef struct code_struct {
-    /**** function **/
+    char*    file_name;
+    char*    block_name;
     size_t   param_count;
     bool     is_async;
-    /**** generic  **/
     size_t   size;
     uint8_t* bytecode;
-    // Maybe a pointer to env? for captures
-    env_t* environment;
+    env_t*   environment;
 } code_t;
 
 /*
  * Create a new function code.
  *
+ * @param _file_name The file name of the function.
+ * @param _block_name The block name of the function.
  * @param _is_async Whether the function is async.
  * @param _param_count The number of parameters of the function.
  * @param _bytecode The bytecode of the function.
  * @param _size The size of the bytecode.
  * @return The new function code.
  */
-code_t* code_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size);
+code_t* code_new_function(
+        char*    _file_name, 
+        char*    _block_name,
+        bool     _is_async, 
+        size_t   _param_count,
+        uint8_t* _bytecode, 
+        size_t   _size);
 
 /*
  * Create a new module code.
  *
+ * @param _file_name The file name of the module.
+ * @param _block_name The block name of the module.
  * @param _bytecode The bytecode of the module.
  * @param _size The size of the bytecode.
  * @return The new module code.
  */
-code_t* code_new_module(uint8_t* _bytecode, size_t _size);
+code_t* code_new_module(
+        char*    _file_name, 
+        char*    _block_name);
 
 /*
  * Free the code.

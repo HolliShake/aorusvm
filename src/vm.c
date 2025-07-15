@@ -1455,7 +1455,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             default: {
-                decompile(bytecode, false);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
             }
         }
@@ -1552,25 +1551,15 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
     env_put(instance->env, _name, vm_to_heap(_value));
 }
 
-DLLEXPORT void vm_run_main(uint8_t* _bytecode) {
+DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
-    // Verify magic number
-    VERIFY_MAGIC_NUMBER(_bytecode);
-    // Verify version
-    VERIFY_VERSION(_bytecode);
-
-    code_t* code = code_new_module(
-        _bytecode+LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION, 
-        get_long(_bytecode, LENGTH_OF_MAGIC_NUMBER+LENGTH_OF_VERSION)
-    );
-
     // Create a new environment for the main function
-    decompile(code->bytecode, false);
+    decompile(_bytecode, false);
     return;
     env_t* env = 
         env_new(instance->env);
-    env->closure = code->environment;
-    vm_execute(env, 0, code);
+    env->closure = _bytecode->environment;
+    vm_execute(env, 0, _bytecode);
     env->closure = NULL;
     env_free(env);
 
