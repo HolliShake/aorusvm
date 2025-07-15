@@ -13,6 +13,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
     ASSERTNULL(env, "failed to allocate memory for env");
     env->parent = _parent;
     env->buckets = calloc(ENV_BUCKET_COUNT, sizeof(env_node_t*));
+    for (size_t i = 0; i < ENV_BUCKET_COUNT; i++) env->buckets[i] = NULL;
     ASSERTNULL(env->buckets, "failed to allocate memory for buckets");
     env->bucket_count = ENV_BUCKET_COUNT;
     env->size = 0;
@@ -23,6 +24,7 @@ DLLEXPORT env_t* env_new(env_t* _parent) {
 INTERNAL void env_rehash(env_t* _env) {
     size_t new_bucket_count = _env->bucket_count * 2;
     env_node_t** new_buckets = calloc(new_bucket_count, sizeof(env_node_t*));
+    for (size_t i = 0; i < new_bucket_count; i++) new_buckets[i] = NULL;
     ASSERTNULL(new_buckets, "failed to allocate memory for buckets");
 
     for (size_t i = 0; i < _env->bucket_count; i++) {
@@ -73,28 +75,40 @@ DLLEXPORT void env_put(env_t* _env, char* _name, object_t* _value) {
     size_t index = hash % _env->bucket_count;
     env_node_t* node = _env->buckets[index];
 
-    // Check for existing entry
-    while (node) {
-        if (strcmp(node->name, _name) == 0) {
-            node->value = _value;
-            return;
+    if (node != NULL) {
+        env_node_t* current = node;
+        while (current) {
+            if (strcmp(current->name, _name) == 0) {
+                current->value = _value;
+                return;
+            }
+            if (current->next == NULL) break;
+            current = current->next;
         }
-        node = node->next;
+        node = malloc(sizeof(env_node_t));
+        ASSERTNULL(node, "failed to allocate memory for env node");
+        node->name = string_allocate(_name);
+        node->value = _value;
+        node->next = NULL;
+        current->next = node;
+
+        _env->size++;  // <-- ADD THIS
+    } else {
+        node = malloc(sizeof(env_node_t));
+        ASSERTNULL(node, "failed to allocate memory for env node");
+        node->name = string_allocate(_name);
+        node->value = _value;
+        node->next = NULL;
+        _env->buckets[index] = node;
+
+        _env->size++;  // already here
     }
 
-    // Create new node and insert at head of chain
-    node = malloc(sizeof(env_node_t));
-    ASSERTNULL(node, "failed to allocate memory for env node");
-    node->name = strdup(_name);
-    node->value = _value;
-    node->next = _env->buckets[index];
-    _env->buckets[index] = node;
-
-    // Check load factor and rehash if needed
-    if (++_env->size > _env->bucket_count * LOAD_FACTOR_THRESHOLD) {
+    if (_env->size > _env->bucket_count * LOAD_FACTOR_THRESHOLD) {
         env_rehash(_env);
     }
 }
+
 
 DLLEXPORT object_t* env_get(env_t* _env, char* _name) {
     if (_env == NULL) return NULL;
@@ -146,20 +160,31 @@ DLLEXPORT void env_free(env_t* _env) {
 }
 
 object_t** env_get_object_list(env_t* _env) {
+    // First count the number of objects
+    size_t count = 0;
+    for (size_t i = 0; i < _env->bucket_count; i++) {
+        env_node_t* node = _env->buckets[i];
+        while (node) {
+            count++;
+            node = node->next;
+        }
+    }
+    
+    // Allocate memory for all objects plus NULL terminator
+    object_t** list = malloc(sizeof(object_t*) * (count + 1));
+    if (list == NULL) return NULL;
+    
+    // Fill the list
     size_t index = 0;
-    object_t** list = malloc(sizeof(object_t*));
-    list[0] = NULL;
-
     for (size_t i = 0; i < _env->bucket_count; i++) {
         env_node_t* node = _env->buckets[i];
         while (node) {
             list[index++] = node->value;
-            list = (object_t**) realloc(list, sizeof(object_t*) * (index + 1));
-            list[index] = NULL;
             node = node->next;
         }
     }
-
+    list[index] = NULL;
+    
     return list;
 }
 

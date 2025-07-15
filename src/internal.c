@@ -5,8 +5,10 @@
 
 #pragma region StringC
 char* string_allocate(const char* _str) {
-    char* str = (char*) malloc(sizeof(char) * (strlen(_str) + 1)); str[0] = '\0';
+    size_t len = strlen(_str) + 1;
+    char* str = (char*) malloc(len);
     ASSERTNULL(str, "failed to allocate memory for string");
+    memset(str, 0, len);  // optional but safe
     strcpy(str, _str);
     return str;
 }

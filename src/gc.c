@@ -34,11 +34,10 @@ INTERNAL void gc_free_object(object_t* _obj) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_FUNCTION(_obj)) {
         code_t* code = (code_t*) _obj->value.opaque;
-        if (code->environment != NULL) {
-            env_free(code->environment);
-        }
+        printf("free> [%s:%s]: %s %p\n", code->file_name, code->block_name, object_to_string(_obj), _obj);
+        // if (code->environment != NULL) env_free(code->environment);
         free(code->bytecode);
-        free(code);
+        // free(code);
     }
     free(_obj);
 }
@@ -93,6 +92,7 @@ INTERNAL void gc_mark_vm_content(vm_t* _vm) {
 }
 
 INTERNAL void gc_mark_env_content(env_t* _env) {
+    PD("CALLED!");
     env_t* current = _env;
     while (current != NULL) {
         object_t** list = env_get_object_list(current);
@@ -110,7 +110,7 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
     }
 }
 
-INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
+INTERNAL void gc_sweep(vm_t* vm) {
     object_t** current = &vm->root;
 
     while (*current != NULL) {
@@ -127,8 +127,9 @@ INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
     }
 }
 
-void gc_collect_all(vm_t* _vm, env_t* _env) {
-    gc_sweep(_vm, true);
+void gc_collect_all(vm_t* _vm) {
+    gc_mark_vm_content(_vm);
+    gc_sweep(_vm);
 }
 
 void gc_collect(vm_t* _vm, env_t* _env) {
@@ -140,7 +141,7 @@ void gc_collect(vm_t* _vm, env_t* _env) {
     if (_env != NULL) gc_mark_env_content(_env);
 
     // collect the garbage
-    gc_sweep(_vm, false);
+    gc_sweep(_vm);
 
     // printf("collected %d objects\n", gc_collected_count);
     gc_collected_count = 0;

@@ -747,12 +747,13 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  */
 INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* _signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
-    code_t *code = (code_t *) _closure->value.opaque;
+    code_t* code = (code_t *) _closure->value.opaque;
     env_t* block_env 
         = env_new(_parent_env);
     block_env->closure = code->environment;
     *_signal = vm_execute(block_env, 0, code);
     if (*_signal == VmBlockSignalComplete) POPP();
+    block_env->parent  = NULL;
     block_env->closure = NULL;
     env_free(block_env);
 }
@@ -879,7 +880,7 @@ INTERNAL void do_panic(int _argc) {
     fprintf(stderr, "panic: %s\n", message);
     free(message);
     vm_load_null();
-    gc_collect_all(instance, NULL);
+    gc_collect_all(instance);
     exit(EXIT_FAILURE);
 }
 
@@ -1379,9 +1380,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_SETUP_BLOCK: {
                 code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
-                object_t* closure = object_new_function(function_bytecode);
+                object_t* closure = vm_to_heap(object_new_function(function_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
-                do_block(_env, closure, &signal);
+                do_block(_env, closure, &signal);   
                 FORWARD(8);
                 if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
                 if (signal == VmBlockSignalComplete) break;
@@ -1389,7 +1390,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
                 code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
-                object_t* closure = object_new_function(function_bytecode);
+                object_t* closure = vm_to_heap(object_new_function(function_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);
                 FORWARD(8);
@@ -1459,7 +1460,7 @@ DLLEXPORT void vm_init() {
     // name resolver
     instance->name_resolver = vm_name_resolver;
     // root object
-    instance->root = object_new(OBJECT_TYPE_OBJECT);
+    instance->root = object_new_object();
     instance->tail = instance->root;
     // singleton null
     instance->null = object_new(OBJECT_TYPE_NULL);
@@ -1540,7 +1541,6 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
     env->closure = _bytecode->environment;
     vm_execute(env, 0, _bytecode);
     env->closure = NULL;
-    env_free(env);
 
     // Evaluation stack must contain 1 object
     if (instance->sp != 1) {
@@ -1549,4 +1549,7 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
     POPP();
-}
+
+   
+    gc_collect_all(instance);
+}   
