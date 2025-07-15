@@ -29,6 +29,8 @@
     ip += size; \
 }
 
+#define OPCODE (bytecode[ip])
+
 #define PEEK() (instance->evaluation_stack[instance->sp - 1])
 #define POPP() (instance->evaluation_stack[--instance->sp])
 #define POPN(_times) { \
@@ -1371,14 +1373,21 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_COMPLETE_BLOCK: {
                 return VmBlockSignalComplete;
             }
-            case OPCODE_MAKE_FUNCTION: 
-            case OPCODE_MAKE_ASYNC_FUNCTION: {
+            case OPCODE_SETUP_FUNCTION:
+            case OPCODE_BEGIN_FUNCTION: {
+                if (opcode == OPCODE_SETUP_FUNCTION)
+                if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
+                FORWARD(1);
                 code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
                 PUSH(object_new_function(function_bytecode));
                 FORWARD(8);
                 break;
             }
-            case OPCODE_SETUP_BLOCK: {
+            case OPCODE_SETUP_BLOCK:
+            case OPCODE_BEGIN_BLOCK: {
+                if (opcode == OPCODE_SETUP_BLOCK)
+                if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
+                FORWARD(1);
                 code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
                 object_t* closure = vm_to_heap(object_new_function(function_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
@@ -1435,6 +1444,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             default: {
+                decompile(_code, false);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
             }
         }

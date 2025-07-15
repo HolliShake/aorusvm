@@ -5,6 +5,7 @@
 #define CODE_H
 
 typedef struct code_struct {
+    bool     is_scoped;
     char*    file_name;
     char*    block_name;
     size_t   param_count;
@@ -13,6 +14,20 @@ typedef struct code_struct {
     uint8_t* bytecode;
     env_t*   environment;
 } code_t;
+
+/*
+ * Create a new module code.
+ *
+ * @param _file_name The file name of the module.
+ * @param _block_name The block name of the module.
+ * @param _bytecode The bytecode of the module.
+ * @param _size The size of the bytecode.
+ * @return The new module code.
+ */
+code_t* code_new_module(
+        char*    _file_name, 
+        char*    _block_name);
+
 
 /*
  * Create a new function code.
@@ -28,23 +43,26 @@ typedef struct code_struct {
 code_t* code_new_function(
         char*    _file_name, 
         char*    _block_name,
+        bool     _is_scoped,
         bool     _is_async, 
         size_t   _param_count,
         uint8_t* _bytecode, 
         size_t   _size);
 
 /*
- * Create a new module code.
+ * Create a new block code.
  *
- * @param _file_name The file name of the module.
- * @param _block_name The block name of the module.
- * @param _bytecode The bytecode of the module.
+ * @param _file_name The file name of the block.
+ * @param _block_name The block name of the block.
+ * @param _bytecode The bytecode of the block.
  * @param _size The size of the bytecode.
- * @return The new module code.
+ * @return The new block code.
  */
-code_t* code_new_module(
+code_t* code_new_block(
         char*    _file_name, 
-        char*    _block_name);
+        char*    _block_name,
+        uint8_t* _bytecode, 
+        size_t   _size);
 
 /*
  * Free the code.

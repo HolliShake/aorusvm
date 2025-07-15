@@ -1,5 +1,6 @@
 #include "env.h"
 #include "object.h"
+#include "opcode.h"
 #include "type.h"
 #include "vm.h"
 

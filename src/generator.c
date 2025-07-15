@@ -493,13 +493,15 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             code_t* _func = code_new_function(
                 string_allocate(_generator->fpath),
                 string_allocate("function"),
+                true,// Function expression is always scoped
                 is_async,
                 param_count,
                 (uint8_t*) malloc(sizeof(uint8_t)),
                 0
             );
             // Make function
-            emit(_code, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
+            emit(_code, OPCODE_SETUP_FUNCTION);
+            emit(_code, OPCODE_BEGIN_FUNCTION);
             emit_memory(_code, _func);
             // Create function scope
             scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
@@ -1276,11 +1278,9 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             generator_expression(_generator, _code, _scope, error);
             int end = emit_jump(_code, OPCODE_JUMP_IF_NOT_ERROR);
             
-            code_t* _catch = code_new_function(
+            code_t* _catch = code_new_block(
                 string_allocate(_generator->fpath),
                 string_allocate("catch"),
-                false,
-                1,
                 (uint8_t*) malloc(sizeof(uint8_t)),
                 0
             );
@@ -1661,8 +1661,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
         }
         case AstForStatement: {
             ast_node_t* initializer = _statement->ast0;
-            ast_node_t* iterable = _statement->ast1;
-            ast_node_t* body = _statement->ast2;
+            ast_node_t* iterable    = _statement->ast1;
+            ast_node_t* body        = _statement->ast2;
             if (initializer == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -1716,7 +1716,10 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             // Emit the initializer
             if (initializer->type == AstName) {
                 emit(_code, OPCODE_GET_NEXT_VALUE);
+
+                emit(_code, OPCODE_STORE_NAME);
                 emit_string(_code, initializer->str0);
+
                 if (scope_has(for_scope, initializer->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
@@ -1733,8 +1736,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     .position  = initializer->position
                 };
                 scope_put(for_scope, initializer->str0, symbol);
-                // Cleanup
-                // free(initializer->str0);
             } else if (initializer->type == AstForMultipleInitializer) {
                 emit(_code, OPCODE_GET_NEXT_KEY_VALUE);
                 ast_node_t* init_l = initializer->ast0;
@@ -1939,13 +1940,15 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             code_t* _func = code_new_function(
                 string_allocate(_generator->fpath),
                 string_allocate(name->str0),
+                false,
                 is_async,
                 param_count,
                 (uint8_t*) malloc(sizeof(uint8_t)),
                 0
             );
             // Make function
-            emit(_code, is_async ? OPCODE_MAKE_ASYNC_FUNCTION : OPCODE_MAKE_FUNCTION);
+            emit(_code, OPCODE_SETUP_FUNCTION);
+            emit(_code, OPCODE_BEGIN_FUNCTION);
             emit_memory(_code, (void*) _func);
             // Create function scope
             scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
@@ -2035,17 +2038,16 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
         }
         case AstBlockStatement: {
             ast_node_list_t statements = _statement->array0;
-            code_t* _block = code_new_function(
+            code_t* _block = code_new_block(
                 string_allocate(_generator->fpath),
                 string_allocate("block"),
-                false,
-                0,
                 (uint8_t*) malloc(sizeof(uint8_t)),
                 0
             );
             scope_t* block_scope = scope_new(_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
             emit(_code, OPCODE_SETUP_BLOCK);
+            emit(_code, OPCODE_BEGIN_BLOCK);
             emit_memory(_code, (void*) _block);
             // Compile all statements in block
             for (size_t i = 0; statements[i] != NULL; i++) {

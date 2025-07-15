@@ -4,27 +4,27 @@
 #include <stdlib.h>
 
 
-INTERNAL char* decompiler_get_string(uint8_t* _bytecode, size_t _ip) {
+INTERNAL char* decompiler_get_string(uint8_t* bytecode, size_t _ip) {
     char* str = string_allocate("");
-    while (_bytecode[_ip] != 0) {
-        str = string_append_char(str, _bytecode[_ip]);
+    while (bytecode[_ip] != 0) {
+        str = string_append_char(str, bytecode[_ip]);
         _ip++;
     }
     return str;
 }
 
-INTERNAL int decompiler_get_int(uint8_t* _bytecode, size_t _ip) {
+INTERNAL int decompiler_get_int(uint8_t* bytecode, size_t _ip) {
     int value = 0;
     for (size_t i = 0; i < 4; i++) {
-        value = value | (_bytecode[_ip + i] << (i * 8));
+        value = value | (bytecode[_ip + i] << (i * 8));
     }
     return value;
 }
 
-INTERNAL long decompiler_get_long(uint8_t* _bytecode, size_t _ip) {
+INTERNAL long decompiler_get_long(uint8_t* bytecode, size_t _ip) {
     long value = 0;
     for (size_t i = 0; i < 8; i++) {
-        value = value | ((long)_bytecode[_ip + i] << (i * 8));
+        value = value | ((long)bytecode[_ip + i] << (i * 8));
     }
     return value;
 }
@@ -43,15 +43,16 @@ double decompiler_get_double(uint8_t *bytecode, size_t ip) {
 }
 
 INTERNAL
-void* decompile_get_memory(uint8_t* _bytecode, size_t _ip) {
+void* decompile_get_memory(uint8_t* bytecode, size_t _ip) {
     uintptr_t value = 0;
     for (size_t i = 0; i < 8; i++) {
-        value |= ((uintptr_t)_bytecode[_ip + i] << (i * 8));
+        value |= ((uintptr_t)bytecode[_ip + i] << (i * 8));
     }
     return (void*)value;
 }
 
 #define FORWARD(n) ip += n
+#define OPCODE (bytecode[ip])
 #define PRINT_OPCODE(format, ...) printf("[%.*zu] " format, (int)log10(bytecode_size) + 1, ip-1, ##__VA_ARGS__)
 
 void decompile(code_t* _code, bool _with_header) {  
@@ -66,34 +67,34 @@ void decompile(code_t* _code, bool _with_header) {
  
     
     size_t bytecode_size = _code->size;
-    uint8_t* _bytecode = _code->bytecode;
+    uint8_t* bytecode = _code->bytecode;
 
     size_t index = ip;
     while (ip < bytecode_size) {
         index = ip;
-        uint8_t opcode = _bytecode[ip++];
+        uint8_t opcode = bytecode[ip++];
         switch (opcode) {
             case OPCODE_LOAD_NAME: {
-                char* name = decompiler_get_string(_bytecode, ip);
+                char* name = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("load_name: %s\n", name);
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;
             }
             case OPCODE_LOAD_INT: {
-                int value = decompiler_get_int(_bytecode, ip);
+                int value = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("load_int: %d\n", value);
                 FORWARD(4);
                 break;
             }
             case OPCODE_LOAD_DOUBLE: {
-                double value = decompiler_get_double(_bytecode, ip);
+                double value = decompiler_get_double(bytecode, ip);
                 PRINT_OPCODE("load_double: %f\n", value);
                 FORWARD(8);
                 break;
             }
             case OPCODE_LOAD_STRING: {
-                char* value = decompiler_get_string(_bytecode, ip);
+                char* value = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("load_string: %s\n", value);
                 FORWARD(strlen(value) + 1);
                 free(value);
@@ -104,13 +105,13 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_LOAD_BOOL: {
-                bool value = _bytecode[ip] == 1;
+                bool value = bytecode[ip] == 1;
                 PRINT_OPCODE("load_bool: %s\n", value ? "true" : "false");
                 FORWARD(1);
                 break;
             }
             case OPCODE_LOAD_ARRAY: {
-                int length = decompiler_get_int(_bytecode, ip);
+                int length = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("load_array: (length = %d)\n", length);
                 FORWARD(4);
                 break;
@@ -124,7 +125,7 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_LOAD_OBJECT: {
-                int length = decompiler_get_int(_bytecode, ip);
+                int length = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("load_object: (length = %d)\n", length);
                 FORWARD(4);
                 break;
@@ -138,14 +139,14 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_STORE_NAME: {
-                char* name = decompiler_get_string(_bytecode, ip);
+                char* name = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("store_name: %s\n", name);
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;
             }
             case OPCODE_SET_NAME: {
-                char* name = decompiler_get_string(_bytecode, ip);
+                char* name = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("set_name: %s\n", name);
                 FORWARD(strlen(name) + 1);
                 free(name);
@@ -160,7 +161,7 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_CALL: {
-                int argc = decompiler_get_int(_bytecode, ip);
+                int argc = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("call: (argc = %d)\n", argc);
                 FORWARD(4);
                 break;
@@ -234,43 +235,43 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_POP_JUMP_IF_FALSE: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("pop_jump_if_false: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_POP_JUMP_IF_TRUE: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("pop_jump_if_true: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_JUMP_IF_FALSE_OR_POP: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("jump_if_false_or_pop: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_JUMP_IF_TRUE_OR_POP: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("jump_if_true_or_pop: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_JUMP_IF_NOT_ERROR: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("jump_if_not_error: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_JUMP_FORWARD: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("jump_forward: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_ABSOLUTE_JUMP: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("absolute_jump: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
@@ -283,24 +284,31 @@ void decompile(code_t* _code, bool _with_header) {
                 PRINT_OPCODE("nop\n");
                 break;
             }
-            case OPCODE_MAKE_FUNCTION:
-            case OPCODE_MAKE_ASYNC_FUNCTION: {
-                code_t* function_bytecode = (code_t*) decompile_get_memory(_bytecode, ip);
-                PRINT_OPCODE("make_%s: %s\n", opcode == OPCODE_MAKE_ASYNC_FUNCTION ? "async_function" : "function", function_bytecode->block_name);
+            case OPCODE_SETUP_FUNCTION:
+            case OPCODE_BEGIN_FUNCTION: {
+                if (opcode == OPCODE_SETUP_FUNCTION)
+                if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
+                FORWARD(1);
+                code_t* functionbytecode = (code_t*) decompile_get_memory(bytecode, ip);
+                PRINT_OPCODE("setup_%s: %s\n", functionbytecode->is_async ? "async_function" : "function", functionbytecode->block_name);
                 printf("+-----------------+\n");
-                printf("| MAKE FUNCTION %d |\n", opcode == OPCODE_MAKE_ASYNC_FUNCTION);
+                printf("| MAKE FUNCTION   |\n");
                 printf("+-----------------+\n");
-                printf("| PARAM COUNT: %zu |\n", function_bytecode->param_count);
+                printf("| PARAM COUNT: %zu |\n", functionbytecode->param_count);
                 printf("+-----------------+\n");
-                decompile(function_bytecode, false);
+                decompile(functionbytecode, false);
                 printf("+-----------------+\n");
                 printf("| END FUNCTION    |\n");
                 printf("+-----------------+\n");
                 FORWARD(8);
                 break;
             }
-            case OPCODE_SETUP_BLOCK: {
-                code_t* address = (code_t*) decompile_get_memory(_bytecode, ip);
+            case OPCODE_SETUP_BLOCK:
+            case OPCODE_BEGIN_BLOCK: {
+                if (opcode == OPCODE_SETUP_BLOCK)
+                if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
+                FORWARD(1);
+                code_t* address = (code_t*) decompile_get_memory(bytecode, ip);
                 PRINT_OPCODE("setup_block:\n");
                 printf("+-----------------+\n");
                 printf("| SET BLOCK       |\n");
@@ -313,12 +321,12 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
-                code_t* block_bytecode = (code_t*) decompile_get_memory(_bytecode, ip);
-                PRINT_OPCODE("setup_catch_block: %s\n", block_bytecode->block_name);
+                code_t* blockbytecode = (code_t*) decompile_get_memory(bytecode, ip);
+                PRINT_OPCODE("setup_catch_block: %s\n", blockbytecode->block_name);
                 printf("+-----------------+\n");
                 printf("| SET CATCH BLOCK |\n");
                 printf("+-----------------+\n");
-                decompile(block_bytecode, false);
+                decompile(blockbytecode, false);
                 printf("+-----------------+\n");
                 printf("| END CATCH BLOCK |\n");
                 printf("+-----------------+\n");
@@ -342,12 +350,12 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_SAVE_CAPTURES: {
-                int capture_count = decompiler_get_int(_bytecode, ip);
+                int capture_count = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("save_captures: (capture_count = %d) ", capture_count);
                 int length = 4;
                 printf("[");
                 for (int i = 0; i < capture_count; i++) {
-                    char* name = decompiler_get_string(_bytecode, ip+length);
+                    char* name = decompiler_get_string(bytecode, ip+length);
                     printf("%s", name);
                     length += strlen(name) + 1;
                     if (i < capture_count - 1) {
@@ -360,13 +368,13 @@ void decompile(code_t* _code, bool _with_header) {
                 break;
             }
             case OPCODE_GET_ITERATOR_OR_JUMP: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("get_iterator_or_jump: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
             }
             case OPCODE_HAS_NEXT: {
-                int jump_offset = decompiler_get_int(_bytecode, ip);
+                int jump_offset = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("has_next: (jump_to_offset = %d)\n", jump_offset);
                 FORWARD(4);
                 break;
@@ -387,4 +395,5 @@ void decompile(code_t* _code, bool _with_header) {
 }
 
 #undef FORWARD
+#undef OPCODE
 #undef PRINT_OPCODE

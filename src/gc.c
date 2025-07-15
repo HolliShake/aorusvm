@@ -2,6 +2,8 @@
 
 size_t gc_collected_count = 0;
 
+#define OPCODE (_code->bytecode[ip+1])
+
 INTERNAL void gc_mark_env_content(env_t* _env);
 
 INTERNAL size_t gc_total_objects(object_t* root) {
@@ -18,7 +20,47 @@ INTERNAL size_t gc_total_objects(object_t* root) {
     return count;
 }
 
-INTERNAL void gc_free_object(object_t* _obj) {
+INTERNAL void gc_free_code(code_t* _code) {
+    size_t ip = 0;
+    while (ip < _code->size) {
+        uint8_t opcode = _code->bytecode[ip];
+        switch (opcode) {
+            case OPCODE_SETUP_BLOCK:
+            case OPCODE_BEGIN_BLOCK: {
+                if (opcode == OPCODE_SETUP_BLOCK)
+                if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
+                ip += 2;
+                uintptr_t block_address = 0;
+                for (size_t i = 0; i < 8; i++) {
+                    block_address |= ((uintptr_t)_code->bytecode[ip + i] << (i * 8));
+                }
+                code_t* block = (code_t*) block_address;
+                gc_free_code(block);
+                ip += 8;
+                break;
+            }
+            case OPCODE_SETUP_FUNCTION:
+            case OPCODE_BEGIN_FUNCTION: {
+                if (opcode == OPCODE_SETUP_FUNCTION)
+                if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
+                ip += 2;
+                uintptr_t function_address = 0;
+                for (size_t i = 0; i < 8; i++) {
+                    function_address |= ((uintptr_t)_code->bytecode[ip + i] << (i * 8));
+                }
+                code_t* function = (code_t*) function_address;
+                gc_free_code(function);
+                ip += 8;
+                break;
+            }
+            default: {
+                ++ip;
+            }
+        }
+    }
+}
+
+INTERNAL void gc_free_object(object_t* _obj, bool _free_all) {
     if (_obj == NULL) {
         return;
     }
@@ -34,10 +76,13 @@ INTERNAL void gc_free_object(object_t* _obj) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_FUNCTION(_obj)) {
         code_t* code = (code_t*) _obj->value.opaque;
-        printf("free> [%s:%s]: %s %p\n", code->file_name, code->block_name, object_to_string(_obj), _obj);
-        // if (code->environment != NULL) env_free(code->environment);
-        free(code->bytecode);
-        // free(code);
+        if (_free_all) gc_free_code(code);
+        if (!code->is_scoped) {
+            env_free(code->environment);
+            free(code->file_name);
+            free(code->block_name);
+            free(code);
+        }
     }
     free(_obj);
 }
@@ -110,7 +155,7 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
     }
 }
 
-INTERNAL void gc_sweep(vm_t* vm) {
+INTERNAL void gc_sweep(vm_t* vm, bool _free_all) {
     object_t** current = &vm->root;
 
     while (*current != NULL) {
@@ -119,7 +164,7 @@ INTERNAL void gc_sweep(vm_t* vm) {
         if (!obj->marked) {
             ++gc_collected_count;
             *current = obj->next; // unlink
-            gc_free_object(obj);
+            gc_free_object(obj, _free_all);
         } else {
             obj->marked = false;
             current = &obj->next;
@@ -129,7 +174,7 @@ INTERNAL void gc_sweep(vm_t* vm) {
 
 void gc_collect_all(vm_t* _vm) {
     gc_mark_vm_content(_vm);
-    gc_sweep(_vm);
+    gc_sweep(_vm, true);
 }
 
 void gc_collect(vm_t* _vm, env_t* _env) {
@@ -141,7 +186,7 @@ void gc_collect(vm_t* _vm, env_t* _env) {
     if (_env != NULL) gc_mark_env_content(_env);
 
     // collect the garbage
-    gc_sweep(_vm);
+    gc_sweep(_vm, false);
 
     // printf("collected %d objects\n", gc_collected_count);
     gc_collected_count = 0;
