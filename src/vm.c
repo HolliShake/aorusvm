@@ -141,6 +141,15 @@ double get_double(uint8_t *bytecode, size_t ip) {
 }
 
 INTERNAL
+void* get_memory(uint8_t* _bytecode, size_t _ip) {
+    uintptr_t value = 0;
+    for (size_t i = 0; i < 8; i++) {
+        value |= ((uintptr_t)_bytecode[_ip + i] << (i * 8));
+    }
+    return (void*)value;
+}
+
+INTERNAL
 char* get_string(uint8_t *_bytecode, size_t _ip) {
     char* str = string_allocate("");
     while (_bytecode[_ip] != 0) {
@@ -876,31 +885,14 @@ INTERNAL void do_panic(int _argc) {
 
 INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
-    
-    // Get bytecode size
-    size_t bytecode_size;
-    VERIFY_BYTECODE_SIZE(_code->bytecode, bytecode_size);
 
-    if (bytecode_size != _code->size) PD("bytecode size mismatch");
+    char* file_path = _code->file_name;
+    char* exec_name = _code->block_name;
 
-    char* file_path = 
-        get_string(_code->bytecode, 8);
-
-    // Add 1 to skip the null terminator of file_path string
-    char* exec_name = 
-        get_string(_code->bytecode, 8 + strlen(file_path) + 1);
-
-    // printf("EXEC: '%s' size: %zu\n", exec_name, bytecode_size);
-
-    // Calculate the starting IP
-    size_t ip = 
-        (8) + 
-        (strlen(file_path) + 1) + 
-        (strlen(exec_name) + 1) + 
-        (_ip);
+    size_t ip = _ip;
 
     // Shallow copy the bytecode
-    uint8_t *bytecode = _code->bytecode;
+    uint8_t* bytecode = _code->bytecode;
 
     while (ip < _code->size) {
         opcode_t opcode = bytecode[ip++];
@@ -1380,40 +1372,27 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_MAKE_FUNCTION: 
             case OPCODE_MAKE_ASYNC_FUNCTION: {
-                int param_count = get_int(bytecode, ip);
-                size_t function_size = get_long(bytecode, ip + 4);
-                char* module_name = get_string(bytecode, ip + 8);
-                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
-                uint8_t* function_bytecode = malloc(function_size);
-                memcpy(function_bytecode, bytecode + ip, function_size);
-                PUSH(object_new_function(opcode == OPCODE_MAKE_ASYNC_FUNCTION, param_count, function_bytecode, function_size));
-                FORWARD(function_size);
+                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
+                PUSH(object_new_function(function_bytecode));
+                FORWARD(8);
                 break;
             }
             case OPCODE_SETUP_BLOCK: {
-                size_t function_size = get_long(bytecode, ip);
-                char* module_name = get_string(bytecode, ip + 8);
-                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
-                uint8_t* function_bytecode = malloc(function_size);
-                memcpy(function_bytecode, bytecode + ip, function_size);
-                object_t* closure = object_new_function(false, 0, function_bytecode, function_size);
+                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
+                object_t* closure = object_new_function(function_bytecode);
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);
-                FORWARD(function_size);
+                FORWARD(8);
                 if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
                 if (signal == VmBlockSignalComplete) break;
                 PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
-                size_t function_size = get_long(bytecode, ip);
-                char* module_name = get_string(bytecode, ip + 8);
-                char* function_name = get_string(bytecode, ip + 8 + strlen(module_name) + 1);
-                uint8_t* function_bytecode = malloc(function_size);
-                memcpy(function_bytecode, bytecode + ip, function_size);
-                object_t* closure = object_new_function(false, 0, function_bytecode, function_size);
+                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
+                object_t* closure = object_new_function(function_bytecode);
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);
-                FORWARD(function_size);
+                FORWARD(8);
                 break;
             }
             case OPCODE_DUPTOP: {
@@ -1554,8 +1533,8 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
     // Create a new environment for the main function
-    decompile(_bytecode, false);
-    return;
+    // decompile(_bytecode, false);
+    // return;
     env_t* env = 
         env_new(instance->env);
     env->closure = _bytecode->environment;
@@ -1566,8 +1545,8 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
     // Evaluation stack must contain 1 object
     if (instance->sp != 1) {
         DUMP_STACK();
+        decompile(_bytecode, false);
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
     POPP();
-    gc_collect_all(instance, env);
 }

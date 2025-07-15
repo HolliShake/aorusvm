@@ -868,12 +868,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                 _generator, 
                 _code,
                 _scope,
-                _expression->ast0
-            );
-            generator_expression(
-                _generator, 
-                _code,
-                _scope,
                 _expression->ast1
             );
             emit(_code, OPCODE_SUB);

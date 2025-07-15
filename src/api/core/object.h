@@ -9,6 +9,7 @@
  */
 
 #include "global.h"
+#include "code.h"
 
 #ifndef API_CORE_OBJECT_H
 #define API_CORE_OBJECT_H
@@ -94,12 +95,10 @@ DLLEXPORT object_t* object_new_range(long _start, long _end, long _step);
 
 /*
  * Create a new function object.
- * @param _param_count The number of parameters.
  * @param _bytecode The bytecode.
- * @param _size The size of the bytecode.
  * @return The new object.
  */
-DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size);
+DLLEXPORT object_t* object_new_function(code_t* _bytecode);
 
 /*
  * Create a new native function object.

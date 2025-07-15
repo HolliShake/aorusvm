@@ -116,7 +116,7 @@ INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
     while (*current != NULL) {
         object_t* obj = *current;
 
-        if (!obj->marked || _collect_all) {
+        if (!obj->marked) {
             ++gc_collected_count;
             *current = obj->next; // unlink
             gc_free_object(obj);
