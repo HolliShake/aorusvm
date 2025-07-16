@@ -110,7 +110,9 @@ accessGlobal();
 func ret(a, b) {
     println(a, b);
     
-    return func() {};
+    return func() {
+        2 + 2;
+    };
 
     [...(0..100)];
 }

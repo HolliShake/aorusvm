@@ -18,9 +18,12 @@ typedef enum vm_block_signal_t {
 
 typedef struct vm_struct {
     // evaluation stack
-    object_t **evaluation_stack;
+    object_t** evaluation_stack;
     size_t sp;
-    // counter
+    // function table
+    size_t function_table_size;
+    code_t** function_table_item;
+    // function table counter
     size_t allocation_counter;
     // name resolver
     vm_name_resolver_t name_resolver;

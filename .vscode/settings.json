@@ -33,6 +33,7 @@
         "cstdint": "c",
         "compare": "c",
         "iterator.h": "c",
-        "func.h": "c"
+        "func.h": "c",
+        "scope.h": "c"
     }
 }

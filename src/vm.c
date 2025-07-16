@@ -38,45 +38,20 @@
         POPP(); \
 }
 
-#define LENGTH_OF_MAGIC_NUMBER  4
-#define LENGTH_OF_VERSION       4
-#define LENGTH_OF_BYTECODE_SIZE 8
-
-// Bytecode verification (bytes 0 - 3)
-#define VERIFY_MAGIC_NUMBER(bytecode) { \
-    int magic_value = get_int(bytecode, 0); \
-    if (magic_value != MAGIC_NUMBER) { \
-        PD("invalid magic number: expected 0x%08X but got 0x%08X", MAGIC_NUMBER, magic_value); \
+#define SAVE_FUNCTION(function) { \
+    size_t i; \
+    for (i = 0; i < instance->function_table_size && instance->function_table_item[i] != function; i++); \
+    if (i == instance->function_table_size) { \
+        instance->function_table_item[instance->function_table_size++] = function; \
+        instance->function_table_item = (code_t**) realloc(instance->function_table_item, sizeof(code_t*) * (instance->function_table_size + 1)); \
+        instance->function_table_item[instance->function_table_size] = NULL; \
     } \
-}
-
-// Bytecode version (bytes 4 - 7)
-#define VERIFY_VERSION(bytecode) { \
-    int version = get_int(bytecode, 4); \
-    if (version != VERSION) { \
-        PD("incompatible bytecode version: bytecode was compiled with version %d but runtime expects version %d", version, VERSION); \
-    } \
-}
-
-// Get bytecode size (bytes 8 - 15)
-#define VERIFY_BYTECODE_SIZE(bytecode, outvariable) { \
-    long size = get_long(bytecode, 0); \
-    if (size == 0) { \
-        PD("bytecode size is 0"); \
-    } \
-    outvariable = size; \
-}
-
-#define DUMP_BYTECODE(bytecode, size) { \
-    for (size_t i = 0; i < size; i++) { \
-        printf("[%02zu]: 0x%02X = %d\n", i, bytecode[i], bytecode[i]); \
-    } \
-    printf("\n"); \
 }
 
 #define DUMP_STACK() { \
     for (size_t i = 0; i < instance->sp; i++) { \
-        printf("[%02zu]: %s\n", i, object_to_string(instance->evaluation_stack[i])); \
+        printf("[%02zu]: %s", i, object_to_string(instance->evaluation_stack[i])); \
+        if (i < instance->sp - 1) printf(", "); \
     } \
     printf("\n"); \
 }
@@ -1379,6 +1354,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
                 FORWARD(1);
                 code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
+                SAVE_FUNCTION(function_bytecode); // Slow!, optimize later
                 PUSH(object_new_function(function_bytecode));
                 FORWARD(8);
                 break;
@@ -1388,8 +1364,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (opcode == OPCODE_SETUP_BLOCK)
                 if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
-                object_t* closure = vm_to_heap(object_new_function(function_bytecode));
+                code_t* block_bytecode = (code_t*) get_memory(bytecode, ip);
+                SAVE_FUNCTION(block_bytecode); // Slow!, optimize later
+                object_t* closure = vm_to_heap(object_new_function(block_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);   
                 FORWARD(8);
@@ -1398,8 +1375,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
-                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
-                object_t* closure = vm_to_heap(object_new_function(function_bytecode));
+                code_t* block_bytecode = (code_t*) get_memory(bytecode, ip);
+                SAVE_FUNCTION(block_bytecode); // Slow!, optimize later
+                object_t* closure = vm_to_heap(object_new_function(block_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
                 do_block(_env, closure, &signal);
                 FORWARD(8);
@@ -1465,6 +1443,10 @@ DLLEXPORT void vm_init() {
         (object_t **) malloc(sizeof(object_t *) * EVALUATION_STACK_SIZE);
     ASSERTNULL(instance->evaluation_stack, "failed to allocate memory for evaluation stack");
     instance->sp = 0;
+    // function table
+    instance->function_table_size = 0;
+    instance->function_table_item = (code_t**) malloc(sizeof(code_t*));
+    instance->function_table_item[0] = NULL;
     // counter
     instance->allocation_counter = 0;
     // name resolver

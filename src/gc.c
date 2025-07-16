@@ -20,47 +20,7 @@ INTERNAL size_t gc_total_objects(object_t* root) {
     return count;
 }
 
-INTERNAL void gc_free_code(code_t* _code) {
-    size_t ip = 0;
-    while (ip < _code->size) {
-        uint8_t opcode = _code->bytecode[ip];
-        switch (opcode) {
-            case OPCODE_SETUP_BLOCK:
-            case OPCODE_BEGIN_BLOCK: {
-                if (opcode == OPCODE_SETUP_BLOCK)
-                if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
-                ip += 2;
-                uintptr_t block_address = 0;
-                for (size_t i = 0; i < 8; i++) {
-                    block_address |= ((uintptr_t)_code->bytecode[ip + i] << (i * 8));
-                }
-                code_t* block = (code_t*) block_address;
-                gc_free_code(block);
-                ip += 8;
-                break;
-            }
-            case OPCODE_SETUP_FUNCTION:
-            case OPCODE_BEGIN_FUNCTION: {
-                if (opcode == OPCODE_SETUP_FUNCTION)
-                if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
-                ip += 2;
-                uintptr_t function_address = 0;
-                for (size_t i = 0; i < 8; i++) {
-                    function_address |= ((uintptr_t)_code->bytecode[ip + i] << (i * 8));
-                }
-                code_t* function = (code_t*) function_address;
-                gc_free_code(function);
-                ip += 8;
-                break;
-            }
-            default: {
-                ++ip;
-            }
-        }
-    }
-}
-
-INTERNAL void gc_free_object(object_t* _obj, bool _free_all) {
+INTERNAL void gc_free_object(object_t* _obj) {
     if (_obj == NULL) {
         return;
     }
@@ -74,15 +34,6 @@ INTERNAL void gc_free_object(object_t* _obj, bool _free_all) {
         iterator_free((iterator_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
-    } else if (OBJECT_TYPE_FUNCTION(_obj)) {
-        code_t* code = (code_t*) _obj->value.opaque;
-        if (_free_all) gc_free_code(code);
-        if (!code->is_scoped) {
-            env_free(code->environment);
-            free(code->file_name);
-            free(code->block_name);
-            free(code);
-        }
     }
     free(_obj);
 }
@@ -137,7 +88,6 @@ INTERNAL void gc_mark_vm_content(vm_t* _vm) {
 }
 
 INTERNAL void gc_mark_env_content(env_t* _env) {
-    PD("CALLED!");
     env_t* current = _env;
     while (current != NULL) {
         object_t** list = env_get_object_list(current);
@@ -155,8 +105,8 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
     }
 }
 
-INTERNAL void gc_sweep(vm_t* vm, bool _free_all) {
-    object_t** current = &vm->root;
+INTERNAL void gc_sweep(vm_t* _vm, bool _free_all) {
+    object_t** current = &_vm->root;
 
     while (*current != NULL) {
         object_t* obj = *current;
@@ -164,12 +114,19 @@ INTERNAL void gc_sweep(vm_t* vm, bool _free_all) {
         if (!obj->marked) {
             ++gc_collected_count;
             *current = obj->next; // unlink
-            gc_free_object(obj, _free_all);
+            gc_free_object(obj);
         } else {
             obj->marked = false;
             current = &obj->next;
         }
     }
+
+    // free the function table
+    for (size_t i = 0; i < _vm->function_table_size; i++) {
+        env_free(_vm->function_table_item[i]->environment);
+        code_free(_vm->function_table_item[i]);
+    }
+    free(_vm->function_table_item);
 }
 
 void gc_collect_all(vm_t* _vm) {

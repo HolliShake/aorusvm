@@ -1,8 +1,4 @@
 #include "decompiler.h"
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
-
 
 INTERNAL char* decompiler_get_string(uint8_t* bytecode, size_t _ip) {
     char* str = string_allocate("");

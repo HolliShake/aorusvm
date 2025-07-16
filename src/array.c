@@ -1,6 +1,4 @@
 #include "array.h"
-#include <stdlib.h>
-#include <stdio.h>  // for PD()
 
 // If you don't have a PD() macro, define it:
 #ifndef PD

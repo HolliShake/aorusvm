@@ -44,7 +44,6 @@ code_t* code_new_block(char* _file_name, char* _block_name, uint8_t* _bytecode, 
 }
 
 void code_free(code_t* _code) {
-    env_free(_code->environment);
     free(_code->file_name);
     free(_code->block_name);
     free(_code->bytecode);
