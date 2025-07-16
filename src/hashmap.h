@@ -1,5 +1,6 @@
 #include "api/core/global.h"
 #include "api/core/object.h"
+#include "internal.h"
 
 #ifndef HASHMAP_H
 #define HASHMAP_H
@@ -57,6 +58,15 @@ void hashmap_put(hashmap_t* _hashmap, object_t* _key, object_t* _value);
  * @return The value.
  */
 object_t* hashmap_get(hashmap_t* _hashmap, object_t* _key);
+
+/*
+ * Get a value from the hashmap.
+ *
+ * @param _hashmap The hashmap.
+ * @param _key The key.
+ * @return The value.
+ */
+object_t* hashmap_get_string(hashmap_t* _hashmap, char* _key);
 
 /*
  * Extend the hashmap with another hashmap.

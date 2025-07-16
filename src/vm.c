@@ -818,8 +818,9 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     return;
 }
 
-INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
+INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
     code_t* code = (code_t *) _function->value.opaque;
+    object_t* this = _is_method ? POPP() : NULL;
     if (code->param_count != _argc) {
         // pop all arguments, before returning error
         POPN(_argc);
@@ -835,6 +836,7 @@ INTERNAL void do_call(env_t* _parent_env, object_t *_function, int _argc) {
     env_t* func_env = 
         env_new(_parent_env);
     func_env->closure = code->environment;
+    if (this != NULL) env_put(func_env, string_allocate("this"), this);
     vm_execute(func_env, 0, code);
     func_env->closure = NULL;
     env_free(func_env);
@@ -1083,15 +1085,34 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 ));
                 break;
             }
+            case OPCODE_GET_PROPERTY: {
+                char* name = get_string(bytecode, ip);
+                object_t* obj = POPP();
+                if (!OBJECT_TYPE_OBJECT(obj)) {
+                    char* message = string_format(
+                        "expected \"object\", got \"%s\"", 
+                        object_type_to_string(obj)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
+                object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
+                PUSH_REF(result);
+                FORWARD(strlen(name) + 1);
+                break;
+            }
             case OPCODE_INDEX: {
                 object_t* index = POPP();
                 object_t* obj = POPP();
                 do_index(obj, index);
                 break;
             }
-            case OPCODE_CALL: {
+            case OPCODE_CALL:
+            case OPCODE_CALL_METHOD: {
+                const bool is_method = (opcode == OPCODE_CALL_METHOD);
                 int argc = get_int(bytecode, ip);
-                object_t *function = POPP();
+                object_t* function = POPP();
                 if (!OBJECT_TYPE_CALLABLE(function)) {
                     char* message = string_format(
                         "expected \"function\", got \"%s\"", 
@@ -1103,7 +1124,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     break;
                 }
                 if (OBJECT_TYPE_FUNCTION(function)) {
-                    do_call(_env, function, argc);
+                    do_call(_env, is_method, function, argc);
                 } else {
                     do_native_call(function, argc);
                 }
@@ -1384,7 +1405,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_DUPTOP: {
-                PUSH(PEEK());
+                PUSH_REF(PEEK());
                 break;
             }
             case OPCODE_ROT2: {

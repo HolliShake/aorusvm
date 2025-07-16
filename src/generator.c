@@ -40,6 +40,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstArray:
         case AstObject:
         case AstFunctionExpression:
+        case AstMemberAccess:
         case AstIndex:
         case AstCall:
         case AstUnaryPlus:
@@ -609,6 +610,46 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             emit(_code, OPCODE_INDEX);
             break;
         }
+        case AstMemberAccess: {
+            ast_node_t* obj    = _expression->ast0;
+            ast_node_t* member = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access expression requires an object, but received NULL"
+                );
+            }
+            if (member == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access expression requires a member, but received NULL"
+                );
+            }
+            if (member->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access expression requires a member, but received %d", member->type
+                );
+            }
+            if (!generator_is_expression_type(obj) || !generator_is_expression_type(member)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access expression requires both object and member to be expressions"
+                );
+            }
+            generator_expression(_generator, _code, _scope, obj);
+            emit(_code, OPCODE_GET_PROPERTY);
+            emit_string(_code, member->str0);
+            break;
+        }
         case AstCall: {
             ast_node_t* function      = _expression->ast0;
             ast_node_list_t arguments = _expression->array0;
@@ -652,8 +693,49 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                 }
                 generator_expression(_generator, _code, _scope, argument);
             }
-            generator_expression(_generator, _code, _scope, function);
-            emit(_code, OPCODE_CALL);
+            if (function->type == AstMemberAccess) {
+                ast_node_t* obj = function->ast0;
+                ast_node_t* member = function->ast1;
+                if (obj == NULL) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "call expression must have a function, but received NULL"
+                    );
+                }
+                if (member == NULL) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "call expression must have a function, but received NULL"
+                    );
+                }
+                if (member->type != AstName) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "call expression must have a function, but received %d", member->type
+                    );
+                }
+                if (!generator_is_expression_type(obj) || !generator_is_expression_type(member)) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "call expression must have a function, but received %d", member->type
+                    );
+                }
+                generator_expression(_generator, _code, _scope, obj);
+                emit(_code, OPCODE_DUPTOP);
+                emit(_code, OPCODE_GET_PROPERTY);
+                emit_string(_code, member->str0);
+            } else {
+                generator_expression(_generator, _code, _scope, function);
+            }
+            emit(_code, (function->type == AstMemberAccess) ? OPCODE_CALL_METHOD : OPCODE_CALL);
             emit_int(_code, param_count);
             break;
         }

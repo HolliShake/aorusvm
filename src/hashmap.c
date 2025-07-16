@@ -112,6 +112,21 @@ object_t* hashmap_get(hashmap_t* _hashmap, object_t* _key) {
     return NULL;
 }
 
+object_t* hashmap_get_string(hashmap_t* _hashmap, char* _key) {
+    ASSERTNULL(_hashmap, "hashmap is null");
+    ASSERTNULL(_key, "key is null");
+
+    size_t hash = hash64(_key);
+    hashmap_node_t* node = _hashmap->buckets[hash % _hashmap->bucket_count];
+    while (node) {
+        if (strcmp(object_to_string(node->key), _key) == 0) {
+            return node->value;
+        }
+        node = node->next;
+    }
+    return NULL;
+}
+
 void hashmap_extend(hashmap_t* _hashmap, hashmap_t* _other) {
     ASSERTNULL(_hashmap, "hashmap is null");
     ASSERTNULL(_other, "other is null");

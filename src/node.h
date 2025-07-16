@@ -19,6 +19,7 @@ typedef enum ast_node_type_struct {
     AstObjectProperty,
     AstObject,
     AstFunctionExpression,
+    AstMemberAccess,
     AstIndex,
     AstCall,
     // Unary operators

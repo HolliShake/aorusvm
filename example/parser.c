@@ -263,12 +263,18 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
     }
     while (CHECKV(DOT) || CHECKV(LBRACE) || CHECKV(LPAREN)) {
         if (CHECKV(DOT)) {
-            __THROW_ERROR(
-                _parser->fpath,
-                _parser->fdata,
-                _parser->current->position,
-                "not implemented"
-            );
+            ACCEPTV(DOT);
+            ast_node_t* member = parser_terminal(_parser);
+            if (member == NULL) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "member access expected"
+                );
+            }
+            ended = ast_position(member);
+            node = ast_member_access_node(position_merge(start, ended), node, member);
         } else if (CHECKV(LBRACE)) {
             ACCEPTV(LBRACE);
             ast_node_t* index = parser_expression(_parser);
