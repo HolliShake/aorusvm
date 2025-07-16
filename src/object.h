@@ -15,14 +15,11 @@ typedef struct object_struct {
     union object_union {
         int    i32;
         double f64;
-        void   *opaque;
+        void*  opaque;
     } value;
     // for garbage collection
-    bool marked;
-    object_t *next;
+    bool      marked;
+    object_t* next;
 } object_t;
-
-// Iterator object should be an internal object.
-object_t* object_new_iterator(object_t* _obj);
 
 #endif

@@ -60,6 +60,12 @@ DLLEXPORT object_t* object_new_range(long _start, long _end, long _step) {
     return obj;
 }
 
+DLLEXPORT object_t* object_new_iterator(object_t* _obj) {
+    object_t* obj = object_new(OBJECT_TYPE_ITERATOR);
+    obj->value.opaque = iterator_new(_obj);
+    return obj;
+}
+
 DLLEXPORT object_t* object_new_function(code_t* _bytecode) {
     object_t* obj = object_new(OBJECT_TYPE_FUNCTION);
     obj->value.opaque = _bytecode;
@@ -83,12 +89,6 @@ DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
         obj->value.opaque = 
             (object_t*) _message;
     }
-    return obj;
-}
-
-object_t* object_new_iterator(object_t* _obj) {
-    object_t* obj = object_new(OBJECT_TYPE_ITERATOR);
-    obj->value.opaque = iterator_new(_obj);
     return obj;
 }
 
@@ -199,6 +199,9 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         case OBJECT_TYPE_RANGE: {
             range_t* range = (range_t*) _obj->value.opaque;
             return string_format("range(%ld, %ld, %ld)", range->start, range->end, range->step);
+        }
+        case OBJECT_TYPE_ITERATOR: {
+            return string_format("<iterator.%s/>", object_type_to_string(_obj->value.opaque));
         }
         case OBJECT_TYPE_OBJECT: {
             hashmap_t* map = (hashmap_t*) _obj->value.opaque;
@@ -361,6 +364,7 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
         case OBJECT_TYPE_ARRAY:
             return array_length((array_t*) _obj->value.opaque) > 0;
         case OBJECT_TYPE_RANGE:
+        case OBJECT_TYPE_ITERATOR:
             return true;
         case OBJECT_TYPE_OBJECT:
             return hashmap_size((hashmap_t*) _obj->value.opaque) > 0;
@@ -415,6 +419,9 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
             range_t* range2 = (range_t*) _obj2->value.opaque;
             return range1->start == range2->start && range1->end == range2->end && range1->step == range2->step;
         }
+        case OBJECT_TYPE_ITERATOR: {
+            return _obj1->value.opaque == _obj2->value.opaque;
+        }
         case OBJECT_TYPE_OBJECT: {
             hashmap_t* map1 = (hashmap_t*) _obj1->value.opaque;
             hashmap_t* map2 = (hashmap_t*) _obj2->value.opaque;
@@ -437,31 +444,32 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
 }
 
 DLLEXPORT char* object_type_to_string(object_t* _obj) {
-    if (_obj == NULL) return "<cnull>";
+    if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
-            return "int";
+            return string_allocate("int");
         case OBJECT_TYPE_DOUBLE:
-            return "number";
+            return string_allocate("number");
         case OBJECT_TYPE_STRING:
-            return "string";
+            return string_allocate("string");
         case OBJECT_TYPE_BOOL:
-            return "boolean";
+            return string_allocate("boolean");
         case OBJECT_TYPE_NULL:
-            return "null";
+            return string_allocate("null");
         case OBJECT_TYPE_ARRAY:
+            return string_allocate("array");
         case OBJECT_TYPE_RANGE:
-            return "array";
+            return string_allocate("range");
         case OBJECT_TYPE_ITERATOR:
-            return string_format("<iterator.%s/>", object_type_to_string(_obj->value.opaque));
+            return string_format("<iterator.%s/>", object_to_string(_obj->value.opaque));
         case OBJECT_TYPE_OBJECT:
-            return "object";
+            return string_allocate("object");
         case OBJECT_TYPE_FUNCTION:
-            return "function";
+            return string_allocate("function");
         case OBJECT_TYPE_NATIVE_FUNCTION:
-            return "native function";
+            return string_allocate("native function");
         case OBJECT_TYPE_ERROR:
-            return "error";
+            return string_allocate("error");
         default:
             return string_format("<unknown.%d/>", _obj->type);
     }
@@ -522,13 +530,16 @@ DLLEXPORT size_t object_hash(object_t* _obj) {
             range_t* range = (range_t*) _obj->value.opaque;
             return (size_t) _obj->value.opaque ^ range->start ^ range->end ^ range->step;
         }
+        case OBJECT_TYPE_ITERATOR: {
+            return (size_t) _obj;
+        }
         case OBJECT_TYPE_OBJECT: {
             #if IS_64BIT
                 size_t hash = 14695981039346656037u;  // FNV offset basis (Fowler–Noll–Vo)
-                size_t prime = 1099511628211u; // FNV prime
+                size_t prime = 1099511628211u;        // FNV prime
             #else
-                size_t hash = 2166136261u;  // FNV offset basis (Fowler–Noll–Vo)
-                size_t prime = 16777619u; // FNV prime
+                size_t hash  = 2166136261u; // FNV offset basis (Fowler–Noll–Vo)
+                size_t prime = 16777619u;   // FNV prime
             #endif
             hashmap_t* map = (hashmap_t*) _obj->value.opaque;
             for (size_t i = 0; i < map->size; i++) {

@@ -94,6 +94,13 @@ DLLEXPORT object_t* object_new_array(size_t _length);
 DLLEXPORT object_t* object_new_range(long _start, long _end, long _step);
 
 /*
+ * Create a new iterator object.
+ * @param _obj The object to iterate over.
+ * @return The new object.
+ */
+DLLEXPORT object_t* object_new_iterator(object_t* _obj);
+
+/*
  * Create a new function object.
  * @param _bytecode The bytecode.
  * @return The new object.
