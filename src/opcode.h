@@ -40,24 +40,25 @@ typedef enum opcode_enum {
     OPCODE_POP_JUMP_IF_TRUE             = 110,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_IF_FALSE_OR_POP         = 111,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_IF_TRUE_OR_POP          = 112,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_JUMP_IF_NOT_ERROR_OR_POP     = 113,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_JUMP_IF_NOT_ERROR            = 113,  // Followed by 4 bytes (aka jump offset)
     OPCODE_JUMP_FORWARD                 = 114,  // Followed by 4 bytes (aka jump offset)
     OPCODE_ABSOLUTE_JUMP                = 115,  // Followed by 4 bytes (aka jump offset)
     OPCODE_POPTOP                       = 116,  // No following bytes
     OPCODE_NOP                          = 117,  // No following bytes
-    OPCODE_MAKE_FUNCTION                = 118,  // Followed by 4 bytes (aka parameter count) + 8 bytes (aka bytecode size)
-    OPCODE_MAKE_ASYNC_FUNCTION          = 119,  // Followed by 4 bytes (aka parameter count) + 8 bytes (aka bytecode size)
-    OPCODE_SETUP_BLOCK                  = 120,  // Followed by 8 bytes (aka bytecode size)
-    OPCODE_SETUP_CATCH_BLOCK            = 121,  // Followed by 8 bytes (aka bytecode size)
-    OPCODE_RETURN                       = 122,  // No following bytes
-    OPCODE_COMPLETE_BLOCK               = 123,  // No following bytes
-    OPCODE_DUPTOP                       = 124,  // No following bytes
-    OPCODE_ROT2                         = 125,  // No following bytes
-    OPCODE_SAVE_CAPTURES                = 126,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
-    OPCODE_GET_ITERATOR_OR_JUMP         = 127,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_HAS_NEXT                     = 128,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_GET_NEXT_VALUE               = 129,  // No following bytes
-    OPCODE_GET_NEXT_KEY_VALUE           = 130,  // No following bytes
+    OPCODE_SETUP_FUNCTION               = 118,  // No following bytes
+    OPCODE_BEGIN_FUNCTION               = 119,  // Followed by 8 bytes (aka code_t pointer/serialized address)
+    OPCODE_SETUP_BLOCK                  = 120,  // No following bytes
+    OPCODE_BEGIN_BLOCK                  = 121,  // Followed by 8 bytes (aka code_t pointer/serialized address)
+    OPCODE_SETUP_CATCH_BLOCK            = 122,  // Followed by 8 bytes (aka code_t pointer/serialized address)
+    OPCODE_RETURN                       = 123,  // No following bytes
+    OPCODE_COMPLETE_BLOCK               = 124,  // No following bytes
+    OPCODE_DUPTOP                       = 125,  // No following bytes
+    OPCODE_ROT2                         = 126,  // No following bytes
+    OPCODE_SAVE_CAPTURES                = 127,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
+    OPCODE_GET_ITERATOR_OR_JUMP         = 128,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_HAS_NEXT                     = 129,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_GET_NEXT_VALUE               = 130,  // No following bytes
+    OPCODE_GET_NEXT_KEY_VALUE           = 131,  // No following bytes
     // NOTE: 255 is the last opcode
 } opcode_t;
 

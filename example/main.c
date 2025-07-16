@@ -1,6 +1,7 @@
 #include "../src/api/core/generator.h"
 #include "../src/api/core/global.h"
 #include "../src/api/core/vm.h"
+#include "../src/api/core/code.h"
 #include "filereader.h"
 #include "parser.h"
 
@@ -80,10 +81,8 @@ int main(int argc, char** argv) {
     parser_t* parser = parser_new(fpath, content);
     ast_node_t* node = parser_parse(parser);
     generator_t* generator = generator_new(fpath, content);
-    uint8_t* bytecode = generator_generate(generator, node);
-    FILE *fp = fopen("bytecode.vmc", "wb");
-    fwrite(bytecode, 1, generator_get_bytecode_size(generator), fp);
-    fclose(fp);
+    code_t* bytecode = generator_generate(generator, node);
+   
     generator_free(generator);
     vm_init();
     vm_set_name_resolver((vm_name_resolver_t) custom_name_resolver);

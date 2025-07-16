@@ -60,9 +60,9 @@ DLLEXPORT object_t* object_new_range(long _start, long _end, long _step) {
     return obj;
 }
 
-DLLEXPORT object_t* object_new_function(bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size) {
+DLLEXPORT object_t* object_new_function(code_t* _bytecode) {
     object_t* obj = object_new(OBJECT_TYPE_FUNCTION);
-    obj->value.opaque = code_new_function(_is_async, _param_count, _bytecode, _size);
+    obj->value.opaque = _bytecode;
     return obj;
 }
 

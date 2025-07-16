@@ -9,6 +9,7 @@
  */
 
 #include "../ast/node.h"
+#include "code.h"
 #include "global.h"
 
 #ifndef API_CORE_GENERATOR_H
@@ -34,15 +35,7 @@ DLLEXPORT generator_t* generator_new(char* _fpath, char* _fdata);
  * @param _program The program to generate the bytecode for.
  * @return The bytecode.
  */
-DLLEXPORT uint8_t* generator_generate(generator_t* _generator, ast_node_t* _program);
-
-/*
- * @brief Gets the size of the bytecode.
- * 
- * @param _generator The generator to use.
- * @return The size of the bytecode.
- */
-DLLEXPORT size_t generator_get_bytecode_size(generator_t* _generator);
+DLLEXPORT code_t* generator_generate(generator_t* _generator, ast_node_t* _program);
 
 /*
  * @brief Frees the generator.

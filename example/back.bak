@@ -109,9 +109,8 @@ accessGlobal();
 
 func ret(a, b) {
     println(a, b);
-    
     return func() {
-        2 + 2;
+        return a + b + 1000;
     };
 
     [...(0..100)];
@@ -125,12 +124,5 @@ println(0..2000);
 
 const r = 0..500;
 
-{
-    {
-        println("Hola!");
-    }
-}
 
-for (i in 0..10) {
-    println(i);
-}
+println(k);

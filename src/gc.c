@@ -2,6 +2,8 @@
 
 size_t gc_collected_count = 0;
 
+#define OPCODE (_code->bytecode[ip+1])
+
 INTERNAL void gc_mark_env_content(env_t* _env);
 
 INTERNAL size_t gc_total_objects(object_t* root) {
@@ -32,13 +34,6 @@ INTERNAL void gc_free_object(object_t* _obj) {
         iterator_free((iterator_t*) _obj->value.opaque);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_free((hashmap_t*) _obj->value.opaque);
-    } else if (OBJECT_TYPE_FUNCTION(_obj)) {
-        code_t* code = (code_t*) _obj->value.opaque;
-        if (code->environment != NULL) {
-            env_free(code->environment);
-        }
-        free(code->bytecode);
-        free(code);
     }
     free(_obj);
 }
@@ -110,13 +105,13 @@ INTERNAL void gc_mark_env_content(env_t* _env) {
     }
 }
 
-INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
-    object_t** current = &vm->root;
+INTERNAL void gc_sweep(vm_t* _vm, bool _free_all) {
+    object_t** current = &_vm->root;
 
     while (*current != NULL) {
         object_t* obj = *current;
 
-        if (!obj->marked || _collect_all) {
+        if (!obj->marked) {
             ++gc_collected_count;
             *current = obj->next; // unlink
             gc_free_object(obj);
@@ -125,9 +120,17 @@ INTERNAL void gc_sweep(vm_t* vm, bool _collect_all) {
             current = &obj->next;
         }
     }
+
+    // free the function table
+    for (size_t i = 0; i < _vm->function_table_size; i++) {
+        env_free(_vm->function_table_item[i]->environment);
+        code_free(_vm->function_table_item[i]);
+    }
+    free(_vm->function_table_item);
 }
 
-void gc_collect_all(vm_t* _vm, env_t* _env) {
+void gc_collect_all(vm_t* _vm) {
+    gc_mark_vm_content(_vm);
     gc_sweep(_vm, true);
 }
 

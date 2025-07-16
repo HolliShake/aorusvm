@@ -1,5 +1,6 @@
 #include "env.h"
 #include "object.h"
+#include "opcode.h"
 #include "type.h"
 #include "vm.h"
 
@@ -12,9 +13,8 @@
  * Collect all the garbage.
  *
  * @param _vm The VM.
- * @param _env The environment.
  */
-void gc_collect_all(vm_t* _vm, env_t* _env);
+void gc_collect_all(vm_t* _vm);
 
 /*
  * Collect the garbage.

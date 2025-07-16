@@ -21,7 +21,6 @@ void hashmap_free(hashmap_t* _hashmap) {
         hashmap_node_t* node = _hashmap->buckets[i];
         while (node) {
             hashmap_node_t* next = node->next;
-            free(node->key);
             free(node);
             node = next;
         }
