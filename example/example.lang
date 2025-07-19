@@ -201,7 +201,10 @@ println(xg);
 println(xg = 100);
 println(xg);
 
-println(xg.hello);
+println(xg.hello catch (e) {
+    println("ERR:", e);
+    return 0;
+});
 
 
 

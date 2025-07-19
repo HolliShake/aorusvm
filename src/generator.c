@@ -1322,7 +1322,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, _catch, _scope, body[i]);
+                generator_statement(_generator, _catch, catch_scope, body[i]);
             }
             // Return placeholder
             if (!has_visible_return) {
