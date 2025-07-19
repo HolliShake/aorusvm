@@ -1207,7 +1207,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     PUSH_REF(result);
                 } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(obj)) {
                     user_type_instance_t* uti = (user_type_instance_t*) obj->value.opaque;
-                    if (!hashmap_has_string((hashmap_t*) uti->object, name)) {
+                    if (!hashmap_has_string((hashmap_t*) uti->object->value.opaque, name)) {
                         char* message = string_format(
                             "property \"%s\" not found in \"%s\"", 
                             name,
@@ -1218,7 +1218,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                         FORWARD(strlen(name) + 1);
                         break;
                     }
-                    object_t* result = hashmap_get_string((hashmap_t*) uti->object, name);
+                    object_t* result = hashmap_get_string((hashmap_t*) uti->object->value.opaque, name);
                     PUSH_REF(result);
                 } else if (OBJECT_TYPE_OBJECT(obj)) {
                     if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
@@ -1240,6 +1240,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                         object_type_to_string(obj)
                     );
                     PUSH(object_new_error(message, true));
+                    free(message);
                 }
                 FORWARD(strlen(name) + 1);
                 free(name);
@@ -1516,9 +1517,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_HAS_NEXT: {
                 int jump_offset = get_int(bytecode, ip);
                 object_t* obj = PEEK();
-                if (!OBJECT_TYPE_ITERATOR(obj)) {
-                    PD("expected iterator, got %s", object_type_to_string(obj));
-                }
                 if (!iterator_has_next(obj)) {
                     JUMP(jump_offset);
                     break;
@@ -1529,9 +1527,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_GET_NEXT_VALUE: 
             case OPCODE_GET_NEXT_KEY_VALUE: {
                 object_t* obj = PEEK();
-                if (!OBJECT_TYPE_ITERATOR(obj)) {
-                    PD("expected iterator, got %s", object_type_to_string(obj));
-                }
                 object_t** values = iterator_next(obj);
                 if (opcode == OPCODE_GET_NEXT_KEY_VALUE) {
                     if (values[1] != NULL) PUSH_REF(values[1]) // value
@@ -1612,12 +1607,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
-                if (!OBJECT_TYPE_FUNCTION(obj)) {
-                    PD("expected function, got %s", object_type_to_string(obj));
-                }
-
                 code_t* code = (code_t*) obj->value.opaque;
-
                 int capture_count = get_int(bytecode, ip);
                 int length = 4;
                 for (int i = 0; i < capture_count; i++) {
@@ -1687,7 +1677,10 @@ DLLEXPORT void vm_set_name_resolver(vm_name_resolver_t _resolver) {
 
 DLLEXPORT void vm_name_resolver(env_t* _env, char* _name) {
     if (!env_has(_env, _name, true)) {
-        PD("variable %s not found", _name);
+        char* message = string_format("variable \"%s\" not found", _name);
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
     }
     PUSH_REF(env_get(_env, _name));
 }

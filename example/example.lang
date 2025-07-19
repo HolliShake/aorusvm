@@ -172,7 +172,7 @@ class Person {
     println(">>", 2 + 2 + xx);
 
     var init = func(a, b) {
-        println(a, b);
+        println(a, b, ++xx);
     };
 
     func printxx() {
@@ -183,6 +183,9 @@ class Person {
 
 const px = new Person(1, 2);
 
+const printxx = px.printxx;
+println(printxx);
+
 println(px, px.printxx());
 
 println(Person);
@@ -190,3 +193,5 @@ println(Person);
 println(newPerson("Doy", 2));
 
 println(new 10(), Person.xx);
+
+println(printxx(), aws12);
