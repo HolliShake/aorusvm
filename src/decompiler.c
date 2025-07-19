@@ -176,11 +176,18 @@ void decompile(code_t* _code, bool _with_header) {
                 FORWARD(4);
                 break;
             }
-            case OPCODE_CALL:
             case OPCODE_CALL_METHOD: {
+                char* method_name = decompiler_get_string(bytecode, ip);
+                FORWARD(strlen(method_name) + 1);
                 int argc = decompiler_get_int(bytecode, ip);
-                if (opcode == OPCODE_CALL) PRINT_OPCODE("call: (argc = %d)\n", argc);
-                else PRINT_OPCODE("call_method: (argc = %d)\n", argc);
+                PRINT_OPCODE("call_method: (method_name = %s, argc = %d)\n", method_name, argc);
+                FORWARD(4);
+                free(method_name);
+                break;
+            }
+            case OPCODE_CALL: {
+                int argc = decompiler_get_int(bytecode, ip);
+                PRINT_OPCODE("call: (argc = %d)\n", argc);
                 FORWARD(4);
                 break;
             }

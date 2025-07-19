@@ -710,14 +710,14 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     );
                 }
                 generator_expression(_generator, _code, _scope, obj);
-                emit(_code, OPCODE_DUPTOP);
-                emit(_code, OPCODE_GET_PROPERTY);
+                emit(_code, OPCODE_CALL_METHOD);
                 emit_string(_code, member->str0);
+                emit_int(_code, param_count);
             } else {
                 generator_expression(_generator, _code, _scope, function);
+                emit(_code, OPCODE_CALL);
+                emit_int(_code, param_count);
             }
-            emit(_code, (function->type == AstMemberAccess) ? OPCODE_CALL_METHOD : OPCODE_CALL);
-            emit_int(_code, param_count);
             break;
         }
         case AstUnaryPlus: {

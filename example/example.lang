@@ -163,8 +163,19 @@ println(({ "name": "Doy" })["name"]);
 class Person {
     var xx = 2;
     println(">>", 2 + 2 + xx);
+
+    func init(a, b) {
+        println(a, b);
+    }
+
+    func printxx() {
+        println("xx>>", xx);
+        return 1;
+    }
 }
 
-println(new Person(1, 2));
+const px = new Person(1, 2);
+
+println(px, px.printxx());
 
 println(Person);

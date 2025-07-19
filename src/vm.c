@@ -1183,6 +1183,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
+                    FORWARD(strlen(name) + 1);
                     break;
                 }
                 if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
@@ -1193,6 +1194,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
+                    FORWARD(strlen(name) + 1);
                     break;
                 }
                 object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
@@ -1224,12 +1226,21 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(4);
                 break;
             }
-            case OPCODE_CALL:
             case OPCODE_CALL_METHOD: {
-                const bool is_method = (opcode == OPCODE_CALL_METHOD);
+                char* method_name = get_string(bytecode, ip);
+                FORWARD(strlen(method_name) + 1);
+                int argc = get_int(bytecode, ip);
+                object_t* obj = POPP();
+                vm_invoke_method(_env, obj, method_name, argc);
+                FORWARD(4);
+                free(method_name);
+                break;
+            }
+            case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t* function = POPP();
                 if (!OBJECT_TYPE_CALLABLE(function)) {
+                    for (int i = 0; i < argc; i++) POPP();
                     char* message = string_format(
                         "expected \"function\", got \"%s\"", 
                         object_type_to_string(function)
@@ -1240,7 +1251,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     break;
                 }
                 if (OBJECT_TYPE_FUNCTION(function)) {
-                    do_call(_env, is_method, function, argc);
+                    do_call(_env, false, function, argc);
                 } else {
                     do_native_call(function, argc);
                 }

@@ -233,31 +233,29 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             }
             
             // Pre-allocate buffer with estimated size
-            size_t capacity = 32 + entries_count * 16; // Initial estimate
+            size_t capacity = 32 + entries_count * 32; // Larger estimate for formatting
             char* result = malloc(capacity);
             if (!result) return NULL;
             
             size_t used = 0;
             result[used++] = '{';
+            result[used++] = '\n';
             
             size_t entries_added = 0;
             for (size_t i = 0; i < map->bucket_count; i++) {
                 hashmap_node_t* node = map->buckets[i];
                 while (node) {
-                    // Add separator if not the first element
-                    if (entries_added > 0) {
-                        if (used + 2 >= capacity) {
-                            capacity *= 2;
-                            char* new_buf = realloc(result, capacity);
-                            if (!new_buf) {
-                                free(result);
-                                return NULL;
-                            }
-                            result = new_buf;
+                    // Add indentation
+                    if (used + 2 >= capacity) {
+                        capacity *= 2;
+                        char* new_buf = realloc(result, capacity);
+                        if (!new_buf) {
+                            free(result);
+                            return NULL;
                         }
-                        result[used++] = ',';
-                        result[used++] = ' ';
+                        result = new_buf;
                     }
+                    result[used++] = '\t';
                     
                     // Get string representation of key
                     char* key_str = object_to_string(node->key);
@@ -308,8 +306,8 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
                     size_t val_len = strlen(val_str);
                     
                     // Ensure buffer has enough space for value
-                    if (used + val_len >= capacity) {
-                        capacity = capacity * 2 + val_len;
+                    if (used + val_len + 2 >= capacity) {
+                        capacity = capacity * 2 + val_len + 2;
                         char* new_buf = realloc(result, capacity);
                         if (!new_buf) {
                             free(val_str);
@@ -323,6 +321,12 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
                     memcpy(result + used, val_str, val_len);
                     used += val_len;
                     free(val_str);
+                    
+                    // Add comma and newline if not the last element
+                    if (entries_added < entries_count - 1) {
+                        result[used++] = ',';
+                    }
+                    result[used++] = '\n';
                     
                     entries_added++;
                     node = node->next;
