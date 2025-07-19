@@ -39,7 +39,6 @@ if (3 < 2) {
 println(1, 2, 3, "Hello World!", z);
 
 func pp(callback) {
-   
     println("End!");
 }
 
@@ -49,7 +48,6 @@ var b = 0;
 pp(println);
 
 var n = 1;
-
 
 var jj = 1;
 
@@ -109,8 +107,9 @@ accessGlobal();
 
 func ret(a, b) {
     println(a, b);
+    
     return func() {
-        return a + b + 1000;
+        2 + 2;
     };
 
     [...(0..100)];
@@ -120,9 +119,103 @@ println(ret(2, 4)());
 println(ret(2, 8)());
 println(fact(5));
 
-println(0..2000);
+println(">", 0..2000);
 
 const r = 0..500;
 
+{
+    {
+        println("Hola!");
+    }
+}
 
-println(k);
+for (i in 0..10) {
+    println(i);
+}
+
+
+const simulateClass = {
+    "name": "Philipp",
+    "getName": func() {
+        return this.name;
+    }
+};
+
+func newPerson(_name, _age) {
+    return ({
+        "name": _name,
+        "age": _age,
+        "getName": func() {
+            return this.name;
+        },
+        "getAge": func() {
+            return this.age;
+        },
+        "sample": ({
+            "a": 65,
+            "b": 75,
+            "c": ({
+                "d": "12331231"
+            })
+        })
+    });
+}
+
+const p = newPerson("Philipp Andrew Roa Redondo", 26);
+
+println(p.getName(), p.getAge());
+
+println(({ "name": "Doy" })["name"]);
+
+class Human {
+    func init(a, b) {
+       this.name = a;
+       this.age  = b;
+
+       println("SET:", this);
+    }
+}
+
+class Person extends Human {
+    var xx = 2;
+    println(">>", 2 + 2 + xx);
+
+    var init = func(_name, _age) {
+        super().init(_name, _age);
+    };
+
+    func printxx() {
+        println("xx>>", xx, this);
+        return 1;
+    }
+}
+
+const px = new Person(1, 2);
+
+const printxx = px.printxx;
+println(printxx);
+
+println(">>>>>>>>>>>>.", px, px.printxx());
+
+println(Person);
+
+println(newPerson("Doy", 2));
+
+println(new 10(), Person.xx);
+
+println(printxx(), aws12);
+
+var xg = 2;
+println(xg);
+println(xg = 100);
+println(xg);
+
+println(xg.hello catch (e) {
+    println("ERR:", e);
+    return 0;
+});
+
+println(new Person("Doy", 12));
+
+
+

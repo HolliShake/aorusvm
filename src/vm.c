@@ -62,9 +62,9 @@
 }
 
 #define DUMP_STACK() { \
-    for (size_t i = 0; i < instance->sp; i++) { \
+    for (size_t i = instance->sp; i > 0; i--) { \
         printf("[%02zu]: %s", i, object_to_string(instance->evaluation_stack[i])); \
-        if (i < instance->sp - 1) printf(", "); \
+        if (i - 1 > 0) printf("\n"); \
     } \
     printf("\n"); \
 }
@@ -772,11 +772,35 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
     return NULL;
 }
 
+INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _value) {
+    if (OBJECT_TYPE_USER_TYPE(_obj)) {
+
+    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        object_t* key = object_new_string(_property_name);
+        bool exists = hashmap_has_string((hashmap_t*) ((user_type_instance_t*) _obj->value.opaque)->object->value.opaque, _property_name);
+        hashmap_put((hashmap_t*) ((user_type_instance_t*) _obj->value.opaque)->object->value.opaque, key, _value);
+        if (exists) {
+            free(key->value.opaque);
+            free(key);
+        } else {
+            vm_to_heap(key);
+        }
+    }
+}
+
 INTERNAL object_t* get_method(object_t* _obj, char* _method_name) {
-    if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+    if (OBJECT_TYPE_USER_TYPE(_obj)) {
+        object_t* current = _obj;
+        while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
+            if (hashmap_has_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name)) {
+                return hashmap_get_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name);
+            }
+            current = ((user_type_t*) current->value.opaque)->super;
+        }
+    }
+    else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
         object_t* constructor = ((user_type_instance_t*) _obj->value.opaque)->constructor;
         while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
-            object_t* method = NULL;
             if (hashmap_has_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name)) {
                 return hashmap_get_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name);
             }
@@ -911,6 +935,8 @@ INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method
 
     // If the method is not found, return an error
     if (method == NULL) {
+        for (int i = 0; i < _argc; i++) POPP();
+        POPP(); // pop the object
         char* message = string_format(
             "method \"%s\" not found in \"%s\"", 
             _method_name,
@@ -923,6 +949,8 @@ INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method
 
     // If the method is not callable, return an error
     if (!OBJECT_TYPE_CALLABLE(method)) {
+        for (int i = 0; i < _argc; i++) POPP();
+        POPP(); // pop the object
         char* message = string_format(
             "method \"%s\" is not callable", 
             _method_name
@@ -1056,7 +1084,31 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_LOAD_SUPER: {
-                object_t* super = env_get(_env, "super");
+                if (!env_has(_env, "this", true)) {
+                    PUSH(object_new_error("super is not defined", true));
+                    break;
+                }
+                object_t* this = env_get(_env, "this");
+                if (!OBJECT_TYPE_USER_TYPE_INSTANCE(this)) {
+                    char* message = string_format(
+                        "expected \"user type instance\", got \"%s\"", 
+                        object_type_to_string(this)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
+                object_t* constructor = ((user_type_instance_t*) this->value.opaque)->constructor;
+                object_t* super = ((user_type_t*) constructor->value.opaque)->super;
+                if (super == NULL) {
+                    char* message = string_format(
+                        "super is not defined for \"%s\"", 
+                        object_to_string(this)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
                 PUSH_REF(super);
                 break;
             }
@@ -1305,10 +1357,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_STORE_CLASS: {
                 char* name = get_string(bytecode, ip);
-                object_t* obj = PEEK();
+                object_t* obj = POPP();
                 object_t* user = object_new_user_type(name, NULL, obj);
-                vm_to_heap(user);
                 env_put(_env, name, user);
+                PUSH_REF(user);
                 FORWARD(strlen(name) + 1);
                 break;
             }
@@ -1332,6 +1384,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     }
                     env = env_parent(env);
                 }
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
+            case OPCODE_SET_PROPERTY: {
+                char* name = get_string(bytecode, ip);
+                object_t* obj = POPP();
+                set_property(obj, name, PEEK());
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;
@@ -1552,6 +1612,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(8);
                 break;
             }
+            case OPCODE_EXTEND_CLASS: {
+                object_t* super = POPP();
+                object_t* class = PEEK();
+                user_type_t* user = (user_type_t*) class->value.opaque;
+                user->super = super;
+                break;
+            }
             case OPCODE_SETUP_FUNCTION:
             case OPCODE_BEGIN_FUNCTION: {
                 if (opcode == OPCODE_SETUP_FUNCTION)
@@ -1737,7 +1804,7 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
     env->closure = NULL;
     // Evaluation stack must contain 1 object
     if (instance->sp != 1) {
-        // DUMP_STACK();
+        DUMP_STACK();
         // decompile(_bytecode, false);
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }

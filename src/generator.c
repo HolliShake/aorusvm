@@ -220,6 +220,44 @@ INTERNAL void label(code_t* _code, int _start) {
     } \
 }
 
+INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression);
+INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _statement);
+
+INTERNAL void generator_assignment(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+    if (_expression == NULL) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "assignment expression must have an expression, but received NULL"
+        );
+    }
+    if (!generator_is_expression_type(_expression)) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "assignment expression must be an expression, but received %d", _expression->type
+        );
+    }
+    ast_node_t* lhs = _expression->ast0;
+    ast_node_t* rhs = _expression->ast1;
+    switch (lhs->type) {
+        case AstName:
+            generator_expression(_generator, _code, _scope, rhs);
+            emit(_code, OPCODE_SET_NAME);
+            emit_string(_code, lhs->str0);
+            break;
+        case AstMemberAccess:
+            generator_expression(_generator, _code, _scope, rhs); // value
+            generator_expression(_generator, _code, _scope, lhs->ast0); //object
+            emit(_code, OPCODE_SET_PROPERTY);
+            emit_string(_code, lhs->ast1->str0);
+            break;
+        default:
+    }
+}
+
 INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
     if (_expression == NULL) {
         __THROW_ERROR(
@@ -297,6 +335,11 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
                 _expression->str0
             );
             break;
+        case AstMemberAccess:
+            generator_expression(_generator, _code, _scope, _expression->ast0);
+            emit(_code, OPCODE_SET_PROPERTY);
+            emit_string(_code, _expression->ast1->str0);
+            break;
         default:
             __THROW_ERROR(
                 _generator->fpath, 
@@ -306,9 +349,6 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
             );
     }
 }
-
-INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _statement);
-
 
 INTERNAL void generator_function(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
     ast_node_list_t params = _expression->array0;
@@ -1228,8 +1268,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             break;
         }
         case AstAssign: {
-            generator_expression(_generator, _code, _scope, _expression->ast1);
-            generator_assignment1(_generator, _code, _scope, _expression->ast0);
+            generator_assignment(_generator, _code, _scope, _expression);
             break;
         }
         case AstRange: {
@@ -2047,7 +2086,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             emit(_code, OPCODE_STORE_CLASS);
             emit_string(_code, name->str0);
             if (super != NULL) {
-
+                generator_expression(_generator, _code, _scope, super);
+                emit(_code, OPCODE_EXTEND_CLASS);
             }
             // Emit the pop top opcode
             emit(_code, OPCODE_POPTOP);
