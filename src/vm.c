@@ -776,18 +776,28 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
 }
 
 INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _value) {
+    object_t* key = object_new_string(_property_name);
     if (OBJECT_TYPE_USER_TYPE(_obj)) {
-
+        PD("NOT IMPLEMENTED");
     } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        object_t* key = object_new_string(_property_name);
-        bool exists = hashmap_has_string((hashmap_t*) ((user_type_instance_t*) _obj->value.opaque)->object->value.opaque, _property_name);
-        hashmap_put((hashmap_t*) ((user_type_instance_t*) _obj->value.opaque)->object->value.opaque, key, _value);
+        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
+        hashmap_t* hashmap = (hashmap_t*) instance->object->value.opaque;
+
+        bool exists = hashmap_has_string(hashmap, _property_name);
+        hashmap_put(hashmap, key, _value);
         if (exists) {
-            free(key->value.opaque);
+           free((char*) key->value.opaque);
+           free(key);
+        } else vm_to_heap(key);
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* hashmap = (hashmap_t*) _obj->value.opaque;
+        
+        bool exists = hashmap_has_string(hashmap, _property_name);
+        hashmap_put(hashmap, key, _value);
+        if (exists) {
+            free((char*) key->value.opaque);
             free(key);
-        } else {
-            vm_to_heap(key);
-        }
+        } else vm_to_heap(key);
     }
 }
 
@@ -1635,6 +1645,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_EXTEND_CLASS: {
                 object_t* super = POPP();
+                if (!OBJECT_TYPE_USER_TYPE(super)) {
+                    break;
+                }
                 object_t* class = PEEK();
                 user_type_t* user = (user_type_t*) class->value.opaque;
                 user->super = super;

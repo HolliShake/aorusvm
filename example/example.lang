@@ -2,17 +2,24 @@
 
 class Human {
     func init(a, b) {
-       this.name = a;
-       this.age  = b;
+        this.name = a;
+        this.age  = b;
        println("SET:", this);
     }
 
     func getName() {
+        for (i in 0..10000) {
+            println(i);
+        }
         return this.name;
     }
 }
 
-class Person extends Human {
+class Tao extends Human {
+
+}
+
+class Person extends Tao {
     
 }
 

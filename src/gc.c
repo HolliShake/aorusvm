@@ -67,6 +67,22 @@ INTERNAL void gc_mark_object(object_t* _obj) {
                 node = next;
             }
         }
+    } else if (OBJECT_TYPE_USER_TYPE(_obj)) {
+        user_type_t* user = (user_type_t*) _obj->value.opaque;
+        if (user->super != NULL) {
+            gc_mark_object(user->super);
+        }
+        if (user->prototype != NULL) {
+            gc_mark_object(user->prototype);
+        }
+    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
+        if (instance->constructor != NULL) {
+            gc_mark_object(instance->constructor);
+        }
+        if (instance->object != NULL) {
+            gc_mark_object(instance->object);
+        }
     } else if (OBJECT_TYPE_FUNCTION(_obj)) {
         code_t* code = (code_t*) _obj->value.opaque;
         if (code->environment != NULL) {
@@ -120,7 +136,7 @@ INTERNAL void gc_sweep(vm_t* _vm, bool _free_all) {
             current = &obj->next;
         }
     }
-
+    if (!_free_all) return;
     // free the function table
     for (size_t i = 0; i < _vm->function_table_size; i++) {
         env_free(_vm->function_table_item[i]->environment);
