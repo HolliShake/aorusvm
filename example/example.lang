@@ -29,7 +29,7 @@ class Person extends Human {
 
 const px = new Person(1, 2);
 
-class Dog {
+class Dog extends Person {
 
     func bark() {
         println("ArF!");
@@ -38,7 +38,7 @@ class Dog {
 }
 
 println(">>>>>>>>>>>>.", px, px.printxx());
-println(new Person("Doy", 12).getName(), Dog.barks());
+println(new Person("Doy", 12).getName(), Dog.bark(), Dog.xx, new 2());
 
 
 

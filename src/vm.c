@@ -788,32 +788,6 @@ INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _valu
     }
 }
 
-INTERNAL object_t* get_method(object_t* _obj, char* _method_name) {
-    if (OBJECT_TYPE_USER_TYPE(_obj)) {
-        object_t* current = _obj;
-        while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            if (hashmap_has_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name)) {
-                return hashmap_get_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name);
-            }
-            current = ((user_type_t*) current->value.opaque)->super;
-        }
-    }
-    else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        object_t* constructor = ((user_type_instance_t*) _obj->value.opaque)->constructor;
-        while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
-            if (hashmap_has_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name)) {
-                return hashmap_get_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name);
-            }
-            constructor = ((user_type_t*) constructor->value.opaque)->super;
-        }
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _method_name)) {
-            return hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
-        }
-    }
-    return NULL;
-}
-
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
     if (!OBJECT_TYPE_COLLECTION(_obj)) {
         char* message = string_format(
@@ -926,13 +900,36 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
     function(_argc);
 }
 
-INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
-    // Push the object to the stack if it's not a user type
-    int is_method_call = true;
-    if (is_method_call = !OBJECT_TYPE_USER_TYPE(_obj)) PUSH_REF(_obj); // Consider a static method call, if obj is a type
+INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
+    object_t* method = NULL;
+    if (OBJECT_TYPE_USER_TYPE(_obj)) {
+        object_t* current = _obj;
+        while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
+            if (hashmap_has_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name)) {
+                method = hashmap_get_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name);
+                break;
+            }
+            current = ((user_type_t*) current->value.opaque)->super;
+        }
+    }
+    else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        // Push the object to the stack if it's a user type instance
+        object_t* constructor = ((user_type_instance_t*) _obj->value.opaque)->constructor;
+        while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
+            if (hashmap_has_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name)) {
+                method = hashmap_get_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name);
+                break;
+            }
+            constructor = ((user_type_t*) constructor->value.opaque)->super;
+        }
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _method_name)) {
+            method = hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
+        }
+    }
 
-    // Get the method from the object
-    object_t* method = get_method(_obj, _method_name);
+    bool is_method_call = !OBJECT_TYPE_USER_TYPE(_obj);
+    if (is_method_call) PUSH_REF(_obj);
 
     // If the method is not found, return an error
     if (method == NULL) {
@@ -990,7 +987,7 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
         return;
     }
     object_t* new_instance = vm_to_heap(object_new_user_type_instance(_constructor, vm_to_heap(object_new_object())));
-    vm_invoke_method(_parent_env, new_instance, constructor_name, _argc);
+    vm_invoke_property(_parent_env, new_instance, constructor_name, _argc);
     // Pop the constructor's return value
     POPP();
     // Push the new instance
@@ -1322,7 +1319,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(strlen(method_name) + 1);
                 int argc = get_int(bytecode, ip);
                 object_t* obj = POPP();
-                vm_invoke_method(_env, obj, method_name, argc);
+                vm_invoke_property(_env, obj, method_name, argc);
                 FORWARD(4);
                 free(method_name);
                 break;
