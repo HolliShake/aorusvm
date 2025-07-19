@@ -25,6 +25,7 @@ typedef enum ast_node_type_struct {
     // Unary operators
     AstUnaryPlus,
     AstUnarySpread,
+    AstNew,
     // Binary operators
     AstRange,
     AstBinaryMul,
@@ -60,6 +61,7 @@ typedef enum ast_node_type_struct {
     AstBlockStatement,
     AstFunctionNode,
     AstAsyncFunctionNode,
+    AstClass,
     AstProgram,
 } ast_node_type_t;
 

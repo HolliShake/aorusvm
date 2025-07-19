@@ -66,6 +66,27 @@ DLLEXPORT object_t* object_new_iterator(object_t* _obj) {
     return obj;
 }
 
+DLLEXPORT object_t* object_new_user_type(char* _name, object_t* _super, object_t* _prototype) {
+    object_t* obj = object_new(OBJECT_TYPE_USER_TYPE);
+    obj->value.opaque = (user_type_t*) malloc(sizeof(user_type_t));
+    ASSERTNULL(obj->value.opaque, "failed to allocate memory for user type");
+    user_type_t* user_type = (user_type_t*) obj->value.opaque;
+    user_type->name = _name;
+    user_type->super = _super;
+    user_type->prototype = _prototype;
+    return obj;
+}
+
+DLLEXPORT object_t* object_new_user_type_instance(object_t* _constructor, object_t* _object) {
+    object_t* obj = object_new(OBJECT_TYPE_USER_TYPE_INSTANCE);
+    obj->value.opaque = (user_type_instance_t*) malloc(sizeof(user_type_instance_t));
+    ASSERTNULL(obj->value.opaque, "failed to allocate memory for user type constructor");
+    user_type_instance_t* user_type_instance = (user_type_instance_t*) obj->value.opaque;
+    user_type_instance->constructor = _constructor;
+    user_type_instance->object = _object;
+    return obj;
+}
+
 DLLEXPORT object_t* object_new_function(code_t* _bytecode) {
     object_t* obj = object_new(OBJECT_TYPE_FUNCTION);
     obj->value.opaque = _bytecode;
@@ -322,6 +343,15 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             
             return result;
         }
+        case OBJECT_TYPE_USER_TYPE: {
+            user_type_t* utype = (user_type_t*) _obj->value.opaque;
+            return string_format("class %s %s", utype->name, object_to_string(utype->prototype));
+        }
+        case OBJECT_TYPE_USER_TYPE_INSTANCE: {
+            user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
+            user_type_t* utype = (user_type_t*) instance->constructor->value.opaque;
+            return string_format("%s %s", utype->name, object_to_string(instance->object));
+        }
         case OBJECT_TYPE_FUNCTION: {
             char* str = string_allocate("function");
             str = string_append(str, "(");
@@ -368,6 +398,9 @@ DLLEXPORT bool object_is_truthy(object_t* _obj) {
             return true;
         case OBJECT_TYPE_OBJECT:
             return hashmap_size((hashmap_t*) _obj->value.opaque) > 0;
+        case OBJECT_TYPE_USER_TYPE:
+        case OBJECT_TYPE_USER_TYPE_INSTANCE:
+            return true;
         case OBJECT_TYPE_ERROR:
             return object_is_truthy((object_t*) _obj->value.opaque);
         default:
@@ -434,6 +467,9 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
             }
             return true;
         }
+        case OBJECT_TYPE_USER_TYPE:
+        case OBJECT_TYPE_USER_TYPE_INSTANCE:
+            return _obj1->value.opaque == _obj2->value.opaque || _obj1 == _obj2;
         case OBJECT_TYPE_FUNCTION:
         case OBJECT_TYPE_NATIVE_FUNCTION:
         case OBJECT_TYPE_ERROR:
@@ -464,6 +500,12 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
             return string_format("<iterator.%s/>", object_to_string(_obj->value.opaque));
         case OBJECT_TYPE_OBJECT:
             return string_allocate("object");
+        case OBJECT_TYPE_USER_TYPE:
+            return string_format("<class.%s/>", ((user_type_t*) _obj->value.opaque)->name);
+        case OBJECT_TYPE_USER_TYPE_INSTANCE:
+            user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
+            user_type_t* utype = (user_type_t*) instance->constructor->value.opaque;
+            return string_format("<%s/>", utype->name);
         case OBJECT_TYPE_FUNCTION:
             return string_allocate("function");
         case OBJECT_TYPE_NATIVE_FUNCTION:

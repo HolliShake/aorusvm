@@ -115,6 +115,15 @@ bool scope_is_local(scope_t* _scope) {
     return _scope->type == ScopeTypeLocal;
 }
 
+bool scope_is_class(scope_t* _scope) {
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeClass) return true;
+        current = current->parent;
+    }
+    return false;
+}
+
 bool scope_is_function(scope_t* _scope) {
     scope_t* current = _scope;
     while (current != NULL) {

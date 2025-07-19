@@ -42,6 +42,15 @@ void hashmap_free(hashmap_t* _hashmap);
 bool hashmap_has(hashmap_t* _hashmap, object_t* _key);
 
 /*
+ * Check if the hashmap has a key.
+ *
+ * @param _hashmap The hashmap.
+ * @param _key The key.
+ * @return True if the hashmap has the key, false otherwise.
+ */
+bool hashmap_has_string(hashmap_t* _hashmap, char* _key);
+
+/*
  * Put a key-value pair into the hashmap.
  *
  * @param _hashmap The hashmap.

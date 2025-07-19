@@ -4,6 +4,8 @@ const char* KEYWORDS[] = {
     KEY_VAR,
     KEY_CONST,
     KEY_LOCAL,
+    KEY_CLASS,
+    KEY_EXTENDS,
     KEY_FUNC,
     KEY_ASYNC,
     KEY_RETURN,
@@ -20,6 +22,7 @@ const char* KEYWORDS[] = {
     KEY_FALSE,
     KEY_NULL,
     KEY_CATCH,
+    KEY_NEW,
     NULL
 };
 

@@ -45,6 +45,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstCall:
         case AstUnaryPlus:
         case AstUnarySpread:
+        case AstNew:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
@@ -252,6 +253,22 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
 }
 
 INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+    if (_expression == NULL) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "assignment expression must have an expression, but received NULL"
+        );
+    }
+    if (!generator_is_expression_type(_expression)) {
+        __THROW_ERROR(
+            _generator->fpath, 
+            _generator->fdata, 
+            _expression->position, 
+            "assignment expression must be an expression, but received %d", _expression->type
+        );
+    }
     switch (_expression->type) {
         case AstName:
             if (!scope_has(_scope, _expression->str0, true)) {
@@ -289,7 +306,125 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
 
 INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _statement);
 
+
+INTERNAL void generator_function(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+    ast_node_list_t params = _expression->array0;
+    ast_node_list_t body   = _expression->array1;
+    // Validate name
+    if (params == NULL) {
+        __THROW_ERROR(
+            _generator->fpath, 
+            _generator->fdata, 
+            _expression->position, 
+            "function must have parameters, but received NULL"
+        );
+    }
+    if (body == NULL) {
+        __THROW_ERROR(
+            _generator->fpath, 
+            _generator->fdata, 
+            _expression->position, 
+            "function must have a body, but received NULL"
+        );
+    }
+    size_t param_count;
+    for (param_count = 0; params[param_count] != NULL; param_count++);
+    code_t* _func = code_new_function(
+        string_allocate(_generator->fpath),
+        string_allocate("function"),
+        true,// Function expression is always scoped
+        false,
+        param_count,
+        (uint8_t*) malloc(sizeof(uint8_t)),
+        0
+    );
+    // Make function
+    emit(_code, OPCODE_SETUP_FUNCTION);
+    emit(_code, OPCODE_BEGIN_FUNCTION);
+    emit_memory(_code, _func);
+    // Create function scope
+    scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
+    scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
+    // Compile parameters
+    for (size_t i = 0; params[i] != NULL; i++) {
+        ast_node_t* param = params[i];
+        if (param->type != AstName) {
+            __THROW_ERROR(
+                _generator->fpath, 
+                _generator->fdata, 
+                param->position, 
+                "function parameter must be a valid identifier, but received %d", param->type
+            );
+        }
+        if (scope_function_has(local_scope, param->str0)) {
+            __THROW_ERROR(
+                _generator->fpath, 
+                _generator->fdata, 
+                param->position, 
+                "function parameter %s is already defined", param->str0
+            );
+        }
+        // Save into symbol table
+        scope_value_t symbol = {
+            .name      = param->str0,
+            .is_const  = false,
+            .is_global = true,
+            .position  = param->position
+        };
+        scope_put(local_scope, param->str0, symbol);
+        // Emit the store name opcode
+        emit(_func, OPCODE_STORE_NAME);
+        emit_string(_func, param->str0);
+    }
+    // Compile body
+    bool has_visible_return = false;
+    for (size_t i = 0; body[i] != NULL; i++) {
+        ast_node_t* statement = body[i];
+        if (body[i]->type == AstReturnStatement && has_visible_return) {
+            for (size_t j = i; body[j] != NULL; j++) {
+                // ast_node_free(body[j]);
+            }
+            break;
+        }
+        if (body[i]->type == AstReturnStatement) has_visible_return = true;
+        generator_statement(_generator, _func, local_scope, statement); // statement
+    }
+    if (!has_visible_return) {
+        // Emit the return opcode
+        emit(_func, OPCODE_LOAD_NULL);
+        emit(_func, OPCODE_RETURN);
+    }
+    // Save captures
+    if (function_scope->capture_count > 0) {
+        // Emit opcode save captures
+        emit(_code, OPCODE_SAVE_CAPTURES);
+        emit_int(_code, function_scope->capture_count);
+        for (size_t i = 0; i < function_scope->capture_count; i++) {
+            emit_string(_code, function_scope->captures[i]);
+        }
+    }
+    // Free the function scope
+    scope_free(local_scope);
+    scope_free(function_scope);
+}
+
 INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+    if (_expression == NULL) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _expression->position,
+            "expression must have an expression, but received NULL"
+        );
+    }
+    if (!generator_is_expression_type(_expression)) {
+        __THROW_ERROR(
+            _generator->fpath, 
+            _generator->fdata, 
+            _expression->position, 
+            "expression must be a valid expression type"
+        );
+    }
     switch (_expression->type) {
         case AstName:
             emit(_code, OPCODE_LOAD_NAME);
@@ -395,14 +530,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "object property must have a value"
                 );
             }
-            if (!generator_is_expression_type(key) || !generator_is_expression_type(value)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "object property must have a key and value"
-                );
-            }
             // Or ignore it!!!
             generator_expression(_generator, _code, _scope, value); // value
             generator_expression(_generator, _code, _scope, key); // key
@@ -469,113 +596,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             break;
         }
         case AstFunctionExpression: {
-            bool is_async = _expression->type == AstAsyncFunctionNode;
-            ast_node_list_t params = _expression->array0;
-            ast_node_list_t body   = _expression->array1;
-            // Validate name
-            if (params == NULL) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "function must have parameters, but received NULL"
-                );
-            }
-            if (body == NULL) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "function must have a body, but received NULL"
-                );
-            }
-            size_t param_count;
-            for (param_count = 0; params[param_count] != NULL; param_count++);
-            code_t* _func = code_new_function(
-                string_allocate(_generator->fpath),
-                string_allocate("function"),
-                true,// Function expression is always scoped
-                is_async,
-                param_count,
-                (uint8_t*) malloc(sizeof(uint8_t)),
-                0
-            );
-            // Make function
-            emit(_code, OPCODE_SETUP_FUNCTION);
-            emit(_code, OPCODE_BEGIN_FUNCTION);
-            emit_memory(_code, _func);
-            // Create function scope
-            scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
-            scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
-            // Compile parameters
-            for (size_t i = 0; params[i] != NULL; i++) {
-                ast_node_t* param = params[i];
-                if (param->type != AstName) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        param->position, 
-                        "function parameter must be a valid identifier, but received %d", param->type
-                    );
-                }
-                if (scope_function_has(local_scope, param->str0)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        param->position, 
-                        "function parameter %s is already defined", param->str0
-                    );
-                }
-                // Save into symbol table
-                scope_value_t symbol = {
-                    .name      = param->str0,
-                    .is_const  = false,
-                    .is_global = true,
-                    .position  = param->position
-                };
-                scope_put(local_scope, param->str0, symbol);
-                // Emit the store name opcode
-                emit(_func, OPCODE_STORE_NAME);
-                emit_string(_func, param->str0);
-            }
-            // Compile body
-            bool has_visible_return = false;
-            for (size_t i = 0; body[i] != NULL; i++) {
-                ast_node_t* statement = body[i];
-                if (generator_is_expression_type(statement)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        statement->position, 
-                        "function body must contain statement only, but received %d", statement->type
-                    );
-                }
-                if (body[i]->type == AstReturnStatement && has_visible_return) {
-                    for (size_t j = i; body[j] != NULL; j++) {
-                        // ast_node_free(body[j]);
-                    }
-                    break;
-                }
-                if (body[i]->type == AstReturnStatement) has_visible_return = true;
-                generator_statement(_generator, _func, local_scope, statement); // statement
-            }
-            if (!has_visible_return) {
-                // Emit the return opcode
-                emit(_func, OPCODE_LOAD_NULL);
-                emit(_func, OPCODE_RETURN);
-            }
-            // Save captures
-            if (function_scope->capture_count > 0) {
-                // Emit opcode save captures
-                emit(_code, OPCODE_SAVE_CAPTURES);
-                emit_int(_code, function_scope->capture_count);
-                for (size_t i = 0; i < function_scope->capture_count; i++) {
-                    emit_string(_code, function_scope->captures[i]);
-                }
-            }
-            // Free the function scope
-            scope_free(local_scope);
-            scope_free(function_scope);
+            generator_function(_generator, _code, _scope, _expression);
             break;
         }
         case AstIndex: {
@@ -595,14 +616,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata,
                     _expression->position,
                     "index expression requires an index, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(obj) || !generator_is_expression_type(index)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "index expression requires both object and index to be expressions"
                 );
             }
             generator_expression(_generator, _code, _scope, obj);
@@ -637,14 +650,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "member access expression requires a member, but received %d", member->type
                 );
             }
-            if (!generator_is_expression_type(obj) || !generator_is_expression_type(member)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "member access expression requires both object and member to be expressions"
-                );
-            }
             generator_expression(_generator, _code, _scope, obj);
             emit(_code, OPCODE_GET_PROPERTY);
             emit_string(_code, member->str0);
@@ -661,14 +666,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "call expression must have a function, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(function)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "call expression must have a function, but received %d", function->type
-                );
-            }
             if (arguments == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -683,14 +680,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             // Generate arguments right to left for stack
             for (int i = param_count - 1; i >= 0; i--) {
                 ast_node_t* argument = arguments[i];
-                if (!generator_is_expression_type(argument)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        argument->position,
-                        "call expression must be an expression, but received %d", argument->type
-                    );
-                }
                 generator_expression(_generator, _code, _scope, argument);
             }
             if (function->type == AstMemberAccess) {
@@ -720,14 +709,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                         "call expression must have a function, but received %d", member->type
                     );
                 }
-                if (!generator_is_expression_type(obj) || !generator_is_expression_type(member)) {
-                    __THROW_ERROR(
-                        _generator->fpath,
-                        _generator->fdata,
-                        _expression->position,
-                        "call expression must have a function, but received %d", member->type
-                    );
-                }
                 generator_expression(_generator, _code, _scope, obj);
                 emit(_code, OPCODE_DUPTOP);
                 emit(_code, OPCODE_GET_PROPERTY);
@@ -747,14 +728,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata,
                     _expression->position,
                     "unary expression must have an expression, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(expression)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "unary expression must be an expression, but received %d", expression->type
                 );
             }
             generator_assignment0(_generator, _code, _scope, expression);
@@ -785,6 +758,27 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             emit(_code, OPCODE_EXTEND_ARRAY);
             break;
         }
+        case AstNew: {
+            ast_node_t* expression = _expression->ast0;
+            ast_node_list_t arguments = expression->array0;
+            if (expression->type != AstCall) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "new expression must have a call expression, but received %d", expression->type
+                );
+            }
+            int param_count = 0;
+            for (param_count = 0; arguments[param_count] != NULL; param_count++);
+            for (int i = param_count - 1; i >= 0; i--) {
+                generator_expression(_generator, _code, _scope, arguments[i]);
+            }
+            generator_expression(_generator, _code, _scope, expression->ast0);
+            emit(_code, OPCODE_CALL_CONSTRUCTOR);
+            emit_int(_code, param_count);
+            break;
+        }
         case AstBinaryMul: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
                 __THROW_ERROR(
@@ -792,14 +786,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -828,14 +814,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -894,14 +872,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "binary expression requires both left and right operands, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
-                );
-            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -928,14 +898,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -966,14 +928,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "binary expression requires both left and right operands, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
-                );
-            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -1002,14 +956,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "binary expression requires both left and right operands, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
-                );
-            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -1036,14 +982,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata, 
                     _expression->position, 
                     "binary expression requires both left and right operands, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -1214,14 +1152,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "logical expression requires both left and right operands, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
-                );
-            }
             if (generator_is_constant_node(_expression)) {
                 FOLD_CONSTANT_EXPRESSION(_expression);
                 return;
@@ -1250,14 +1180,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata, 
                     _expression->position, 
                     "logical expression requires both left and right operands, but received NULL"
-                );
-            }
-            if (!generator_is_expression_type(_expression->ast0) || !generator_is_expression_type(_expression->ast1)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _expression->position, 
-                    "binary expression requires both left and right operands to be expressions"
                 );
             }
             if (generator_is_constant_node(_expression)) {
@@ -1299,14 +1221,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "range expression requires a right hand side, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(lhs) || !generator_is_expression_type(rhs)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "range expression requires both left and right operands to be expressions"
-                );
-            }
             generator_expression(_generator, _code, _scope, rhs);
             generator_expression(_generator, _code, _scope, lhs);
             emit(_code, OPCODE_RANGE);
@@ -1338,14 +1252,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fdata,
                     _expression->position,
                     "catch body expected"
-                );
-            }
-            if (!generator_is_expression_type(error)) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "catch error must be an expression"
                 );
             }
             if (placeholder->type != AstName) {
@@ -1408,6 +1314,22 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
 //==================================
 
 INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _statement) {
+    if (_statement == NULL) {
+        __THROW_ERROR(
+            _generator->fpath,
+            _generator->fdata,
+            _statement->position,
+            "statement must have a statement, but received NULL"
+        );
+    }
+    if (!generator_is_statement_type(_statement)) {
+        __THROW_ERROR(
+            _generator->fpath, 
+            _generator->fdata, 
+            _statement->position, 
+            "statement must be a valid statement type"
+        );
+    }
     switch (_statement->type) {
         case AstVarStatement:
         case AstConstStatement:
@@ -1462,14 +1384,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         "variable name must be a valid identifier, but received %d", name->type
                     );
                 }
-                if (value && !generator_is_expression_type(value)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        _statement->position, 
-                        "variable value must be an expression"
-                    );
-                }
                 if (scope_has(_scope, name->str0, false)) {
                     __THROW_ERROR(
                         _generator->fpath, 
@@ -1505,7 +1419,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             ast_node_t* cond   = _statement->ast0;
             ast_node_t* tvalue = _statement->ast1;
             ast_node_t* fvalue = _statement->ast2;
-            if (!cond || !tvalue || !generator_is_expression_type(cond)) {
+            if (!cond || !tvalue) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -1538,14 +1452,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         _generator->fdata, 
                         cond->position, 
                         "logical expression must have a left and right operand"
-                    );
-                }
-                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        cond->position, 
-                        "logical expression must have both left and right operands to be expressions"
                     );
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
@@ -1591,7 +1497,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
         case AstWhileStatement: {
             ast_node_t* cond = _statement->ast0;
             ast_node_t* body = _statement->ast1;
-            if (!cond || !body || !generator_is_expression_type(cond)) {
+            if (!cond || !body) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -1621,14 +1527,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         _generator->fdata, 
                         cond->position, 
                         "logical expression must have a left and right operand"
-                    );
-                }
-                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        cond->position, 
-                        "logical expression must have both left and right operands to be expressions"
                     );
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
@@ -1666,7 +1564,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
         case AstDoWhileStatement: {
             ast_node_t* cond = _statement->ast0;
             ast_node_t* body = _statement->ast1;
-            if (!cond || !body || !generator_is_expression_type(cond)) {
+            if (!cond || !body) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -1697,14 +1595,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         _generator->fdata, 
                         cond->position, 
                         "logical expression must have a left and right operand"
-                    );
-                }
-                if (!generator_is_expression_type(cond_l) || !generator_is_expression_type(cond_r)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        cond->position, 
-                        "logical expression must have both left and right operands to be expressions"
                     );
                 }
                 bool is_logical_and = cond->type == AstLogicalAnd;
@@ -1767,22 +1657,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     _generator->fdata, 
                     _statement->position, 
                     "for statement must have a body"
-                );
-            }
-            if (!generator_is_expression_type(iterable)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _statement->position, 
-                    "for statement must have a valid iterable"
-                );
-            }
-            if (!generator_is_statement_type(body)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _statement->position, 
-                    "for statement must have a valid body"
                 );
             }
             scope_t* for_scope = scope_new(_scope, ScopeTypeLoop);
@@ -1931,14 +1805,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             current->is_returned = true;
             // Generate return value and return opcode
             ast_node_t* expr = _statement->ast0;
-            if (expr != NULL && !generator_is_expression_type(expr)) {
-                __THROW_ERROR(
-                    _generator->fpath, 
-                    _generator->fdata, 
-                    _statement->position,
-                    "return value must be an expression"
-                );
-            }
             if (expr != NULL) {
                 generator_expression(_generator, _code, _scope, expr);
             } else {
@@ -1956,16 +1822,192 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "expression statement must have an expression, but received NULL"
                 );
             }
-            if (!generator_is_expression_type(_statement->ast0)) {
+            generator_expression(_generator, _code, _scope, _statement->ast0);
+            emit(_code, OPCODE_POPTOP);
+            break;
+        }
+        case AstClass: {
+            ast_node_t* name = _statement->ast0;
+            ast_node_t* super = _statement->ast1;
+            ast_node_list_t body = _statement->array0;
+            if (name == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
                     _statement->position, 
-                    "expression statement must be an expression, but received %d", _statement->ast0->type
+                    "class name must be a valid identifier"
                 );
             }
-            generator_expression(_generator, _code, _scope, _statement->ast0);
+            if (name->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "class name must be a valid identifier"
+                );
+            }
+            if (body == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "class must have a body"
+                );
+            }
+            scope_t* class_scope = scope_new(_scope, ScopeTypeClass);
+            scope_t* local_scope = scope_new(class_scope, ScopeTypeLocal);
+            // Create class code
+            code_t* class_code = code_new_block(
+                string_allocate(_generator->fpath),
+                string_allocate(name->str0),
+                (uint8_t*) malloc(sizeof(uint8_t)),
+                0
+            );
+            
+            // Emit the setup class opcode
+            emit(_code, OPCODE_SETUP_CLASS);
+            // Emit the begin class opcode
+            emit(_code, OPCODE_BEGIN_CLASS);
+            emit_memory(_code, (void*) class_code);
+
+            int property_count = 0;
+            for (size_t i = 0; body[i] != NULL; i++) {
+                ast_node_t* statement = body[i];
+                
+                if (statement->type == AstFunctionNode || statement->type == AstAsyncFunctionNode) {
+                    property_count++;
+                    ast_node_t* name = statement->ast0;
+                    if (name == NULL) {
+                        __THROW_ERROR(
+                            _generator->fpath, 
+                            _generator->fdata, 
+                            statement->position, 
+                            "function name must be a valid identifier"
+                        );
+                    }
+                    if (name->type != AstName) {
+                        __THROW_ERROR(
+                            _generator->fpath, 
+                            _generator->fdata, 
+                            statement->position, 
+                            "function name must be a valid identifier"
+                        );
+                    }
+                    generator_function(_generator, class_code, local_scope, statement);
+                    emit(class_code, OPCODE_DUPTOP);
+
+                    emit(class_code, OPCODE_STORE_NAME);
+                    emit_string(class_code, name->str0);
+
+                    // Emit function name as key
+                    emit(class_code, OPCODE_LOAD_STRING);
+                    emit_string(class_code, name->str0);
+
+                    if (scope_has(local_scope, name->str0, false)) {
+                        __THROW_ERROR(
+                            _generator->fpath, 
+                            _generator->fdata, 
+                            statement->position, 
+                            "function %s is already defined", name->str0
+                        );
+                    }
+
+                    // Save into symbol table
+                    scope_value_t symbol = {
+                        .name      = name->str0,
+                        .is_const  = false,
+                        .is_global = true,
+                        .position  = name->position
+                    };
+                    scope_put(local_scope, name->str0, symbol);
+                } else if (statement->type == AstVarStatement) {
+                    ast_node_list_t names = statement->array0;
+                    ast_node_list_t values = statement->array1;
+                    for (size_t i = 0; names[i] != NULL; i++) {
+                        ast_node_t* name = names[i];
+                        ast_node_t* value = values[i];
+                        if (name == NULL) {
+                            __THROW_ERROR(
+                                _generator->fpath, 
+                                _generator->fdata, 
+                                statement->position, 
+                                "variable name must be a valid identifier"
+                            );
+                        }
+                        if (name->type != AstName) {
+                            __THROW_ERROR(
+                                _generator->fpath, 
+                                _generator->fdata, 
+                                statement->position, 
+                                "variable name must be a valid identifier"
+                            );
+                        }
+                        if (scope_has(local_scope, name->str0, false)) {
+                            __THROW_ERROR(
+                                _generator->fpath, 
+                                _generator->fdata, 
+                                statement->position, 
+                                "variable %s is already defined", name->str0
+                            );
+                        }
+                        ++property_count;
+                        if (value == NULL) {
+                            emit(class_code, OPCODE_LOAD_NULL);
+                        } else {
+                            generator_expression(_generator, class_code, local_scope, value);
+                        }
+                        emit(class_code, OPCODE_DUPTOP);
+
+                        emit(class_code, OPCODE_STORE_NAME);
+                        emit_string(class_code, name->str0);
+
+                        // Emit the store name opcode
+                        emit(class_code, OPCODE_LOAD_STRING);
+                        emit_string(class_code, name->str0);
+
+                        if (scope_has(local_scope, name->str0, false)) {
+                            __THROW_ERROR(
+                                _generator->fpath, 
+                                _generator->fdata, 
+                                statement->position, 
+                                "variable %s is already defined", name->str0
+                            );
+                        }
+
+                        // Save into symbol table
+                        scope_value_t symbol = {
+                            .name      = name->str0,
+                            .is_const  = statement->type == AstConstStatement,
+                            .is_global = true,
+                            .position  = name->position
+                        };
+                        scope_put(local_scope, name->str0, symbol);
+                    }
+                } else if (statement->type == AstLocalStatement || statement->type == AstConstStatement) {
+                    __THROW_ERROR(
+                        _generator->fpath, 
+                        _generator->fdata, 
+                        statement->position, 
+                        "declaration must be a function or a variable declaration"
+                    );
+                } else {
+                    generator_statement(_generator, class_code, local_scope, statement);
+                }
+            }
+            emit(class_code, OPCODE_LOAD_OBJECT);
+            emit_int(class_code, property_count);
+
+            // Emit Store Class
+            emit(_code, OPCODE_STORE_CLASS);
+            emit_string(_code, name->str0);
+            if (super != NULL) {
+
+            }
+            // Emit the pop top opcode
             emit(_code, OPCODE_POPTOP);
+            // Free the class scope
+            scope_free(class_scope);
+            scope_free(local_scope);
             break;
         }
         case AstFunctionNode: 
@@ -2071,14 +2113,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
                 ast_node_t* statement = body[i];
-                if (generator_is_expression_type(statement)) {
-                    __THROW_ERROR(
-                        _generator->fpath, 
-                        _generator->fdata, 
-                        statement->position, 
-                        "function body must contain statement only, but received %d", statement->type
-                    );
-                }
                 if (body[i]->type == AstReturnStatement && has_visible_return) {
                     for (size_t j = i; body[j] != NULL; j++) {
                         // ast_node_free(body[j]);
@@ -2156,14 +2190,6 @@ INTERNAL code_t* generator_program(generator_t* _generator, ast_node_t* _program
     scope_t* scope = scope_new(NULL, ScopeTypeGlobal);
     for (size_t i = 0; children[i] != NULL; i++) {
         ast_node_t* child = children[i];
-        if (generator_is_expression_type(child)) {
-            __THROW_ERROR(
-                _generator->fpath, 
-                _generator->fdata, 
-                child->position, 
-                "program must contain statements only, but received %d", child->type
-            );
-        }
         generator_statement(_generator, _block, scope, child);
     }
     // write the bytecode to the file

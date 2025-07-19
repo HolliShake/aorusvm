@@ -141,6 +141,13 @@ void decompile(code_t* _code, bool _with_header) {
                 free(name);
                 break;
             }
+            case OPCODE_STORE_CLASS: {
+                char* name = decompiler_get_string(bytecode, ip);
+                PRINT_OPCODE("store_class: %s\n", name);
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
             case OPCODE_SET_NAME: {
                 char* name = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("set_name: %s\n", name);
@@ -152,13 +159,28 @@ void decompile(code_t* _code, bool _with_header) {
                 PRINT_OPCODE("range\n");
                 break;
             }
+            case OPCODE_GET_PROPERTY: {
+                char* name = decompiler_get_string(bytecode, ip);
+                PRINT_OPCODE("get_property: %s\n", name);
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
             case OPCODE_INDEX: {
                 PRINT_OPCODE("index\n");
                 break;
             }
-            case OPCODE_CALL: {
+            case OPCODE_CALL_CONSTRUCTOR: {
                 int argc = decompiler_get_int(bytecode, ip);
-                PRINT_OPCODE("call: (argc = %d)\n", argc);
+                PRINT_OPCODE("call_constructor: (argc = %d)\n", argc);
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_CALL:
+            case OPCODE_CALL_METHOD: {
+                int argc = decompiler_get_int(bytecode, ip);
+                if (opcode == OPCODE_CALL) PRINT_OPCODE("call: (argc = %d)\n", argc);
+                else PRINT_OPCODE("call_method: (argc = %d)\n", argc);
                 FORWARD(4);
                 break;
             }
@@ -278,6 +300,24 @@ void decompile(code_t* _code, bool _with_header) {
             }
             case OPCODE_NOP: {
                 PRINT_OPCODE("nop\n");
+                break;
+            }
+            case OPCODE_SETUP_CLASS:
+            case OPCODE_BEGIN_CLASS: {
+                if (opcode == OPCODE_SETUP_CLASS)
+                if (OPCODE != OPCODE_BEGIN_CLASS) PD("incorrect bytecode format");
+                PRINT_OPCODE("setup_class\n");
+                FORWARD(1);
+                code_t* classbytecode = (code_t*) decompile_get_memory(bytecode, ip);
+                PRINT_OPCODE("setup_class: %s\n", classbytecode->block_name);
+                printf("+-----------------+\n");
+                printf("| MAKE CLASS      |\n");
+                printf("+-----------------+\n");
+                decompile(classbytecode, false);
+                printf("+-----------------+\n");
+                printf("| END CLASS       |\n");
+                printf("+-----------------+\n");
+                FORWARD(8);
                 break;
             }
             case OPCODE_SETUP_FUNCTION:

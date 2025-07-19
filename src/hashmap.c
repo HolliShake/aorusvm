@@ -64,6 +64,19 @@ bool hashmap_has(hashmap_t* _hashmap, object_t* _key) {
     return false;
 }
 
+bool hashmap_has_string(hashmap_t* _hashmap, char* _key) {
+    ASSERTNULL(_hashmap, "hashmap is null");
+    ASSERTNULL(_key, "key is null");
+
+    size_t hash = hash64(_key);
+    hashmap_node_t* node = _hashmap->buckets[hash % _hashmap->bucket_count];
+    while (node) {
+        if (strcmp(object_to_string(node->key), _key) == 0) return true;
+        node = node->next;
+    }
+    return false;
+}
+
 void hashmap_put(hashmap_t* _hashmap, object_t* _key, object_t* _value) {
     ASSERTNULL(_hashmap, "hashmap is null");
     ASSERTNULL(_key, "key is null");

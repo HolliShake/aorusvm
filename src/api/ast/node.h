@@ -164,6 +164,15 @@ DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _va
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value);
 
 /*
+ * New node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The new node.
+ */
+DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value);
+
+/*
  * Range node.
  *
  * @param _position The position of the node.
@@ -479,6 +488,17 @@ DLLEXPORT ast_node_t* ast_function_node(position_t* _position, ast_node_t* _name
  * @return The async function node.
  */
 DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t* _name, ast_node_list_t _parameters, ast_node_list_t _body);
+
+/*
+ * Class node.
+ *
+ * @param _position The position of the node.
+ * @param _name The name of the class.
+ * @param _super The super class of the class.
+ * @param _body The body of the class.
+ * @return The class node.
+ */
+DLLEXPORT ast_node_t* ast_class_node(position_t* _position, ast_node_t* _name, ast_node_t* _super, ast_node_list_t _body);
 
 /*
  * Block statement node.

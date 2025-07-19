@@ -9,6 +9,8 @@ typedef enum object_type_enum {
     OBJECT_TYPE_ARRAY,
     OBJECT_TYPE_RANGE,
     OBJECT_TYPE_OBJECT,
+    OBJECT_TYPE_USER_TYPE,
+    OBJECT_TYPE_USER_TYPE_INSTANCE,
     OBJECT_TYPE_FUNCTION,
     OBJECT_TYPE_NATIVE_FUNCTION,
     OBJECT_TYPE_NULL,
@@ -24,6 +26,8 @@ typedef enum object_type_enum {
 #define OBJECT_TYPE_NULL(object) (object->type == OBJECT_TYPE_NULL)
 #define OBJECT_TYPE_ARRAY(object) (object->type == OBJECT_TYPE_ARRAY)
 #define OBJECT_TYPE_RANGE(object) (object->type == OBJECT_TYPE_RANGE)
+#define OBJECT_TYPE_USER_TYPE(object) (object->type == OBJECT_TYPE_USER_TYPE)
+#define OBJECT_TYPE_USER_TYPE_INSTANCE(object) (object->type == OBJECT_TYPE_USER_TYPE_INSTANCE)
 #define OBJECT_TYPE_FUNCTION(object) (object->type == OBJECT_TYPE_FUNCTION)
 #define OBJECT_TYPE_OBJECT(object) (object->type == OBJECT_TYPE_OBJECT)
 #define OBJECT_TYPE_COLLECTION(object) (OBJECT_TYPE_ARRAY(object) || OBJECT_TYPE_OBJECT(object) || OBJECT_TYPE_RANGE(object))

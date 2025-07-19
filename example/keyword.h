@@ -6,6 +6,8 @@
 #define KEY_VAR "var"
 #define KEY_CONST "const"
 #define KEY_LOCAL "local"
+#define KEY_CLASS "class"
+#define KEY_EXTENDS "extends"
 #define KEY_FUNC "func"
 #define KEY_ASYNC "async"
 #define KEY_RETURN "return"
@@ -22,6 +24,7 @@
 #define KEY_FALSE "false"
 #define KEY_NULL "null"
 #define KEY_CATCH "catch"
+#define KEY_NEW "new"
 
 extern const char* KEYWORDS[];
 

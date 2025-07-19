@@ -8,6 +8,7 @@
 typedef enum scope_type_enum {
     ScopeTypeGlobal,
     ScopeTypeLocal,
+    ScopeTypeClass,
     ScopeTypeFunction,
     ScopeTypeCatch,
     ScopeTypeSingle,
@@ -106,6 +107,15 @@ bool scope_is_global(scope_t* _scope);
  * @return True if the scope is a local, false otherwise.
  */
 bool scope_is_local(scope_t* _scope);
+
+/*
+ * Check if a scope is a class.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a class, false otherwise.
+ */
+bool scope_is_class(scope_t* _scope);
+
 
 /*
  * Check if a scope is a function.

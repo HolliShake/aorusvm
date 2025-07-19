@@ -351,6 +351,19 @@ ast_node_t* parser_unary(parser_t* _parser) {
         }
         ended = ast_position(node);
         return ast_unary_spread_node(position_merge(start, ended), node);
+    } else if (CHECKV(KEY_NEW)) {
+        ACCEPTV(KEY_NEW);
+        ast_node_t* node = parser_member_or_call(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for new"
+            );
+        }
+        ended = ast_position(node);
+        return ast_new_node(position_merge(start, ended), node);
     }
     return parser_member_or_call(_parser);
 }
@@ -697,6 +710,7 @@ ast_node_t* parser_mandatory_expression(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_class_declaration(parser_t* _parser);
 ast_node_t* parser_function_declaration(parser_t* _parser);
 ast_node_t* parser_variable_declaration(parser_t* _parser, bool _is_const, bool _is_local);
 ast_node_t* parser_if_statement(parser_t* _parser);
@@ -708,7 +722,9 @@ ast_node_t* parser_return_statement(parser_t* _parser);
 
 ast_node_t* parser_statement(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    if (CHECKV(KEY_FUNC)) {
+    if (CHECKV(KEY_CLASS)) {
+        return parser_class_declaration(_parser);
+    } else if (CHECKV(KEY_FUNC)) {
         return parser_function_declaration(_parser);
     } else if (CHECKV(KEY_VAR)) {
         return parser_variable_declaration(_parser, false, false);
@@ -741,6 +757,47 @@ ast_node_t* parser_statement(parser_t* _parser) {
         node
     );
     return expr;
+}
+
+ast_node_t* parser_class_declaration(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_CLASS);
+    ast_node_t* name = parser_terminal(_parser);
+    if (name == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "class name expected"
+        );
+    }
+    ast_node_t* super = NULL;
+    if (CHECKV(KEY_EXTENDS)) {
+        ACCEPTV(KEY_EXTENDS);
+        super = parser_terminal(_parser);
+        if (super == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "super class expected"
+            );
+        }
+    }
+    ACCEPTV(LBRACKET);
+    size_t index = 0;
+    ast_node_list_t body = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    body[0] = NULL;
+    ast_node_t* statement = parser_statement(_parser);
+    while (statement != NULL) {
+        body[index++] = statement;
+        body = (ast_node_list_t) realloc(body, (sizeof(ast_node_t*) * (index + 1)));
+        body[index] = NULL;
+        statement = parser_statement(_parser);
+    }
+    ended = _parser->current->position;
+    ACCEPTV(RBRACKET);
+    return ast_class_node(position_merge(start, ended), name, super, body);
 }
 
 ast_node_t* parser_function_declaration(parser_t* _parser) {

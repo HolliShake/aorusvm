@@ -127,6 +127,12 @@ DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstNew, _position);
+    node->ast0 = _value;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
     ast_node_t* node = ast_node_new(AstRange, _position);
     node->ast0 = _lhs;
@@ -351,6 +357,14 @@ DLLEXPORT ast_node_t* ast_async_function_node(position_t* _position, ast_node_t*
     node->ast0 = _name;
     node->array0 = _parameters;
     node->array1 = _body;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_class_node(position_t* _position, ast_node_t* _name, ast_node_t* _super, ast_node_list_t _body) {
+    ast_node_t* node = ast_node_new(AstClass, _position);
+    node->ast0 = _name;
+    node->ast1 = _super;
+    node->array0 = _body;
     return node;
 }
 

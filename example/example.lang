@@ -154,7 +154,17 @@ func newPerson(_name, _age) {
     });
 }
 
-
 const p = newPerson("Philipp Andrew Roa Redondo", 26);
 
 println(p.getName(), p.getAge());
+
+println(({ "name": "Doy" })["name"]);
+
+class Person {
+    var xx = 2;
+    println(">>", 2 + 2 + xx);
+}
+
+println(new Person(1, 2));
+
+println(Person);

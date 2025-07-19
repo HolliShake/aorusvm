@@ -39,12 +39,25 @@
 }
 
 #define SAVE_FUNCTION(function) { \
-    size_t i; \
-    for (i = 0; i < instance->function_table_size && instance->function_table_item[i] != function; i++); \
-    if (i == instance->function_table_size) { \
-        instance->function_table_item[instance->function_table_size++] = function; \
-        instance->function_table_item = (code_t**) realloc(instance->function_table_item, sizeof(code_t*) * (instance->function_table_size + 1)); \
-        instance->function_table_item[instance->function_table_size] = NULL; \
+    /* Use direct lookup instead of linear search */ \
+    if (instance->function_table_size > 0 && \
+        instance->function_table_item[instance->function_table_size-1] == function) { \
+        /* Fast path: function was just added */ \
+    } else { \
+        /* Check if function already exists using pointer comparison */ \
+        size_t i = 0; \
+        while (i < instance->function_table_size && instance->function_table_item[i] != function) i++; \
+        if (i == instance->function_table_size) { \
+            /* Only reallocate when needed, and grow by more than 1 to reduce reallocation frequency */ \
+            if (instance->function_table_size % 16 == 0) { \
+                instance->function_table_item = (code_t**) realloc( \
+                    instance->function_table_item, \
+                    sizeof(code_t*) * (instance->function_table_size + 17) \
+                ); \
+            } \
+            instance->function_table_item[instance->function_table_size++] = function; \
+            instance->function_table_item[instance->function_table_size] = NULL; \
+        } \
     } \
 }
 
@@ -847,6 +860,81 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
     function(_argc);
 }
 
+INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
+    PUSH_REF(_obj);
+    object_t* method = NULL;
+    
+    if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        user_type_instance_t* instance = (user_type_instance_t*)_obj->value.opaque;
+        object_t* actual_object = instance->object;
+        hashmap_t* obj_map = (hashmap_t*)actual_object->value.opaque;
+        
+        // First check if method exists directly on the object
+        if (hashmap_has_string(obj_map, _method_name)) {
+            method = hashmap_get_string((hashmap_t*)instance->constructor->value.opaque, _method_name);
+        } else {
+            // Search up the inheritance chain
+            object_t* constructor = instance->constructor;
+            while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
+                user_type_t* utype = (user_type_t*)constructor->value.opaque;
+                object_t* prototype = utype->prototype;
+                hashmap_t* proto_map = (hashmap_t*)prototype->value.opaque;
+                
+                if (hashmap_has_string(proto_map, _method_name)) {
+                    method = hashmap_get_string(proto_map, _method_name);
+                    break;
+                }
+                constructor = utype->super;
+            }
+        }
+    } else {
+        if (!OBJECT_TYPE_OBJECT(_obj)) {
+            char* message = string_format(
+                "expected object, got \"%s\"", 
+                object_type_to_string(_obj)
+            );
+            PUSH(object_new_error(message, true));
+            free(message);
+            return;
+        }
+        method = hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
+    }
+    
+    // Call the method if found
+    if (OBJECT_TYPE_FUNCTION(method)) {
+        do_call(_parent_env, true, method, _argc);
+    } else {
+        do_native_call(method, _argc);
+    }
+}
+
+INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor, int _argc) {
+    char* constructor_name = "init";
+    user_type_t* utype = (user_type_t*) _constructor->value.opaque;
+    if (!hashmap_has_string((hashmap_t*) utype->prototype->value.opaque, constructor_name)) {
+        for (int i = 0; i < _argc; i++) POPP();
+        object_t* default_ctor_result = object_new_user_type_instance(_constructor, vm_to_heap(object_new_object()));
+        PUSH(default_ctor_result);
+        return;
+    }
+    object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, constructor_name);
+    if (!OBJECT_TYPE_CALLABLE(constructor_from_prototype)) {
+        char* message = string_format(
+            "constructor \"%s\" is not callable", 
+            constructor_name
+        );
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
+    }
+    object_t* new_instance = vm_to_heap(object_new_user_type_instance(_constructor, vm_to_heap(object_new_object())));
+    vm_invoke_method(_parent_env, new_instance, constructor_name, _argc);
+    // Pop the constructor's return value
+    POPP();
+    // Push the new instance
+    PUSH_REF(new_instance);
+}
+
 INTERNAL void do_panic(int _argc) {
     char* message = string_allocate("");
     for (int i = 0; i < _argc; i++) {
@@ -1097,15 +1185,43 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     free(message);
                     break;
                 }
+                if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
+                    char* message = string_format(
+                        "property \"%s\" not found in \"%s\"", 
+                        name,
+                        object_to_string(obj)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    break;
+                }
                 object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
                 PUSH_REF(result);
                 FORWARD(strlen(name) + 1);
+                free(name);
                 break;
             }
             case OPCODE_INDEX: {
                 object_t* index = POPP();
                 object_t* obj = POPP();
                 do_index(obj, index);
+                break;
+            }
+            case OPCODE_CALL_CONSTRUCTOR: {
+                int argc = get_int(bytecode, ip);
+                object_t* constructor = POPP();
+                if (!OBJECT_TYPE_USER_TYPE(constructor)) {
+                    char* message = string_format(
+                        "expected \"user_type\", got \"%s\"", 
+                        object_type_to_string(constructor)
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    FORWARD(4);
+                    break;
+                }
+                do_new_constructor_call(_env, constructor, argc);
+                FORWARD(4);
                 break;
             }
             case OPCODE_CALL:
@@ -1135,6 +1251,16 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 char* name = get_string(bytecode, ip);
                 env_put(_env, name, POPP());
                 FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
+            case OPCODE_STORE_CLASS: {
+                char* name = get_string(bytecode, ip);
+                object_t* obj = PEEK();
+                object_t* user = object_new_user_type(name, NULL, obj);
+                vm_to_heap(user);
+                env_put(_env, name, user);
+                FORWARD(strlen(name) + 1);
                 break;
             }
             case OPCODE_SET_NAME: {
@@ -1158,6 +1284,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     env = env_parent(env);
                 }
                 FORWARD(strlen(name) + 1);
+                free(name);
                 break;
             }
             case OPCODE_INCREMENT: {
@@ -1369,6 +1496,19 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_COMPLETE_BLOCK: {
                 return VmBlockSignalComplete;
             }
+            case OPCODE_SETUP_CLASS:
+            case OPCODE_BEGIN_CLASS: {
+                if (opcode == OPCODE_SETUP_CLASS)
+                if (OPCODE != OPCODE_BEGIN_CLASS) PD("incorrect bytecode format");
+                FORWARD(1);
+                code_t* class_bytecode = (code_t*) get_memory(bytecode, ip);
+                SAVE_FUNCTION(class_bytecode); // Slow!, optimize later
+                object_t* closure = vm_to_heap(object_new_function(class_bytecode));
+                vm_block_signal_t signal = VmBlockSignalPending;
+                do_block(_env, closure, &signal);   
+                FORWARD(8);
+                break;
+            }
             case OPCODE_SETUP_FUNCTION:
             case OPCODE_BEGIN_FUNCTION: {
                 if (opcode == OPCODE_SETUP_FUNCTION)
@@ -1554,15 +1694,12 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
     env->closure = _bytecode->environment;
     vm_execute(env, 0, _bytecode);
     env->closure = NULL;
-
     // Evaluation stack must contain 1 object
     if (instance->sp != 1) {
-        DUMP_STACK();
-        decompile(_bytecode, false);
+        // DUMP_STACK();
+        // decompile(_bytecode, false);
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
     POPP();
-
-   
     gc_collect_all(instance);
 }   
