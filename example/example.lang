@@ -189,4 +189,4 @@ println(Person);
 
 println(newPerson("Doy", 2));
 
-println(new 10());
+println(new 10(), Person.xx);

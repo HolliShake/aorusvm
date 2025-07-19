@@ -1190,29 +1190,57 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_GET_PROPERTY: {
                 char* name = get_string(bytecode, ip);
                 object_t* obj = POPP();
-                if (!OBJECT_TYPE_OBJECT(obj)) {
+                if (OBJECT_TYPE_USER_TYPE(obj)) {
+                    user_type_t* utype = (user_type_t*) obj->value.opaque;
+                    if (!hashmap_has_string((hashmap_t*) utype->prototype->value.opaque, name)) {
+                        char* message = string_format(
+                            "property \"%s\" not found in \"%s\"", 
+                            name,
+                            object_to_string(obj)
+                        );
+                        PUSH(object_new_error(message, true));
+                        free(message);
+                        FORWARD(strlen(name) + 1);
+                        break;
+                    }
+                    object_t* result = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, name);
+                    PUSH_REF(result);
+                } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(obj)) {
+                    user_type_instance_t* uti = (user_type_instance_t*) obj->value.opaque;
+                    if (!hashmap_has_string((hashmap_t*) uti->object, name)) {
+                        char* message = string_format(
+                            "property \"%s\" not found in \"%s\"", 
+                            name,
+                            object_to_string(obj)
+                        );
+                        PUSH(object_new_error(message, true));
+                        free(message);
+                        FORWARD(strlen(name) + 1);
+                        break;
+                    }
+                    object_t* result = hashmap_get_string((hashmap_t*) uti->object, name);
+                    PUSH_REF(result);
+                } else if (OBJECT_TYPE_OBJECT(obj)) {
+                    if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
+                        char* message = string_format(
+                            "property \"%s\" not found in \"%s\"", 
+                            name,
+                            object_to_string(obj)
+                        );
+                        PUSH(object_new_error(message, true));
+                        free(message);
+                        FORWARD(strlen(name) + 1);
+                        break;
+                    }
+                    object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
+                    PUSH_REF(result);
+                } else {
                     char* message = string_format(
                         "expected \"object\", got \"%s\"", 
                         object_type_to_string(obj)
                     );
                     PUSH(object_new_error(message, true));
-                    free(message);
-                    FORWARD(strlen(name) + 1);
-                    break;
                 }
-                if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
-                    char* message = string_format(
-                        "property \"%s\" not found in \"%s\"", 
-                        name,
-                        object_to_string(obj)
-                    );
-                    PUSH(object_new_error(message, true));
-                    free(message);
-                    FORWARD(strlen(name) + 1);
-                    break;
-                }
-                object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
-                PUSH_REF(result);
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;

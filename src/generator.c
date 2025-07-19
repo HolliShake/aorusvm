@@ -1854,6 +1854,15 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             ast_node_t* name = _statement->ast0;
             ast_node_t* super = _statement->ast1;
             ast_node_list_t body = _statement->array0;
+            // Validate scope
+            if (!scope_is_global(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "class declaration must be in the global scope"
+                );
+            }
             if (name == NULL) {
                 __THROW_ERROR(
                     _generator->fpath, 
