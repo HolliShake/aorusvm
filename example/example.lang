@@ -171,9 +171,9 @@ class Person {
     var xx = 2;
     println(">>", 2 + 2 + xx);
 
-    func init(a, b) {
+    var init = func(a, b) {
         println(a, b);
-    }
+    };
 
     func printxx() {
         println("xx>>", xx, this);

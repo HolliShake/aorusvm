@@ -919,6 +919,7 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
     }
     object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, constructor_name);
     if (!OBJECT_TYPE_CALLABLE(constructor_from_prototype)) {
+        for (int i = 0; i < _argc; i++) POPP();
         char* message = string_format(
             "constructor \"%s\" is not callable", 
             constructor_name
