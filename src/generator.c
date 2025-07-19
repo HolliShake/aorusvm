@@ -1978,8 +1978,14 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         if (value == NULL) {
                             emit(class_code, OPCODE_LOAD_NULL);
                         } else {
-                            if (value->type == AstFunctionExpression) generator_expression(_generator, class_code, class_scope, value); // only function can use class scope
-                            else generator_expression(_generator, class_code, local_scope, value);
+                            generator_expression(
+                                _generator, 
+                                class_code, 
+                                ((value->type == AstFunctionExpression)
+                                ? class_scope
+                                : local_scope),
+                                value
+                            );
                         }
                         emit(class_code, OPCODE_DUPTOP);
 
