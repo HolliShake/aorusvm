@@ -1,13 +1,22 @@
 
 
-# print(">>", [*range(5000000)])
-# Python 
-# real    0m4.913s
-# user    0m0.253s
-# sys     0m0.218s
+class Human:
+    def __init__(self, a, b):
+        self.name = a
+        self.age = b
+        print("SET:", self)
 
-# println(">>", [...(0..5000000)]);
-# AourusVM
-# real    0m5.627s
-# user    0m0.598s
-# sys     0m0.278s
+class Person(Human):
+    xx = 2
+    
+    def __init__(self, _name, _age):
+        super().__init__(_name, _age)
+    
+    def printxx(self):
+        print("xx>>", self.xx, self)
+        return 1
+
+px = Person(1, 2)
+
+print(">>>>>>>>>>>>.", px, px.printxx())
+print(Person("Doy", 12))

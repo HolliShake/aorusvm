@@ -6,25 +6,39 @@ class Human {
        this.age  = b;
        println("SET:", this);
     }
+
+    func getName() {
+        return this.name;
+    }
 }
 
 class Person extends Human {
     var xx = 2;
 
-    var init = func(_name, _age) {
-        super().init(_name, _age);
-    };
+    func init(_name, _age) {
+        super.init(_name, _age);
+    }
 
     func printxx() {
         println("xx>>", xx, this);
         return 1;
     }
+
+    
 }
 
 const px = new Person(1, 2);
 
+class Dog {
+
+    func bark() {
+        println("ArF!");
+    }
+
+}
+
 println(">>>>>>>>>>>>.", px, px.printxx());
-println(new Person("Doy", 12));
+println(new Person("Doy", 12).getName(), Dog.barks());
 
 
 

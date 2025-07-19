@@ -927,8 +927,9 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
 }
 
 INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
-    // Push the object to the stack
-    PUSH_REF(_obj);
+    // Push the object to the stack if it's not a user type
+    int is_method_call = true;
+    if (is_method_call = !OBJECT_TYPE_USER_TYPE(_obj)) PUSH_REF(_obj); // Consider a static method call, if obj is a type
 
     // Get the method from the object
     object_t* method = get_method(_obj, _method_name);
@@ -936,7 +937,7 @@ INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method
     // If the method is not found, return an error
     if (method == NULL) {
         for (int i = 0; i < _argc; i++) POPP();
-        POPP(); // pop the object
+        if (is_method_call) POPP(); // pop the object
         char* message = string_format(
             "method \"%s\" not found in \"%s\"", 
             _method_name,
@@ -950,7 +951,7 @@ INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method
     // If the method is not callable, return an error
     if (!OBJECT_TYPE_CALLABLE(method)) {
         for (int i = 0; i < _argc; i++) POPP();
-        POPP(); // pop the object
+        if (is_method_call) POPP(); // pop the object
         char* message = string_format(
             "method \"%s\" is not callable", 
             _method_name
@@ -962,7 +963,7 @@ INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method
 
     // Call the method if found
     if (OBJECT_TYPE_FUNCTION(method)) {
-        do_call(_parent_env, true, method, _argc);
+        do_call(_parent_env, is_method_call, method, _argc);
     } else {
         do_native_call(method, _argc);
     }
