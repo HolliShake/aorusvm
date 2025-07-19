@@ -748,6 +748,48 @@ INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t
     env_free(block_env);
 }
 
+INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
+    if (OBJECT_TYPE_USER_TYPE(_obj)) {
+        object_t* current = _obj;
+        while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
+            object_t* __proto__ = ((user_type_t*) current->value.opaque)->prototype;
+            if (hashmap_has_string((hashmap_t*) __proto__->value.opaque, _property_name)) {
+                return hashmap_get_string((hashmap_t*) __proto__->value.opaque, _property_name);
+            }
+            current = ((user_type_t*) current->value.opaque)->super;
+        }
+    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
+        object_t* object = instance->object;
+        if (hashmap_has_string((hashmap_t*) object->value.opaque, _property_name)) {
+            return hashmap_get_string((hashmap_t*) object->value.opaque, _property_name);
+        }
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _property_name)) {
+            return hashmap_get_string((hashmap_t*)_obj->value.opaque, _property_name);
+        }
+    }
+    return NULL;
+}
+
+INTERNAL object_t* get_method(object_t* _obj, char* _method_name) {
+    if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        object_t* constructor = ((user_type_instance_t*) _obj->value.opaque)->constructor;
+        while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
+            object_t* method = NULL;
+            if (hashmap_has_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name)) {
+                return hashmap_get_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name);
+            }
+            constructor = ((user_type_t*) constructor->value.opaque)->super;
+        }
+    } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _method_name)) {
+            return hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
+        }
+    }
+    return NULL;
+}
+
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
     if (!OBJECT_TYPE_COLLECTION(_obj)) {
         char* message = string_format(
@@ -861,45 +903,35 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
 }
 
 INTERNAL void vm_invoke_method(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
+    // Push the object to the stack
     PUSH_REF(_obj);
-    object_t* method = NULL;
-    
-    if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        user_type_instance_t* instance = (user_type_instance_t*)_obj->value.opaque;
-        object_t* actual_object = instance->object;
-        hashmap_t* obj_map = (hashmap_t*)actual_object->value.opaque;
-        
-        // First check if method exists directly on the object
-        if (hashmap_has_string(obj_map, _method_name)) {
-            method = hashmap_get_string((hashmap_t*)instance->constructor->value.opaque, _method_name);
-        } else {
-            // Search up the inheritance chain
-            object_t* constructor = instance->constructor;
-            while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
-                user_type_t* utype = (user_type_t*)constructor->value.opaque;
-                object_t* prototype = utype->prototype;
-                hashmap_t* proto_map = (hashmap_t*)prototype->value.opaque;
-                
-                if (hashmap_has_string(proto_map, _method_name)) {
-                    method = hashmap_get_string(proto_map, _method_name);
-                    break;
-                }
-                constructor = utype->super;
-            }
-        }
-    } else {
-        if (!OBJECT_TYPE_OBJECT(_obj)) {
-            char* message = string_format(
-                "expected object, got \"%s\"", 
-                object_type_to_string(_obj)
-            );
-            PUSH(object_new_error(message, true));
-            free(message);
-            return;
-        }
-        method = hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
+
+    // Get the method from the object
+    object_t* method = get_method(_obj, _method_name);
+
+    // If the method is not found, return an error
+    if (method == NULL) {
+        char* message = string_format(
+            "method \"%s\" not found in \"%s\"", 
+            _method_name,
+            object_to_string(_obj)
+        );
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
     }
-    
+
+    // If the method is not callable, return an error
+    if (!OBJECT_TYPE_CALLABLE(method)) {
+        char* message = string_format(
+            "method \"%s\" is not callable", 
+            _method_name
+        );
+        PUSH(object_new_error(message, true));
+        free(message);
+        return;
+    }
+
     // Call the method if found
     if (OBJECT_TYPE_FUNCTION(method)) {
         do_call(_parent_env, true, method, _argc);
@@ -1190,58 +1222,20 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_GET_PROPERTY: {
                 char* name = get_string(bytecode, ip);
                 object_t* obj = POPP();
-                if (OBJECT_TYPE_USER_TYPE(obj)) {
-                    user_type_t* utype = (user_type_t*) obj->value.opaque;
-                    if (!hashmap_has_string((hashmap_t*) utype->prototype->value.opaque, name)) {
-                        char* message = string_format(
-                            "property \"%s\" not found in \"%s\"", 
-                            name,
-                            object_to_string(obj)
-                        );
-                        PUSH(object_new_error(message, true));
-                        free(message);
-                        FORWARD(strlen(name) + 1);
-                        break;
-                    }
-                    object_t* result = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, name);
-                    PUSH_REF(result);
-                } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(obj)) {
-                    user_type_instance_t* uti = (user_type_instance_t*) obj->value.opaque;
-                    if (!hashmap_has_string((hashmap_t*) uti->object->value.opaque, name)) {
-                        char* message = string_format(
-                            "property \"%s\" not found in \"%s\"", 
-                            name,
-                            object_to_string(obj)
-                        );
-                        PUSH(object_new_error(message, true));
-                        free(message);
-                        FORWARD(strlen(name) + 1);
-                        break;
-                    }
-                    object_t* result = hashmap_get_string((hashmap_t*) uti->object->value.opaque, name);
-                    PUSH_REF(result);
-                } else if (OBJECT_TYPE_OBJECT(obj)) {
-                    if (!hashmap_has_string((hashmap_t*) obj->value.opaque, name)) {
-                        char* message = string_format(
-                            "property \"%s\" not found in \"%s\"", 
-                            name,
-                            object_to_string(obj)
-                        );
-                        PUSH(object_new_error(message, true));
-                        free(message);
-                        FORWARD(strlen(name) + 1);
-                        break;
-                    }
-                    object_t* result = hashmap_get_string((hashmap_t*) obj->value.opaque, name);
-                    PUSH_REF(result);
-                } else {
+                object_t* property = get_property(obj, name);
+                if (property == NULL) {
                     char* message = string_format(
-                        "expected \"object\", got \"%s\"", 
-                        object_type_to_string(obj)
+                        "property \"%s\" not found in \"%s\"", 
+                        name,
+                        object_to_string(obj)
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
+                    FORWARD(strlen(name) + 1);
+                    free(name);
+                    break;
                 }
+                PUSH_REF(property);
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;

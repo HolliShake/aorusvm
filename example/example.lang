@@ -200,3 +200,8 @@ var xg = 2;
 println(xg);
 println(xg = 100);
 println(xg);
+
+println(xg.hello);
+
+
+
