@@ -160,9 +160,10 @@ bool scope_is_array(scope_t* _scope);
  * Check if a scope is an object.
  *
  * @param _scope The scope to check.
+ * @param _recurse Whether to recurse up the scope chain.
  * @return True if the scope is an object, false otherwise.
  */
-bool scope_is_object(scope_t* _scope);
+bool scope_is_object(scope_t* _scope, bool _recurse);
 
 /*
  * Check if a scope is a capture.

@@ -68,6 +68,16 @@ DLLEXPORT ast_node_t* ast_null_node(position_t* _position) {
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_this_node(position_t* _position) {
+    ast_node_t* node = ast_node_new(AstThis, _position);
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_super_node(position_t* _position) {
+    ast_node_t* node = ast_node_new(AstSuper, _position);
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_array_node(position_t* _position, ast_node_list_t _elements) {
     ast_node_t* node = ast_node_new(AstArray, _position);
     node->array0 = _elements;

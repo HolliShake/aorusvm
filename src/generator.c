@@ -37,6 +37,8 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstString:
         case AstBoolean:
         case AstNull:
+        case AstThis:
+        case AstSuper:
         case AstArray:
         case AstObject:
         case AstFunctionExpression:
@@ -462,6 +464,28 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
         case AstNull:
             emit(_code, OPCODE_LOAD_NULL);
             break;
+        case AstThis:
+            if (!scope_is_class(_scope) && !scope_is_object(_scope, true)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "this can only be used in a class"
+                );
+            }
+            emit(_code, OPCODE_LOAD_THIS);
+            break;
+        case AstSuper:
+            if (!scope_is_class(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "super can only be used in a class"
+                );
+            }
+            emit(_code, OPCODE_LOAD_SUPER);
+            break;
         case AstArray: {
             scope_t* array_scope = scope_new(_scope, ScopeTypeArray);
             ast_node_list_t elements = _expression->array0;
@@ -506,7 +530,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
         case AstObjectProperty: {
             ast_node_t* key = _expression->ast0;
             ast_node_t* value = _expression->ast1;
-            if (!scope_is_object(_scope)) {
+            if (!scope_is_object(_scope, false)) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
@@ -737,7 +761,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
         }
         case AstUnarySpread: {
             ast_node_t* expression = _expression->ast0;
-            if (!scope_is_array(_scope) && !scope_is_object(_scope)) {
+            if (!scope_is_array(_scope) && !scope_is_object(_scope, false)) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -1854,8 +1878,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "class must have a body"
                 );
             }
-            scope_t* class_scope = scope_new(_scope, ScopeTypeClass);
-            scope_t* local_scope = scope_new(class_scope, ScopeTypeLocal);
+            scope_t* local_scope = scope_new(_scope, ScopeTypeLocal);
+            scope_t* class_scope = scope_new(local_scope, ScopeTypeClass);
             // Create class code
             code_t* class_code = code_new_block(
                 string_allocate(_generator->fpath),
@@ -1893,7 +1917,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                             "function name must be a valid identifier"
                         );
                     }
-                    generator_function(_generator, class_code, local_scope, statement);
+                    generator_function(_generator, class_code, class_scope, statement); // only function can use class scope
                     emit(class_code, OPCODE_DUPTOP);
 
                     emit(class_code, OPCODE_STORE_NAME);
@@ -1954,7 +1978,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                         if (value == NULL) {
                             emit(class_code, OPCODE_LOAD_NULL);
                         } else {
-                            generator_expression(_generator, class_code, local_scope, value);
+                            if (value->type == AstFunctionExpression) generator_expression(_generator, class_code, class_scope, value); // only function can use class scope
+                            else generator_expression(_generator, class_code, local_scope, value);
                         }
                         emit(class_code, OPCODE_DUPTOP);
 
@@ -2006,8 +2031,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             // Emit the pop top opcode
             emit(_code, OPCODE_POPTOP);
             // Free the class scope
-            scope_free(class_scope);
             scope_free(local_scope);
+            scope_free(class_scope);
             break;
         }
         case AstFunctionNode: 

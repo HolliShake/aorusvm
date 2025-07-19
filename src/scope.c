@@ -159,8 +159,13 @@ bool scope_is_array(scope_t* _scope) {
     return _scope->type == ScopeTypeArray;
 }
 
-bool scope_is_object(scope_t* _scope) {
-    return _scope->type == ScopeTypeObject;
+bool scope_is_object(scope_t* _scope, bool _recurse) {
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeObject) return true;
+        current = _recurse ? current->parent : NULL;
+    }
+    return false;
 }
 
 bool scope_save_capture(scope_t* _scope, char* _name) {

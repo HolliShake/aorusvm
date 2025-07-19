@@ -94,6 +94,14 @@ ast_node_t* parser_terminal(parser_t* _parser) {
         );
         ACCEPTT(TTKEY);
         return node;
+    } else if (CHECKT(TTKEY) && CHECKV(KEY_THIS)) {
+        ast_node_t* node = ast_this_node(_parser->current->position);
+        ACCEPTT(TTKEY);
+        return node;
+    } else if (CHECKT(TTKEY) && CHECKV(KEY_SUPER)) {
+        ast_node_t* node = ast_super_node(_parser->current->position);
+        ACCEPTT(TTKEY);
+        return node;
     } else {
         return NULL;
     }
@@ -1123,8 +1131,7 @@ ast_node_t* parser_for_statement(parser_t* _parser) {
     statements[0] = for_node;
     statements[1] = NULL;
     // Wrap into block statement to avoid scope issues
-    // return ast_block_statement_node(position_merge(start, ended), statements);
-    return for_node;
+    return ast_block_statement_node(position_merge(start, ended), statements);
 }
 
 ast_node_t* parser_block_statement(parser_t* _parser) {

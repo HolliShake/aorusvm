@@ -1014,6 +1014,19 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 PUSH_REF(instance->null);
                 break;
             }
+            case OPCODE_LOAD_THIS: {
+                if (!env_has(_env, "this", true)) {
+                    PUSH(object_new_error("this is not defined", true));
+                    break;
+                }
+                PUSH_REF(env_get(_env, "this"));
+                break;
+            }
+            case OPCODE_LOAD_SUPER: {
+                object_t* super = env_get(_env, "super");
+                PUSH_REF(super);
+                break;
+            }
             case OPCODE_LOAD_ARRAY: {
                 int length = get_int(bytecode, ip);
                 object_t* array = object_new_array(length);

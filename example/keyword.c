@@ -21,8 +21,10 @@ const char* KEYWORDS[] = {
     KEY_TRUE,
     KEY_FALSE,
     KEY_NULL,
-    KEY_CATCH,
     KEY_NEW,
+    KEY_THIS,
+    KEY_SUPER,
+    KEY_CATCH,
     NULL
 };
 

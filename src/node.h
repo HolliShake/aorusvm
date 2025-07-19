@@ -15,6 +15,8 @@ typedef enum ast_node_type_struct {
     AstBoolean,
     AstString,
     AstNull,
+    AstThis,
+    AstSuper,
     AstArray,
     AstObjectProperty,
     AstObject,
