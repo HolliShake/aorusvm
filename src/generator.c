@@ -45,7 +45,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstMemberAccess:
         case AstIndex:
         case AstCall:
-        case AstUnaryPlus:
+        case AstUnaryPlusPlus:
         case AstUnarySpread:
         case AstNew:
         case AstBinaryMul:
@@ -66,6 +66,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstBinaryXor:
         case AstLogicalAnd:
         case AstLogicalOr:
+        case AstAssign:
         case AstRange:
         case AstCatch:
             return true;
@@ -744,7 +745,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             break;
         }
-        case AstUnaryPlus: {
+        case AstUnaryPlusPlus: {
             ast_node_t* expression = _expression->ast0;
             if (expression == NULL) {
                 __THROW_ERROR(
@@ -1224,6 +1225,11 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                 _expression->ast1
             );
             label(_code, jump_start);
+            break;
+        }
+        case AstAssign: {
+            generator_expression(_generator, _code, _scope, _expression->ast1);
+            generator_assignment1(_generator, _code, _scope, _expression->ast0);
             break;
         }
         case AstRange: {

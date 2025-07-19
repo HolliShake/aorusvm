@@ -162,13 +162,13 @@ DLLEXPORT ast_node_t* ast_index_node(position_t* _position, ast_node_t* _obj, as
 DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments);
 
 /*
- * Unary plus node.
+ * Unary plus plus node.
  *
  * @param _position The position of the node.
  * @param _value The value of the node.
- * @return The unary plus node.
+ * @return The unary plus plus node.
  */
-DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _value);
+DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t* _value);
 
 /*
  * Unary spread node.
@@ -187,16 +187,6 @@ DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _
  * @return The new node.
  */
 DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value);
-
-/*
- * Range node.
- *
- * @param _position The position of the node.
- * @param _lhs The left hand side of the node.
- * @param _rhs The right hand side of the node.
- * @return The range node.
- */
-DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
  * Binary mul node.
@@ -377,6 +367,26 @@ DLLEXPORT ast_node_t* ast_logical_and_node(position_t* _position, ast_node_t* _l
  * @return The logical or node.
  */
 DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Assign node.
+
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The assign node.
+ */
+DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Range node.
+ *
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The range node.
+ */
+DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
  * Catch node.

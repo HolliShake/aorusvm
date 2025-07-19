@@ -125,8 +125,8 @@ DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function
     return node;
 }
 
-DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _value) {
-    ast_node_t* node = ast_node_new(AstUnaryPlus, _position);
+DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryPlusPlus, _position);
     node->ast0 = _value;
     return node;
 }
@@ -140,13 +140,6 @@ DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _
 DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value) {
     ast_node_t* node = ast_node_new(AstNew, _position);
     node->ast0 = _value;
-    return node;
-}
-
-DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
-    ast_node_t* node = ast_node_new(AstRange, _position);
-    node->ast0 = _lhs;
-    node->ast1 = _rhs;
     return node;
 }
 
@@ -271,6 +264,20 @@ DLLEXPORT ast_node_t* ast_logical_and_node(position_t* _position, ast_node_t* _l
 
 DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
     ast_node_t* node = ast_node_new(AstLogicalOr, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstAssign, _position);
+    node->ast0 = _lhs;
+    node->ast1 = _rhs;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs) {
+    ast_node_t* node = ast_node_new(AstRange, _position);
     node->ast0 = _lhs;
     node->ast1 = _rhs;
     return node;
