@@ -1228,7 +1228,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_USER_TYPE(constructor)) {
                     for (int i = 0; i < argc; i++) POPP();
                     char* message = string_format(
-                        "expected \"user_type\", got \"%s\"", 
+                        "expected \"constructor\", got \"%s\"", 
                         object_type_to_string(constructor)
                     );
                     PUSH(object_new_error(message, true));

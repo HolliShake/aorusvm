@@ -790,7 +790,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
-                    "new expression must have a call expression, but received %d", expression->type
+                    "new expression must have a call expression"
                 );
             }
             int param_count = 0;

@@ -188,3 +188,5 @@ println(px, px.printxx());
 println(Person);
 
 println(newPerson("Doy", 2));
+
+println(new 10());
