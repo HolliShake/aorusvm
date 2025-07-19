@@ -664,28 +664,33 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             generator_function(_generator, _code, _scope, _expression);
             break;
         }
-        case AstIndex: {
-            ast_node_t* obj = _expression->ast0;
-            ast_node_t* index = _expression->ast1;
-            if (obj == NULL) {
+        case AstNew: {
+            ast_node_t* expression = _expression->ast0;
+            ast_node_list_t arguments = _expression->array0;
+            if (expression == NULL) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
-                    "index expression requires an object, but received NULL"
+                    "new expression must have a value, but received NULL"
                 );
             }
-            if (index == NULL) {
+            if (arguments == NULL) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
-                    "index expression requires an index, but received NULL"
+                    "new expression must have arguments, but received NULL"
                 );
             }
-            generator_expression(_generator, _code, _scope, obj);
-            generator_expression(_generator, _code, _scope, index);
-            emit(_code, OPCODE_INDEX);
+            int param_count = 0;
+            for (param_count = 0; arguments[param_count] != NULL; param_count++);
+            for (int i = param_count - 1; i >= 0; i--) {
+                generator_expression(_generator, _code, _scope, arguments[i]);
+            }
+            generator_expression(_generator, _code, _scope, expression);
+            emit(_code, OPCODE_CALL_CONSTRUCTOR);
+            emit_int(_code, param_count);
             break;
         }
         case AstMemberAccess: {
@@ -718,6 +723,30 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             generator_expression(_generator, _code, _scope, obj);
             emit(_code, OPCODE_GET_PROPERTY);
             emit_string(_code, member->str0);
+            break;
+        }
+        case AstIndex: {
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* index = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index expression requires an object, but received NULL"
+                );
+            }
+            if (index == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index expression requires an index, but received NULL"
+                );
+            }
+            generator_expression(_generator, _code, _scope, obj);
+            generator_expression(_generator, _code, _scope, index);
+            emit(_code, OPCODE_INDEX);
             break;
         }
         case AstCall: {
@@ -821,27 +850,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             // Or ignore it!!!
             generator_expression(_generator, _code, _scope, expression);
             emit(_code, OPCODE_EXTEND_ARRAY);
-            break;
-        }
-        case AstNew: {
-            ast_node_t* expression = _expression->ast0;
-            ast_node_list_t arguments = expression->array0;
-            if (expression->type != AstCall) {
-                __THROW_ERROR(
-                    _generator->fpath,
-                    _generator->fdata,
-                    _expression->position,
-                    "new expression must have a call expression"
-                );
-            }
-            int param_count = 0;
-            for (param_count = 0; arguments[param_count] != NULL; param_count++);
-            for (int i = param_count - 1; i >= 0; i--) {
-                generator_expression(_generator, _code, _scope, arguments[i]);
-            }
-            generator_expression(_generator, _code, _scope, expression->ast0);
-            emit(_code, OPCODE_CALL_CONSTRUCTOR);
-            emit_int(_code, param_count);
             break;
         }
         case AstBinaryMul: {

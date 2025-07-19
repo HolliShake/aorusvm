@@ -104,6 +104,13 @@ DLLEXPORT ast_node_t* ast_function_expression_node(position_t* _position, ast_no
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value, ast_node_list_t _arguments) {
+    ast_node_t* node = ast_node_new(AstNew, _position);
+    node->ast0 = _value;
+    node->array0 = _arguments;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_member_access_node(position_t* _position, ast_node_t* _obj, ast_node_t* _member) {
     ast_node_t* node = ast_node_new(AstMemberAccess, _position);
     node->ast0 = _obj;
@@ -133,12 +140,6 @@ DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t
 
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value) {
     ast_node_t* node = ast_node_new(AstUnarySpread, _position);
-    node->ast0 = _value;
-    return node;
-}
-
-DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value) {
-    ast_node_t* node = ast_node_new(AstNew, _position);
     node->ast0 = _value;
     return node;
 }

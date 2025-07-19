@@ -132,6 +132,16 @@ DLLEXPORT ast_node_t* ast_object_node(position_t* _position, ast_node_list_t _pr
 DLLEXPORT ast_node_t* ast_function_expression_node(position_t* _position, ast_node_list_t _parameters, ast_node_list_t _body);
 
 /*
+ * New node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @param _arguments The arguments of the node.
+ * @return The new node.
+ */
+DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value, ast_node_list_t _arguments);
+
+/*
  * Member access node.
  *
  * @param _position The position of the node.
@@ -178,15 +188,6 @@ DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t
  * @return The unary spread node.
  */
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value);
-
-/*
- * New node.
- *
- * @param _position The position of the node.
- * @param _value The value of the node.
- * @return The new node.
- */
-DLLEXPORT ast_node_t* ast_new_node(position_t* _position, ast_node_t* _value);
 
 /*
  * Binary mul node.

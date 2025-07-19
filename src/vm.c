@@ -29,6 +29,9 @@
     ip += size; \
 }
 
+#define TOP (instance->sp - 1)
+#define BOT (instance->sp)
+
 #define OPCODE (bytecode[ip])
 
 #define PEEK() (instance->evaluation_stack[instance->sp - 1])
@@ -902,33 +905,32 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
 
 INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
     object_t* method = NULL;
-    if (OBJECT_TYPE_USER_TYPE(_obj)) {
-        object_t* current = _obj;
+    bool is_method_call = !OBJECT_TYPE_USER_TYPE(_obj);
+    
+    if (OBJECT_TYPE_USER_TYPE(_obj) || OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        // Get the appropriate object to search through the prototype chain
+        object_t* current = OBJECT_TYPE_USER_TYPE(_obj) 
+            ? _obj 
+            : ((user_type_instance_t*)_obj->value.opaque)->constructor;
+        
+        // Search up the prototype chain
         while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            if (hashmap_has_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name)) {
-                method = hashmap_get_string((hashmap_t*) ((user_type_t*) current->value.opaque)->prototype->value.opaque, _method_name);
+            user_type_t* utype = (user_type_t*)current->value.opaque;
+            hashmap_t* prototype_map = (hashmap_t*)utype->prototype->value.opaque;
+            
+            if (hashmap_has_string(prototype_map, _method_name)) {
+                method = hashmap_get_string(prototype_map, _method_name);
                 break;
             }
-            current = ((user_type_t*) current->value.opaque)->super;
-        }
-    }
-    else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        // Push the object to the stack if it's a user type instance
-        object_t* constructor = ((user_type_instance_t*) _obj->value.opaque)->constructor;
-        while (constructor != NULL && OBJECT_TYPE_USER_TYPE(constructor)) {
-            if (hashmap_has_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name)) {
-                method = hashmap_get_string((hashmap_t*) ((user_type_t*) constructor->value.opaque)->prototype->value.opaque, _method_name);
-                break;
-            }
-            constructor = ((user_type_t*) constructor->value.opaque)->super;
+            current = utype->super;
         }
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _method_name)) {
-            method = hashmap_get_string((hashmap_t*)_obj->value.opaque, _method_name);
+        hashmap_t* obj_map = (hashmap_t*)_obj->value.opaque;
+        if (hashmap_has_string(obj_map, _method_name)) {
+            method = hashmap_get_string(obj_map, _method_name);
         }
     }
 
-    bool is_method_call = !OBJECT_TYPE_USER_TYPE(_obj);
     if (is_method_call) PUSH_REF(_obj);
 
     // If the method is not found, return an error
@@ -969,12 +971,33 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
 INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor, int _argc) {
     char* constructor_name = "init";
     user_type_t* utype = (user_type_t*) _constructor->value.opaque;
-    if (!hashmap_has_string((hashmap_t*) utype->prototype->value.opaque, constructor_name)) {
+    // Check if constructor exists in the prototype chain
+    while (utype != NULL) {
+        if (hashmap_has_string((hashmap_t*)utype->prototype->value.opaque, constructor_name)) {
+            break;
+        }
+        
+        if (utype->super == NULL) {
+            // No constructor found in prototype chain, create default instance
+            for (int i = 0; i < _argc; i++) POPP();
+            object_t* default_instance = object_new_user_type_instance(
+                _constructor, 
+                vm_to_heap(object_new_object())
+            );
+            PUSH(default_instance);
+            return;
+        }
+        
+        utype = (user_type_t*)utype->super->value.opaque;
+    }
+    
+    if (utype == NULL) {
         for (int i = 0; i < _argc; i++) POPP();
         object_t* default_ctor_result = object_new_user_type_instance(_constructor, vm_to_heap(object_new_object()));
         PUSH(default_ctor_result);
         return;
     }
+    
     object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, constructor_name);
     if (!OBJECT_TYPE_CALLABLE(constructor_from_prototype)) {
         for (int i = 0; i < _argc; i++) POPP();

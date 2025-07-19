@@ -13,32 +13,11 @@ class Human {
 }
 
 class Person extends Human {
-    var xx = 2;
-
-    func init(_name, _age) {
-        super.init(_name, _age);
-    }
-
-    func printxx() {
-        println("xx>>", xx, this);
-        return 1;
-    }
-
     
 }
 
-const px = new Person(1, 2);
+const px = new Person("Philipp Andrew Redondo", 26);
 
-class Dog extends Person {
+println(px.getName(), [1,2,3]);
 
-    func bark() {
-        println("ArF!");
-    }
-
-}
-
-println(">>>>>>>>>>>>.", px, px.printxx());
-println(new Person("Doy", 12).getName(), Dog.bark(), Dog.xx, new 2());
-
-
-
+println("Done!");

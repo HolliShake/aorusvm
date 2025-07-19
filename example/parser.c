@@ -263,9 +263,54 @@ ast_node_t* parser_group(parser_t* _parser) {
     }
 }
 
+ast_node_t* parser_allocation(parser_t* _parser) {
+    position_t* start = _parser->current->position, *ended = start;
+    if (CHECKV(KEY_NEW)) {
+        ACCEPTV(KEY_NEW);
+        ast_node_t* node = parser_allocation(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "allocation expected"
+            );
+        }
+        ACCEPTV(LPAREN);
+        size_t index = 0;
+        ast_node_list_t arguments = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+        arguments[0] = NULL;
+        ast_node_t* argument = parser_expression(_parser);
+        if (argument != NULL) {
+            arguments[index++] = argument;
+            arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 1)));
+            arguments[index] = NULL;
+            while (CHECKV(COMMA)) {
+                ACCEPTV(COMMA);
+                ast_node_t* argument = parser_expression(_parser);
+                if (argument == NULL) {
+                    __THROW_ERROR(
+                        _parser->fpath,
+                        _parser->fdata,
+                        _parser->current->position,
+                        "allocation argument expected"
+                    );
+                }
+                arguments[index++] = argument;
+                arguments = (ast_node_list_t) realloc(arguments, (sizeof(ast_node_t*) * (index + 1)));
+                arguments[index] = NULL;
+            }
+        }
+        ACCEPTV(RPAREN);
+        ended = ast_position(node);
+        return ast_new_node(position_merge(start, ended), node, arguments);
+    }
+    return parser_group(_parser);
+}
+
 ast_node_t* parser_member_or_call(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ast_node_t* node = parser_group(_parser);
+    ast_node_t* node = parser_allocation(_parser);
     if (node == NULL) {
         return NULL;
     }
@@ -359,20 +404,7 @@ ast_node_t* parser_unary(parser_t* _parser) {
         }
         ended = ast_position(node);
         return ast_unary_spread_node(position_merge(start, ended), node);
-    } else if (CHECKV(KEY_NEW)) {
-        ACCEPTV(KEY_NEW);
-        ast_node_t* node = parser_member_or_call(_parser);
-        if (node == NULL) {
-            __THROW_ERROR(
-                _parser->fpath,
-                _parser->fdata,
-                _parser->current->position,
-                "missing operand for new"
-            );
-        }
-        ended = ast_position(node);
-        return ast_new_node(position_merge(start, ended), node);
-    }
+    } 
     return parser_member_or_call(_parser);
 }
 
