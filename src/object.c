@@ -225,127 +225,7 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             return string_format("<iterator.%s/>", object_type_to_string(_obj->value.opaque));
         }
         case OBJECT_TYPE_OBJECT: {
-            hashmap_t* map = (hashmap_t*) _obj->value.opaque;
-            size_t entries_count = hashmap_size(map);
-            
-            if (entries_count == 0) {
-                return string_allocate("{}");
-            }
-            
-            // Pre-allocate buffer with estimated size
-            size_t capacity = 32 + entries_count * 32; // Larger estimate for formatting
-            char* result = malloc(capacity);
-            if (!result) return NULL;
-            
-            size_t used = 0;
-            result[used++] = '{';
-            result[used++] = '\n';
-            
-            size_t entries_added = 0;
-            for (size_t i = 0; i < map->bucket_count; i++) {
-                hashmap_node_t* node = map->buckets[i];
-                while (node) {
-                    // Add indentation
-                    if (used + 2 >= capacity) {
-                        capacity *= 2;
-                        char* new_buf = realloc(result, capacity);
-                        if (!new_buf) {
-                            free(result);
-                            return NULL;
-                        }
-                        result = new_buf;
-                    }
-                    result[used++] = '\t';
-                    
-                    // Get string representation of key
-                    char* key_str = object_to_string(node->key);
-                    if (!key_str) {
-                        free(result);
-                        return NULL;
-                    }
-                    
-                    size_t key_len = strlen(key_str);
-                    
-                    // Ensure buffer has enough space for key
-                    if (used + key_len + 2 >= capacity) {
-                        capacity = capacity * 2 + key_len;
-                        char* new_buf = realloc(result, capacity);
-                        if (!new_buf) {
-                            free(key_str);
-                            free(result);
-                            return NULL;
-                        }
-                        result = new_buf;
-                    }
-                    
-                    // Copy key string
-                    memcpy(result + used, key_str, key_len);
-                    used += key_len;
-                    free(key_str);
-                    
-                    // Add ": " separator
-                    if (used + 2 >= capacity) {
-                        capacity *= 2;
-                        char* new_buf = realloc(result, capacity);
-                        if (!new_buf) {
-                            free(result);
-                            return NULL;
-                        }
-                        result = new_buf;
-                    }
-                    result[used++] = ':';
-                    result[used++] = ' ';
-                    
-                    // Get string representation of value
-                    char* val_str = object_to_string(node->value);
-                    if (!val_str) {
-                        free(result);
-                        return NULL;
-                    }
-                    
-                    size_t val_len = strlen(val_str);
-                    
-                    // Ensure buffer has enough space for value
-                    if (used + val_len + 2 >= capacity) {
-                        capacity = capacity * 2 + val_len + 2;
-                        char* new_buf = realloc(result, capacity);
-                        if (!new_buf) {
-                            free(val_str);
-                            free(result);
-                            return NULL;
-                        }
-                        result = new_buf;
-                    }
-                    
-                    // Copy value string
-                    memcpy(result + used, val_str, val_len);
-                    used += val_len;
-                    free(val_str);
-                    
-                    // Add comma and newline if not the last element
-                    if (entries_added < entries_count - 1) {
-                        result[used++] = ',';
-                    }
-                    result[used++] = '\n';
-                    
-                    entries_added++;
-                    node = node->next;
-                }
-            }
-            
-            // Add closing brace and null terminator
-            if (used + 1 >= capacity) {
-                char* new_buf = realloc(result, used + 2);
-                if (!new_buf) {
-                    free(result);
-                    return NULL;
-                }
-                result = new_buf;
-            }
-            result[used++] = '}';
-            result[used] = '\0';
-            
-            return result;
+            return object_object_to_string_with_indent(_obj, 0);
         }
         case OBJECT_TYPE_USER_TYPE: {
             user_type_t* utype = (user_type_t*) _obj->value.opaque;
@@ -605,4 +485,148 @@ DLLEXPORT size_t object_hash(object_t* _obj) {
             PD("unsupported object type for hash: %d", _obj->type);
             return 0;
     }
+}
+
+char* object_object_to_string_with_indent(object_t* _obj, int _indent) {
+    hashmap_t* map = (hashmap_t*) _obj->value.opaque;
+    size_t entries_count = hashmap_size(map);
+    
+    if (entries_count == 0) {
+        return string_allocate("{}");
+    }
+    
+    // Pre-allocate buffer with estimated size
+    size_t capacity = 32 + entries_count * 32; // Larger estimate for formatting
+    char* result = malloc(capacity);
+    if (!result) return NULL;
+    
+    size_t used = 0;
+    result[used++] = '{';
+    result[used++] = '\n';
+    
+    // Calculate indentation for nested items
+    int next_indent = _indent + 1;
+    
+    size_t entries_added = 0;
+    for (size_t i = 0; i < map->bucket_count; i++) {
+        hashmap_node_t* node = map->buckets[i];
+        while (node) {
+            // Add indentation
+            if (used + next_indent + 1 >= capacity) {
+                capacity *= 2;
+                char* new_buf = realloc(result, capacity);
+                if (!new_buf) {
+                    free(result);
+                    return NULL;
+                }
+                result = new_buf;
+            }
+            
+            // Add proper indentation based on level
+            for (int j = 0; j < next_indent; j++) {
+                result[used++] = '\t';
+            }
+            
+            // Get string representation of key
+            char* key_str = object_to_string(node->key);
+            if (!key_str) {
+                free(result);
+                return NULL;
+            }
+            
+            size_t key_len = strlen(key_str);
+            
+            // Ensure buffer has enough space for key
+            if (used + key_len + 2 >= capacity) {
+                capacity = capacity * 2 + key_len;
+                char* new_buf = realloc(result, capacity);
+                if (!new_buf) {
+                    free(key_str);
+                    free(result);
+                    return NULL;
+                }
+                result = new_buf;
+            }
+            
+            // Copy key string
+            memcpy(result + used, key_str, key_len);
+            used += key_len;
+            free(key_str);
+            
+            // Add ": " separator
+            if (used + 2 >= capacity) {
+                capacity *= 2;
+                char* new_buf = realloc(result, capacity);
+                if (!new_buf) {
+                    free(result);
+                    return NULL;
+                }
+                result = new_buf;
+            }
+            result[used++] = ':';
+            result[used++] = ' ';
+            
+            // Get string representation of value
+            char* val_str;
+            if (node->value->type == OBJECT_TYPE_OBJECT) {
+                // Recursively format nested objects with increased indentation
+                val_str = object_object_to_string_with_indent(node->value, next_indent);
+            } else {
+                val_str = object_to_string(node->value);
+            }
+            
+            if (!val_str) {
+                free(result);
+                return NULL;
+            }
+            
+            size_t val_len = strlen(val_str);
+            
+            // Ensure buffer has enough space for value
+            if (used + val_len + 2 >= capacity) {
+                capacity = capacity * 2 + val_len + 2;
+                char* new_buf = realloc(result, capacity);
+                if (!new_buf) {
+                    free(val_str);
+                    free(result);
+                    return NULL;
+                }
+                result = new_buf;
+            }
+            
+            // Copy value string
+            memcpy(result + used, val_str, val_len);
+            used += val_len;
+            free(val_str);
+            
+            // Add comma and newline if not the last element
+            if (entries_added < entries_count - 1) {
+                result[used++] = ',';
+            }
+            result[used++] = '\n';
+            
+            entries_added++;
+            node = node->next;
+        }
+    }
+    
+    // Add closing brace with proper indentation
+    if (used + _indent + 1 >= capacity) {
+        char* new_buf = realloc(result, used + _indent + 2);
+        if (!new_buf) {
+            free(result);
+            return NULL;
+        }
+        result = new_buf;
+    }
+    
+    // Add indentation for closing brace
+    for (int j = 0; j < _indent; j++) {
+        result[used++] = '\t';
+    }
+    
+    result[used++] = '}';
+    result[used] = '\0';
+    
+    return result;
 }

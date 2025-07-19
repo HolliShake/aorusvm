@@ -150,7 +150,14 @@ func newPerson(_name, _age) {
         },
         "getAge": func() {
             return this.age;
-        }
+        },
+        "sample": ({
+            "a": 65,
+            "b": 75,
+            "c": ({
+                "d": "12331231"
+            })
+        })
     });
 }
 
@@ -169,7 +176,7 @@ class Person {
     }
 
     func printxx() {
-        println("xx>>", xx);
+        println("xx>>", xx, this);
         return 1;
     }
 }
@@ -179,3 +186,5 @@ const px = new Person(1, 2);
 println(px, px.printxx());
 
 println(Person);
+
+println(newPerson("Doy", 2));
