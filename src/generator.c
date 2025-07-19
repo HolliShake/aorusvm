@@ -424,9 +424,6 @@ INTERNAL void generator_function(generator_t* _generator, code_t* _code, scope_t
     for (size_t i = 0; body[i] != NULL; i++) {
         ast_node_t* statement = body[i];
         if (body[i]->type == AstReturnStatement && has_visible_return) {
-            for (size_t j = i; body[j] != NULL; j++) {
-                // ast_node_free(body[j]);
-            }
             break;
         }
         if (body[i]->type == AstReturnStatement) has_visible_return = true;
@@ -1243,7 +1240,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                 _expression->ast1
             );
             label(_code, jump_start);
-            // free(_expression);
             break;
         }
         case AstLogicalOr: {
@@ -1363,9 +1359,6 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
                 if (body[i]->type == AstReturnStatement && has_visible_return) {
-                    for (size_t j = i; body[j] != NULL; j++) {
-                        // ast_node_free(body[j]);
-                    }
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
@@ -2201,16 +2194,12 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 // Emit the store name opcode
                 emit(_func, OPCODE_STORE_NAME);
                 emit_string(_func, param->str0);
-                // free(param);
             }
             // Compile body
             bool has_visible_return = false;
             for (size_t i = 0; body[i] != NULL; i++) {
                 ast_node_t* statement = body[i];
                 if (body[i]->type == AstReturnStatement && has_visible_return) {
-                    for (size_t j = i; body[j] != NULL; j++) {
-                        // ast_node_free(body[j]);
-                    }
                     break;
                 }
                 if (body[i]->type == AstReturnStatement) has_visible_return = true;
@@ -2291,7 +2280,7 @@ INTERNAL code_t* generator_program(generator_t* _generator, ast_node_t* _program
     emit(_block, OPCODE_RETURN);
     // Free the scope
     scope_free(scope);
-    ast_node_free(_program);
+    ast_node_free_all(_program);
     return _block;
 }
 
@@ -2315,9 +2304,9 @@ DLLEXPORT code_t* generator_generate(generator_t* _generator, ast_node_t* _progr
 }
 
 DLLEXPORT void generator_free(generator_t* _generator) {
-    // free(_generator->fpath);
-    // free(_generator->fdata);
-    // free(_generator);
+    free(_generator->fpath);
+    free(_generator->fdata);
+    free(_generator);
 }
 
 #endif

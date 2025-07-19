@@ -88,10 +88,10 @@ typedef struct ast_node_struct {
 } ast_node_t;
 
 /*
- * Free an AST node.
+ * Free an AST node and all its children.
  *
  * @param _node The node to free.
  */
-void ast_node_free(ast_node_t* _node);
+void ast_node_free_all(ast_node_t* _node);
 
 #endif
