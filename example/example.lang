@@ -27,4 +27,7 @@ const px = new Person("Philipp Andrew Redondo", 26);
 
 println(px.getName(), [1,2,3]);
 
-println("Done!");
+println("Done!", func() {
+    this;
+});
+

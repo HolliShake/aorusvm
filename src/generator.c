@@ -503,7 +503,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             emit(_code, OPCODE_LOAD_NULL);
             break;
         case AstThis:
-            if (!scope_is_class(_scope) && !scope_is_object(_scope, true)) {
+            if ((!scope_is_class(_scope) && !scope_is_object(_scope, true)) && !scope_is_function(_scope)) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
