@@ -752,64 +752,108 @@ INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t
 }
 
 INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
-    if (OBJECT_TYPE_USER_TYPE(_obj) || OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        // Get the appropriate object to search through the prototype chain
-        object_t* current = OBJECT_TYPE_USER_TYPE(_obj) 
-            ? _obj 
-            : ((user_type_instance_t*)_obj->value.opaque)->constructor;
+    // Fast path for regular objects
+    if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* map = (hashmap_t*)_obj->value.opaque;
+        return hashmap_has_string(map, _property_name) ? 
+               hashmap_get_string(map, _property_name) : NULL;
+    }
+    
+    // Handle user types (classes)
+    if (OBJECT_TYPE_USER_TYPE(_obj)) {
+        user_type_t* user_type;
         
-        // Search up the prototype chain
-        while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            user_type_t* user_type = 
-                (user_type_t*)current->value.opaque;
-            /************/
-            hashmap_t* mapping_type_hashmap = 
-                (hashmap_t*)user_type->prototype->value.opaque;
-            /************/
-            if (hashmap_has_string(prototype_map, _method_name)) {
-                return hashmap_get_string(prototype_map, _method_name);
+        for (object_t* current = _obj; current != NULL; current = user_type->super) {
+            user_type = (user_type_t*)current->value.opaque;
+            hashmap_t* map = (hashmap_t*)user_type->prototype->value.opaque;
+            
+            if (hashmap_has_string(map, _property_name)) {
+                return hashmap_get_string(map, _property_name);
             }
-            current = utype->super;
         }
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _property_name)) {
-            return hashmap_get_string((hashmap_t*)_obj->value.opaque, _property_name);
+        return NULL;
+    } 
+    
+    // Handle user type instances (objects)
+    if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        for (object_t* current = _obj; current != NULL;) {
+            if (OBJECT_TYPE_USER_TYPE_INSTANCE(current)) {
+                // Check instance properties first
+                user_type_instance_t* instance = (user_type_instance_t*)current->value.opaque;
+                hashmap_t* map = (hashmap_t*)instance->object->value.opaque;
+                
+                if (hashmap_has_string(map, _property_name)) {
+                    return hashmap_get_string(map, _property_name);
+                }
+                
+                // Move up to constructor/class
+                current = instance->constructor;
+            } 
+            else if (OBJECT_TYPE_USER_TYPE(current)) {
+                // Check class prototype
+                user_type_t* user_type = (user_type_t*)current->value.opaque;
+                hashmap_t* map = (hashmap_t*)user_type->prototype->value.opaque;
+                
+                if (hashmap_has_string(map, _property_name)) {
+                    return hashmap_get_string(map, _property_name);
+                }
+                
+                // Move up to superclass
+                current = user_type->super;
+            }
+            else {
+                break;
+            }
         }
     }
+    
     return NULL;
 }
 
 INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _value) {
+    // Fast path: determine target hashmap directly based on object type
+    hashmap_t* target_map = NULL;
+    
+    switch (_obj->type) {
+        case OBJECT_TYPE_USER_TYPE:
+            target_map = (hashmap_t*)(((user_type_t*)_obj->value.opaque)->prototype->value.opaque);
+            break;
+        case OBJECT_TYPE_USER_TYPE_INSTANCE:
+            target_map = (hashmap_t*)(((user_type_instance_t*)_obj->value.opaque)->object->value.opaque);
+            break;
+        case OBJECT_TYPE_OBJECT:
+            target_map = (hashmap_t*)_obj->value.opaque;
+            break;
+        default:
+            // No valid target map for other types
+            return;
+    }
+    
+    // If no valid target map found, exit early
+    if (!target_map) return;
+    
+    // Check if property already exists before creating key object
+    bool exists = hashmap_has_string(target_map, _property_name);
+    
+    // Create string key object only once
     object_t* key = object_new_string(_property_name);
-    if (OBJECT_TYPE_USER_TYPE(_obj)) {
-        PD("NOT IMPLEMENTED");
-    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        user_type_instance_t* instance = 
-            (user_type_instance_t*)_obj->value.opaque;
-        /************/
-        hashmap_t* hashmap = 
-            (hashmap_t*)instance->object->value.opaque;
-        /************/
-        bool exists = hashmap_has_string(hashmap, _property_name);
-        hashmap_put(hashmap, key, _value);
-        if (exists) {
-           free((char*)key->value.opaque);
-           free(key);
-        } else vm_to_heap(key);
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_t* hashmap = 
-            (hashmap_t*)_obj->value.opaque;
-        /************/
-        bool exists = hashmap_has_string(hashmap, _property_name);
-        hashmap_put(hashmap, key, _value);
-        if (exists) {
-            free((char*)key->value.opaque);
-            free(key);
-        } else vm_to_heap(key);
+    
+    // Set the property
+    hashmap_put(target_map, key, _value);
+    
+    // Handle key object memory management
+    if (exists) {
+        // Property already exists, free our temporary key
+        free((char*)key->value.opaque);
+        free(key);
+    } else {
+        // New property, add key to heap management
+        vm_to_heap(key);
     }
 }
 
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
+    // Check if object is a collection type
     if (!OBJECT_TYPE_COLLECTION(_obj)) {
         char* message = string_format(
             "expected collection, got \"%s\"", 
@@ -819,7 +863,10 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         free(message);
         return;
     }
+
+    // Handle arrays
     if (OBJECT_TYPE_ARRAY(_obj)) {
+        // Validate index is a number
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
                 "expected number, got \"%s\"", 
@@ -829,23 +876,24 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
             free(message);
             return;
         }
+
         long index = number_coerce_to_long(_index);
-        
         array_t* array = (array_t*)_obj->value.opaque;
+        
+        // Check bounds
         if (index < 0 || index >= array_length(array)) {
-            char* message = string_format(
-                "index out of bounds", 
-                index
-            );
-            PUSH(object_new_error(message, true));
-            free(message);
+            PUSH(object_new_error("index out of bounds", true));
             return;
         }
-        object_t* result = array_get(array, index);
-        PUSH_REF(result);
+        
+        // Get and push array element
+        PUSH_REF(array_get(array, index));
         return;
-    } else if (OBJECT_TYPE_RANGE(_obj)) {
-        range_t* range = (range_t*)_obj->value.opaque;
+    } 
+    
+    // Handle ranges
+    else if (OBJECT_TYPE_RANGE(_obj)) {
+        // Validate index is a number
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
                 "expected number, got \"%s\"", 
@@ -855,43 +903,44 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
             free(message);
             return;
         }
+
         long index = number_coerce_to_long(_index);
+        range_t* range = (range_t*)_obj->value.opaque;
+        
+        // Check bounds
         if (index < 0 || index >= range_length(range)) {
-            char* message = string_format(
-                "index out of bounds", 
-                index
-            );
-            PUSH(object_new_error(message, true));
-            free(message);
+            PUSH(object_new_error("index out of bounds", true));
             return;
         }
-        object_t* result = range_get(range, index);
-        PUSH_REF(result);
+        
+        // Get and push range element
+        PUSH_REF(range_get(range, index));
         return;
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_t* map = 
-            (hashmap_t*)_obj->value.opaque;
-        /************/
+    } 
+    
+    // Handle objects (maps)
+    else if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* map = (hashmap_t*)_obj->value.opaque;
+        
+        // Check if key exists
         if (!hashmap_has(map, _index)) {
-            char* message = string_format(
-                "key not found", 
-                object_to_string(_index)
-            );
-            PUSH(object_new_error(message, true));
-            free(message);
+            PUSH(object_new_error("key not found", true));
             return;
         }
-        object_t* result = hashmap_get(map, _index);
-        PUSH_REF(result);
+        
+        // Get and push object property
+        PUSH_REF(hashmap_get(map, _index));
         return;
     }
+
+    // This should never happen due to the OBJECT_TYPE_COLLECTION check above
+    // but keeping as a safeguard
     char* message = string_format(
         "expected array or object, got \"%s\"", 
         object_to_string(_obj)
     );
     PUSH(object_new_error(message, true));
     free(message);
-    return;
 }
 
 INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
@@ -927,39 +976,41 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
     object_t* method = NULL;
     bool is_method_call = !OBJECT_TYPE_USER_TYPE(_obj);
     
+    // Find the method in the object or its prototype chain
     if (OBJECT_TYPE_USER_TYPE(_obj) || OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        // Get the appropriate object to search through the prototype chain
+        // Start with the constructor for instances, or the type itself
         object_t* current = OBJECT_TYPE_USER_TYPE(_obj) 
             ? _obj 
             : ((user_type_instance_t*)_obj->value.opaque)->constructor;
         
-        // Search up the prototype chain
+        // Walk up the prototype chain
         while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            user_type_t* user_type = 
-                (user_type_t*)current->value.opaque;
-            /************/
-            hashmap_t* mapping_type_hashmap = 
-                (hashmap_t*)user_type->prototype->value.opaque;
-            /************/
+            user_type_t* user_type = (user_type_t*)current->value.opaque;
+            hashmap_t* prototype_map = (hashmap_t*)user_type->prototype->value.opaque;
+            
             if (hashmap_has_string(prototype_map, _method_name)) {
                 method = hashmap_get_string(prototype_map, _method_name);
                 break;
             }
-            current = utype->super;
+            current = user_type->super;
         }
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
+        // Direct lookup for regular objects
         hashmap_t* obj_map = (hashmap_t*)_obj->value.opaque;
         if (hashmap_has_string(obj_map, _method_name)) {
             method = hashmap_get_string(obj_map, _method_name);
         }
     }
 
+    // For method calls, push the object as 'this'
     if (is_method_call) PUSH_REF(_obj);
 
-    // If the method is not found, return an error
+    // Handle error cases
     if (method == NULL) {
-        for (int i = 0; i < _argc; i++) POPP();
-        if (is_method_call) POPP(); // pop the object
+        // Method not found
+        POPN(_argc);
+        if (is_method_call) POPP();
+        
         char* message = string_format(
             "method \"%s\" not found in \"%s\"", 
             _method_name,
@@ -970,10 +1021,11 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
         return;
     }
 
-    // If the method is not callable, return an error
     if (!OBJECT_TYPE_CALLABLE(method)) {
-        for (int i = 0; i < _argc; i++) POPP();
-        if (is_method_call) POPP(); // pop the object
+        // Method is not callable
+        POPN(_argc);
+        if (is_method_call) POPP();
+        
         char* message = string_format(
             "method \"%s\" is not callable", 
             _method_name
@@ -983,7 +1035,7 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
         return;
     }
 
-    // Call the method if found
+    // Invoke the method
     if (OBJECT_TYPE_FUNCTION(method)) {
         do_call(_parent_env, is_method_call, method, _argc);
     } else {
@@ -993,51 +1045,49 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
 
 INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor, int _argc) {
     char* constructor_name = "init";
-    user_type_t* user_type = 
-        (user_type_t*)_constructor->value.opaque;
-    // Check if constructor exists in the prototype chain
+    user_type_t* user_type = (user_type_t*)_constructor->value.opaque;
+    hashmap_t* prototype_map;
+    
+    // Create a new instance with empty object
+    object_t* new_instance = vm_to_heap(object_new_user_type_instance(
+        _constructor, 
+        vm_to_heap(object_new_object())
+    ));
+    
+    // Find constructor in prototype chain
     while (user_type != NULL) {
-        if (hashmap_has_string((hashmap_t*)user_type->prototype->value.opaque, constructor_name)) {
-            break;
+        prototype_map = (hashmap_t*)user_type->prototype->value.opaque;
+        
+        if (hashmap_has_string(prototype_map, constructor_name)) {
+            // Found constructor - check if it's callable
+            object_t* constructor_fn = hashmap_get_string(prototype_map, constructor_name);
+            
+            if (OBJECT_TYPE_CALLABLE(constructor_fn)) {
+                // Call the constructor with the new instance
+                vm_invoke_property(_parent_env, new_instance, constructor_name, _argc);
+                // Discard constructor's return value
+                POPP();
+                PUSH_REF(new_instance);
+                return;
+            } else {
+                // Constructor exists but isn't callable
+                POPN(_argc);
+                char* message = string_format(
+                    "constructor \"%s\" is not callable", 
+                    constructor_name
+                );
+                PUSH(object_new_error(message, true));
+                free(message);
+                return;
+            }
         }
         
-        if (user_type->super == NULL) {
-            // No constructor found in prototype chain, create default instance
-            for (int i = 0; i < _argc; i++) POPP();
-            object_t* default_instance = object_new_user_type_instance(
-                _constructor, 
-                vm_to_heap(object_new_object())
-            );
-            PUSH(default_instance);
-            return;
-        }
-        
-        user_type = (user_type_t*)user_type->super->value.opaque;
+        // Move up the inheritance chain
+        user_type = user_type->super ? (user_type_t*)user_type->super->value.opaque : NULL;
     }
     
-    if (user_type == NULL) {
-        for (int i = 0; i < _argc; i++) POPP();
-        object_t* default_ctor_result = object_new_user_type_instance(_constructor, vm_to_heap(object_new_object()));
-        PUSH(default_ctor_result);
-        return;
-    }
-    
-    object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*)user_type->prototype->value.opaque, constructor_name);
-    if (!OBJECT_TYPE_CALLABLE(constructor_from_prototype)) {
-        for (int i = 0; i < _argc; i++) POPP();
-        char* message = string_format(
-            "constructor \"%s\" is not callable", 
-            constructor_name
-        );
-        PUSH(object_new_error(message, true));
-        free(message);
-        return;
-    }
-    object_t* new_instance = vm_to_heap(object_new_user_type_instance(_constructor, vm_to_heap(object_new_object())));
-    vm_invoke_property(_parent_env, new_instance, constructor_name, _argc);
-    // Pop the constructor's return value
-    POPP();
-    // Push the new instance
+    // No constructor found - use default instance
+    POPN(_argc);
     PUSH_REF(new_instance);
 }
 
