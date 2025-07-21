@@ -53,7 +53,7 @@
         if (i == instance->function_table_size) { \
             /* Only reallocate when needed, and grow by more than 1 to reduce reallocation frequency */ \
             if (instance->function_table_size % 16 == 0) { \
-                instance->function_table_item = (code_t**) realloc( \
+                instance->function_table_item = (code_t**)realloc( \
                     instance->function_table_item, \
                     sizeof(code_t*) * (instance->function_table_size + 17) \
                 ); \
@@ -740,7 +740,7 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  */
 INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* _signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
-    code_t* code = (code_t *) _closure->value.opaque;
+    code_t* code = (code_t *)_closure->value.opaque;
     env_t* block_env 
         = env_new(_parent_env);
     block_env->closure = code->environment;
@@ -784,22 +784,26 @@ INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _valu
     if (OBJECT_TYPE_USER_TYPE(_obj)) {
         PD("NOT IMPLEMENTED");
     } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
-        hashmap_t* hashmap = (hashmap_t*) instance->object->value.opaque;
-
+        user_type_instance_t* instance = 
+            (user_type_instance_t*)_obj->value.opaque;
+        /************/
+        hashmap_t* hashmap = 
+            (hashmap_t*)instance->object->value.opaque;
+        /************/
         bool exists = hashmap_has_string(hashmap, _property_name);
         hashmap_put(hashmap, key, _value);
         if (exists) {
-           free((char*) key->value.opaque);
+           free((char*)key->value.opaque);
            free(key);
         } else vm_to_heap(key);
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_t* hashmap = (hashmap_t*) _obj->value.opaque;
-        
+        hashmap_t* hashmap = 
+            (hashmap_t*)_obj->value.opaque;
+        /************/
         bool exists = hashmap_has_string(hashmap, _property_name);
         hashmap_put(hashmap, key, _value);
         if (exists) {
-            free((char*) key->value.opaque);
+            free((char*)key->value.opaque);
             free(key);
         } else vm_to_heap(key);
     }
@@ -827,7 +831,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         }
         long index = number_coerce_to_long(_index);
         
-        array_t* array = (array_t*) _obj->value.opaque;
+        array_t* array = (array_t*)_obj->value.opaque;
         if (index < 0 || index >= array_length(array)) {
             char* message = string_format(
                 "index out of bounds", 
@@ -841,7 +845,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         PUSH_REF(result);
         return;
     } else if (OBJECT_TYPE_RANGE(_obj)) {
-        range_t* range = (range_t*) _obj->value.opaque;
+        range_t* range = (range_t*)_obj->value.opaque;
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
                 "expected number, got \"%s\"", 
@@ -865,7 +869,9 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         PUSH_REF(result);
         return;
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_t* map = (hashmap_t*) _obj->value.opaque;
+        hashmap_t* map = 
+            (hashmap_t*)_obj->value.opaque;
+        /************/
         if (!hashmap_has(map, _index)) {
             char* message = string_format(
                 "key not found", 
@@ -889,7 +895,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
 }
 
 INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
-    code_t* code = (code_t *) _function->value.opaque;
+    code_t* code = (code_t *)_function->value.opaque;
     object_t* this = _is_method ? POPP() : NULL;
     if (code->param_count != _argc) {
         // pop all arguments, before returning error
@@ -913,7 +919,7 @@ INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, 
 }
 
 INTERNAL void do_native_call(object_t* _function, int _argc) {
-    vm_native_function function = (vm_native_function) _function->value.opaque;
+    vm_native_function function = (vm_native_function)_function->value.opaque;
     function(_argc);
 }
 
@@ -987,14 +993,15 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
 
 INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor, int _argc) {
     char* constructor_name = "init";
-    user_type_t* utype = (user_type_t*) _constructor->value.opaque;
+    user_type_t* user_type = 
+        (user_type_t*)_constructor->value.opaque;
     // Check if constructor exists in the prototype chain
-    while (utype != NULL) {
-        if (hashmap_has_string((hashmap_t*)utype->prototype->value.opaque, constructor_name)) {
+    while (user_type != NULL) {
+        if (hashmap_has_string((hashmap_t*)user_type->prototype->value.opaque, constructor_name)) {
             break;
         }
         
-        if (utype->super == NULL) {
+        if (user_type->super == NULL) {
             // No constructor found in prototype chain, create default instance
             for (int i = 0; i < _argc; i++) POPP();
             object_t* default_instance = object_new_user_type_instance(
@@ -1005,17 +1012,17 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
             return;
         }
         
-        utype = (user_type_t*)utype->super->value.opaque;
+        user_type = (user_type_t*)user_type->super->value.opaque;
     }
     
-    if (utype == NULL) {
+    if (user_type == NULL) {
         for (int i = 0; i < _argc; i++) POPP();
         object_t* default_ctor_result = object_new_user_type_instance(_constructor, vm_to_heap(object_new_object()));
         PUSH(default_ctor_result);
         return;
     }
     
-    object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*) utype->prototype->value.opaque, constructor_name);
+    object_t* constructor_from_prototype = hashmap_get_string((hashmap_t*)user_type->prototype->value.opaque, constructor_name);
     if (!OBJECT_TYPE_CALLABLE(constructor_from_prototype)) {
         for (int i = 0; i < _argc; i++) POPP();
         char* message = string_format(
@@ -1136,8 +1143,12 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     free(message);
                     break;
                 }
-                object_t* constructor = ((user_type_instance_t*) this->value.opaque)->constructor;
-                object_t* super = ((user_type_t*) constructor->value.opaque)->super;
+                object_t* constructor = 
+                    ((user_type_instance_t*)this->value.opaque)->constructor;
+                /************/
+                object_t* super = 
+                    ((user_type_t*)constructor->value.opaque)->super;
+                /************/
                 if (super == NULL) {
                     char* message = string_format(
                         "super is not defined for \"%s\"", 
@@ -1186,6 +1197,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 array_t* src_array = (OBJECT_TYPE_ARRAY(array_src)) 
                     ? (array_t*) array_src->value.opaque 
                     : (array_t*) (range_to_array((range_t*) array_src->value.opaque))->value.opaque;
+                /************/
                 array_extend((array_t*) array_dst->value.opaque, src_array);
                 break;
             }
@@ -1202,7 +1214,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     free(message);
                     break;
                 }
-                array_push((array_t*) arr->value.opaque, obj);
+                array_push((array_t*)arr->value.opaque, obj);
                 break;
             }
             case OPCODE_LOAD_OBJECT: {
@@ -1220,7 +1232,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                         break;
                     }
                     object_t* val = POPP();
-                    hashmap_put((hashmap_t*) obj->value.opaque, key, val);
+                    hashmap_put((hashmap_t*)obj->value.opaque, key, val);
                 }
                 PUSH(obj);
                 FORWARD(4);
@@ -1249,7 +1261,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     free(message);
                     break;
                 }
-                hashmap_extend((hashmap_t*) obj_dst->value.opaque, (hashmap_t*) obj_src->value.opaque);
+                hashmap_extend((hashmap_t*)obj_dst->value.opaque, (hashmap_t*)obj_src->value.opaque);
                 break;
             }
             case OPCODE_PUT_OBJECT: {
@@ -1275,7 +1287,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     free(message);
                     break;
                 }
-                hashmap_put((hashmap_t*) obj_dst->value.opaque, key, val);
+                hashmap_put((hashmap_t*)obj_dst->value.opaque, key, val);
                 break;
             }
             case OPCODE_RANGE: {
@@ -1642,7 +1654,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (opcode == OPCODE_SETUP_CLASS)
                 if (OPCODE != OPCODE_BEGIN_CLASS) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* class_bytecode = (code_t*) get_memory(bytecode, ip);
+                code_t* class_bytecode = 
+                    (code_t*)get_memory(bytecode, ip);
+                /************/
                 SAVE_FUNCTION(class_bytecode); // Slow!, optimize later
                 object_t* closure = vm_to_heap(object_new_function(class_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
@@ -1656,7 +1670,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     break;
                 }
                 object_t* class = PEEK();
-                user_type_t* user = (user_type_t*) class->value.opaque;
+                user_type_t* user = 
+                    (user_type_t*)class->value.opaque;
+                /************/
                 user->super = super;
                 break;
             }
@@ -1665,7 +1681,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (opcode == OPCODE_SETUP_FUNCTION)
                 if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* function_bytecode = (code_t*) get_memory(bytecode, ip);
+                code_t* function_bytecode = 
+                    (code_t*)get_memory(bytecode, ip);
+                /************/
                 SAVE_FUNCTION(function_bytecode); // Slow!, optimize later
                 PUSH(object_new_function(function_bytecode));
                 FORWARD(8);
@@ -1676,7 +1694,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (opcode == OPCODE_SETUP_BLOCK)
                 if (OPCODE != OPCODE_BEGIN_BLOCK) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* block_bytecode = (code_t*) get_memory(bytecode, ip);
+                code_t* block_bytecode = (code_t*)get_memory(bytecode, ip);
                 SAVE_FUNCTION(block_bytecode); // Slow!, optimize later
                 object_t* closure = vm_to_heap(object_new_function(block_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
@@ -1687,7 +1705,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
-                code_t* block_bytecode = (code_t*) get_memory(bytecode, ip);
+                code_t* block_bytecode = (code_t*)get_memory(bytecode, ip);
                 SAVE_FUNCTION(block_bytecode); // Slow!, optimize later
                 object_t* closure = vm_to_heap(object_new_function(block_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
@@ -1709,7 +1727,9 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
-                code_t* code = (code_t*) obj->value.opaque;
+                code_t* code = 
+                    (code_t*)obj->value.opaque;
+                /************/
                 int capture_count = get_int(bytecode, ip);
                 int length = 4;
                 for (int i = 0; i < capture_count; i++) {
@@ -1747,12 +1767,12 @@ DLLEXPORT void vm_init() {
     ASSERTNULL(instance, "failed to allocate memory for vm");
     // evaluation stack
     instance->evaluation_stack = 
-        (object_t **) malloc(sizeof(object_t *) * EVALUATION_STACK_SIZE);
+        (object_t **)malloc(sizeof(object_t*) * EVALUATION_STACK_SIZE);
     ASSERTNULL(instance->evaluation_stack, "failed to allocate memory for evaluation stack");
     instance->sp = 0;
     // function table
     instance->function_table_size = 0;
-    instance->function_table_item = (code_t**) malloc(sizeof(code_t*));
+    instance->function_table_item = (code_t**)malloc(sizeof(code_t*));
     instance->function_table_item[0] = NULL;
     // counter
     instance->allocation_counter = 0;
