@@ -8,9 +8,6 @@ class Human {
     }
 
     func getName() {
-        for (i in 0..10) {
-            println(i);
-        }
         return this.name;
     }
 }
@@ -23,9 +20,15 @@ class Person extends Tao {
     
 }
 
+Person.setName = func(name) {
+    this.name = name;
+};
+
 const px = new Person("Philipp Andrew Redondo", 26);
 
-println(px.getName(), [1,2,3]);
+println(px.getName());
+px.setName("Hello World!");
+println(px.getName());
 
 println("Done!", func() {
     this;
