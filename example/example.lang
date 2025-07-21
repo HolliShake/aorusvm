@@ -35,6 +35,6 @@ println("Done!", func() {
 }, px.getName);
 
 
-var y = 11;
+var y = 11.."asdasd";
 var x = 2 + y;
 println(x);

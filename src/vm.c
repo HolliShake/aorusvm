@@ -755,8 +755,9 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
     // Fast path for regular objects
     if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* map = (hashmap_t*)_obj->value.opaque;
-        return hashmap_has_string(map, _property_name) ? 
-               hashmap_get_string(map, _property_name) : NULL;
+        return hashmap_has_string(map, _property_name) 
+            ? hashmap_get_string(map, _property_name) 
+            : NULL;
     }
     
     // Handle user types (classes)
@@ -1363,7 +1364,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 }
                 long start = number_coerce_to_long(lhs);
                 long ended = number_coerce_to_long(rhs);
-                long step = (start < ended) ? 1 : -1;
+                long step  = (start < ended) ? 1 : -1;
                 PUSH(object_new_range(
                     start, 
                     ended, 
