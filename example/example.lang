@@ -34,3 +34,7 @@ println("Done!", func() {
     this;
 }, px.getName);
 
+
+var y = 11;
+var x = 2 + y;
+println(x);

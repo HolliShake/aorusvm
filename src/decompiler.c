@@ -106,6 +106,14 @@ void decompile(code_t* _code, bool _with_header) {
                 FORWARD(1);
                 break;
             }
+            case OPCODE_LOAD_THIS: {
+                PRINT_OPCODE("load_this\n");
+                break;
+            }
+            case OPCODE_LOAD_SUPER: {
+                PRINT_OPCODE("load_super\n");
+                break;
+            }
             case OPCODE_LOAD_ARRAY: {
                 int length = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("load_array: (length = %d)\n", length);
@@ -151,6 +159,13 @@ void decompile(code_t* _code, bool _with_header) {
             case OPCODE_SET_NAME: {
                 char* name = decompiler_get_string(bytecode, ip);
                 PRINT_OPCODE("set_name: %s\n", name);
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
+            case OPCODE_SET_PROPERTY: {
+                char* name = decompiler_get_string(bytecode, ip);
+                PRINT_OPCODE("set_property: %s\n", name);
                 FORWARD(strlen(name) + 1);
                 free(name);
                 break;
@@ -327,6 +342,10 @@ void decompile(code_t* _code, bool _with_header) {
                 FORWARD(8);
                 break;
             }
+            case OPCODE_EXTEND_CLASS: {
+                PRINT_OPCODE("extend_class\n");
+                break;
+            }
             case OPCODE_SETUP_FUNCTION:
             case OPCODE_BEGIN_FUNCTION: {
                 if (opcode == OPCODE_SETUP_FUNCTION)
@@ -432,7 +451,7 @@ void decompile(code_t* _code, bool _with_header) {
             }
             default:
                 printf("[%zu] Unknown opcode: %d\n", ip-1, opcode);
-                return;
+                exit(EXIT_FAILURE);
         }
     }
 }
