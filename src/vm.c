@@ -752,20 +752,24 @@ INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t
 }
 
 INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
-    if (OBJECT_TYPE_USER_TYPE(_obj)) {
-        object_t* current = _obj;
+    if (OBJECT_TYPE_USER_TYPE(_obj) || OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
+        // Get the appropriate object to search through the prototype chain
+        object_t* current = OBJECT_TYPE_USER_TYPE(_obj) 
+            ? _obj 
+            : ((user_type_instance_t*)_obj->value.opaque)->constructor;
+        
+        // Search up the prototype chain
         while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            object_t* __proto__ = ((user_type_t*) current->value.opaque)->prototype;
-            if (hashmap_has_string((hashmap_t*) __proto__->value.opaque, _property_name)) {
-                return hashmap_get_string((hashmap_t*) __proto__->value.opaque, _property_name);
+            user_type_t* user_type = 
+                (user_type_t*)current->value.opaque;
+            /************/
+            hashmap_t* mapping_type_hashmap = 
+                (hashmap_t*)user_type->prototype->value.opaque;
+            /************/
+            if (hashmap_has_string(prototype_map, _method_name)) {
+                return hashmap_get_string(prototype_map, _method_name);
             }
-            current = ((user_type_t*) current->value.opaque)->super;
-        }
-    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
-        object_t* object = instance->object;
-        if (hashmap_has_string((hashmap_t*) object->value.opaque, _property_name)) {
-            return hashmap_get_string((hashmap_t*) object->value.opaque, _property_name);
+            current = utype->super;
         }
     } else if (OBJECT_TYPE_OBJECT(_obj)) {
         if (hashmap_has_string((hashmap_t*)_obj->value.opaque, _property_name)) {
@@ -925,9 +929,12 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
         
         // Search up the prototype chain
         while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
-            user_type_t* utype = (user_type_t*)current->value.opaque;
-            hashmap_t* prototype_map = (hashmap_t*)utype->prototype->value.opaque;
-            
+            user_type_t* user_type = 
+                (user_type_t*)current->value.opaque;
+            /************/
+            hashmap_t* mapping_type_hashmap = 
+                (hashmap_t*)user_type->prototype->value.opaque;
+            /************/
             if (hashmap_has_string(prototype_map, _method_name)) {
                 method = hashmap_get_string(prototype_map, _method_name);
                 break;

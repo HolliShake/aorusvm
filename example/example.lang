@@ -29,5 +29,5 @@ println(px.getName(), [1,2,3]);
 
 println("Done!", func() {
     this;
-});
+}, px.getName);
 
