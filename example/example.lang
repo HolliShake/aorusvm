@@ -1,46 +1,5 @@
 
 
-class Human {
-    func init(a, b) {
-        this.name = a;
-        this.age  = b;
-       println("SET:", this);
-    }
-
-    func getName() {
-        return this.name;
-    }
-}
-
-class Tao extends Human {
-
-}
-
-class Person extends Tao {
-    
-}
-
-Person.setName = func(name) {
-    this.name = name;
-};
-
-const px = new Person("Philipp Andrew Redondo", 26);
-
-println(px.getName());
-px.setName("Hello World!");
-println(px.getName());
-
-println("Done!", func() {
-    this;
-}, px.getName);
-
-
-var y = 11.."asdasd";
-println(y);
-var xxxx = 2 + 2 * x;
-println("x value >>", xxxx);
-
-println(!x);
-println(x, ~x);
-println(+x);
-println(-x);
+var x = 5;
+println(2 * 3 + x++ + 12);
+println(x);

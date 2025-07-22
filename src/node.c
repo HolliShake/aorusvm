@@ -132,6 +132,18 @@ DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_postfix_plus_plus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstPostfixPlusPlus, _position);
+    node->ast0 = _value;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_postfix_minus_minus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstPostfixMinusMinus, _position);
+    node->ast0 = _value;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t* _value) {
     ast_node_t* node = ast_node_new(AstUnaryPlusPlus, _position);
     node->ast0 = _value;

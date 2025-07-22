@@ -24,6 +24,9 @@ typedef enum ast_node_type_struct {
     AstMemberAccess,
     AstIndex,
     AstCall,
+    // Postfix operators
+    AstPostfixPlusPlus,
+    AstPostfixMinusMinus,
     // Unary operators
     AstUnaryPlusPlus,
     AstUnaryMinusMinus,

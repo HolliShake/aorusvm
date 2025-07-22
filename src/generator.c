@@ -45,6 +45,8 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstMemberAccess:
         case AstIndex:
         case AstCall:
+        case AstPostfixPlusPlus:
+        case AstPostfixMinusMinus:
         case AstUnaryPlusPlus:
         case AstUnaryMinusMinus:
         case AstUnaryPlus:
@@ -304,7 +306,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
     }
 }
 
-INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression, bool _is_postfix) {
     if (_expression == NULL) {
         __THROW_ERROR(
             _generator->fpath,
@@ -340,6 +342,7 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
                     "constant variable %s cannot be re-assigned", _expression->str0
                 );
             }
+            if (_is_postfix) emit(_code, OPCODE_ROT2);
             emit(_code, OPCODE_SET_NAME);
             emit_string(
                 _code, 
@@ -822,6 +825,21 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             break;
         }
+        case AstPostfixPlusPlus: {
+            ast_node_t* expression = _expression->ast0;
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "unary expression must have an expression, but received NULL"
+                );
+            }
+            generator_assignment0(_generator, _code, _scope, expression);
+            emit(_code, OPCODE_INCREMENT);
+            generator_assignment1(_generator, _code, _scope, expression, true);
+            break;
+        }
         case AstUnaryPlusPlus: {
             ast_node_t* expression = _expression->ast0;
             if (expression == NULL) {
@@ -834,7 +852,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             generator_assignment0(_generator, _code, _scope, expression);
             emit(_code, OPCODE_INCREMENT);
-            generator_assignment1(_generator, _code, _scope, expression);
+            generator_assignment1(_generator, _code, _scope, expression, false);
             break;
         }
         case AstUnaryMinusMinus: {
@@ -849,7 +867,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             generator_assignment0(_generator, _code, _scope, expression);
             emit(_code, OPCODE_DECREMENT);
-            generator_assignment1(_generator, _code, _scope, expression);
+            generator_assignment1(_generator, _code, _scope, expression, false);
             break;
         }
         case AstUnaryPlus: {

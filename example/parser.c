@@ -376,6 +376,21 @@ ast_node_t* parser_member_or_call(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_postfix(parser_t* _parser) {
+    ast_node_t* node = parser_member_or_call(_parser);
+    if (node == NULL) {
+        return NULL;
+    }
+    if (CHECKV(PLUSPLUS)) {
+        ACCEPTV(PLUSPLUS);
+        return ast_postfix_plus_plus_node(position_merge(ast_position(node), ast_position(node)), node);
+    } else if (CHECKV(MINUSMINUS)) {
+        ACCEPTV(MINUSMINUS);
+        return ast_postfix_minus_minus_node(position_merge(ast_position(node), ast_position(node)), node);
+    }
+    return node;
+}
+
 ast_node_t* parser_unary(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
     if (CHECKV(PLUSPLUS)) {
@@ -470,7 +485,7 @@ ast_node_t* parser_unary(parser_t* _parser) {
         ended = ast_position(node);
         return ast_unary_spread_node(position_merge(start, ended), node);
     } 
-    return parser_member_or_call(_parser);
+    return parser_postfix(_parser);
 }
 
 ast_node_t* parser_multiplicative(parser_t* _parser) {

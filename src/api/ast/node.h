@@ -172,6 +172,24 @@ DLLEXPORT ast_node_t* ast_index_node(position_t* _position, ast_node_t* _obj, as
 DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function, ast_node_list_t _arguments);
 
 /*
+ * Postfix plus plus node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The postfix plus plus node.
+ */
+DLLEXPORT ast_node_t* ast_postfix_plus_plus_node(position_t* _position, ast_node_t* _value);
+
+/*
+ * Postfix minus minus node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The postfix minus minus node.
+ */
+DLLEXPORT ast_node_t* ast_postfix_minus_minus_node(position_t* _position, ast_node_t* _value);
+
+/*
  * Unary plus plus node.
  *
  * @param _position The position of the node.
