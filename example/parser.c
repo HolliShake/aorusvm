@@ -408,6 +408,58 @@ ast_node_t* parser_unary(parser_t* _parser) {
         }
         ended = ast_position(node);
         return ast_unary_minus_minus_node(position_merge(start, ended), node);
+    } else if (CHECKV(PLUS)) {
+        ACCEPTV(PLUS);
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for +"
+            );
+        }
+        ended = ast_position(node);
+        return ast_unary_plus_node(position_merge(start, ended), node);
+    } else if (CHECKV(MINUS)) {
+        ACCEPTV(MINUS);
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for -"
+            );
+        }
+        ended = ast_position(node);
+        return ast_unary_minus_node(position_merge(start, ended), node);
+    } else if (CHECKV(NOT)) {
+        ACCEPTV(NOT);
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for !"
+            );
+        }
+        ended = ast_position(node);
+        return ast_unary_not_node(position_merge(start, ended), node);
+    } else if (CHECKV(BITWISE_NOT)) {
+        ACCEPTV(BITWISE_NOT);
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for ~"
+            );
+        }
+        ended = ast_position(node);
+        return ast_unary_bitnot_node(position_merge(start, ended), node);
     } else if (CHECKV(SPREAD)) {
         ACCEPTV(SPREAD);
         ast_node_t* node = parser_unary(_parser);

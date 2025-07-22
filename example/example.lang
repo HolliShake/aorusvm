@@ -37,4 +37,9 @@ println("Done!", func() {
 
 var y = 11.."asdasd";
 var x = 2 + y;
-println(--x);
+println(x);
+
+println(!x);
+println(x, ~x);
+println(+x);
+println(-x);

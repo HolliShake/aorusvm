@@ -9,6 +9,7 @@
 #define RBRACKET      "}"
 #define NOT           "!"
 #define DOT           "."
+#define BITWISE_NOT   "~"
 #define DOTDOT        ".."
 #define SPREAD        "..."
 #define PLUSPLUS      "++"

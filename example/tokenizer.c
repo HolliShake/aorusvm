@@ -192,6 +192,15 @@ token_t* tokenizer_symbol(tokenizer_t* _tokenizer) {
             }
             break;
         }
+        case '~': {
+            append_str(value, _tokenizer->look);
+            tokenizer_forward(_tokenizer);
+            if (_tokenizer->look == '=') {
+                append_str(value, _tokenizer->look);
+                tokenizer_forward(_tokenizer);
+            }
+            break;
+        }
         case '=': {
             append_str(value, _tokenizer->look);
             tokenizer_forward(_tokenizer);

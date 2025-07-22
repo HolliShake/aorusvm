@@ -164,6 +164,10 @@ void do_increment(object_t* _obj) {
         return;
     }
 
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
     double result = number_coerce_to_double(_obj);
     result += 1;
     if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
@@ -194,6 +198,10 @@ void do_decrement(object_t* _obj) {
         return;
     }
 
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
     double result = number_coerce_to_double(_obj);
     result -= 1;
     if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
@@ -213,6 +221,99 @@ void do_decrement(object_t* _obj) {
 }
 
 INTERNAL
+void do_unary_plus(object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        int result = _obj->value.i32;
+        PUSH(object_new_int(_obj->value.i32));
+        return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
+    double result = number_coerce_to_double(_obj);
+    result = +result;
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    char* message = string_format("cannot unary plus type %s", object_type_to_string(_obj));
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
+}
+
+INTERNAL
+void do_unary_minus(object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        int result = -_obj->value.i32;
+        PUSH(object_new_int(result));
+        return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
+    double result = number_coerce_to_double(_obj);
+    result = -result;
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    char* message = string_format("cannot unary minus type %s", object_type_to_string(_obj));
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
+}
+
+INTERNAL
+void do_not(object_t* _obj) {
+    if (OBJECT_TYPE_BOOL(_obj)) {
+        PUSH(object_new_bool(!_obj->value.i32));
+        return;
+    }
+
+    bool result = object_is_truthy(_obj);
+    PUSH(object_new_bool(!result));
+    return;
+}
+
+INTERNAL
+void do_bitwise_not(object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        int result = ~_obj->value.i32;
+        PUSH(object_new_int(result));
+        return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
+    long result = number_coerce_to_long(_obj);
+    result = ~result;
+    if (result >= INT32_MIN && result <= INT32_MAX) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double((double)result));
+    return;
+    ERROR:;
+    char* message = string_format("cannot bitwise not type %s", object_type_to_string(_obj));
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
+}
+
+INTERNAL
 void do_mul(object_t *_lhs, object_t *_rhs) {
     // Fast path for integers
     if (OBJECT_TYPE_INT(_lhs) && OBJECT_TYPE_INT(_rhs)) {
@@ -223,6 +324,10 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
         }
         PUSH(object_new_double((double)result));
         return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
     }
 
     // Fallback path using coercion
@@ -261,6 +366,10 @@ void do_div(object_t *_lhs, object_t *_rhs) {
         int result = a / b;
         PUSH(object_new_int(result));
         return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
     }
 
     // Fallback path using coercion
@@ -303,6 +412,10 @@ void do_mod(object_t *_lhs, object_t *_rhs) {
         int result = a % b;
         PUSH(object_new_int(result));
         return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
     }
 
     // Fallback path using coercion
@@ -401,6 +514,10 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
         return;
     }
 
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     // Fallback path using coercion
     double lhs_value = number_coerce_to_double(_lhs);
     double rhs_value = number_coerce_to_double(_rhs);
@@ -431,6 +548,10 @@ INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
         int result = a << b;
         PUSH(object_new_int(result));
         return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
     }
 
     // Fallback path using coercion
@@ -465,6 +586,10 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
         return;
     }
 
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     // Fallback path using coercion
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -489,9 +614,14 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
-    if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+    
     // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -514,9 +644,14 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
-    if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -539,9 +674,14 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
-    if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -564,9 +704,14 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
-    if (!object_is_number(_lhs) || !object_is_number(_rhs)) {
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -589,7 +734,7 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
-    if (object_is_number(_lhs) && object_is_number(_rhs)) {
+    if (OBJECT_TYPE_NUMBER(_lhs) && OBJECT_TYPE_NUMBER(_rhs)) {
         long lhs_value = number_coerce_to_long(_lhs);
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value == rhs_value) {
@@ -635,7 +780,7 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
 }
 
 INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
-    if (object_is_number(_lhs) && object_is_number(_rhs)) {
+    if (OBJECT_TYPE_NUMBER(_lhs) && OBJECT_TYPE_NUMBER(_rhs)) {
         long lhs_value = number_coerce_to_long(_lhs);
         long rhs_value = number_coerce_to_long(_rhs);
         if (lhs_value != rhs_value) {
@@ -683,6 +828,11 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value & rhs_value;
@@ -712,6 +862,11 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value | rhs_value;
@@ -741,6 +896,11 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
         PUSH(object_new_int(result));
         return;
     }
+
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
+        goto ERROR;
+    }
+
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
     long result = lhs_value ^ rhs_value;
@@ -1535,6 +1695,26 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_DECREMENT: {
                 object_t *obj = POPP();
                 do_decrement(obj);
+                break;
+            }
+            case OPCODE_UNARY_PLUS: {
+                object_t *obj = POPP();
+                do_unary_plus(obj);
+                break;
+            }
+            case OPCODE_UNARY_MINUS: {
+                object_t *obj = POPP();
+                do_unary_minus(obj);
+                break;
+            }
+            case OPCODE_NOT: {
+                object_t *obj = POPP();
+                do_not(obj);
+                break;
+            }
+            case OPCODE_BITWISE_NOT: {
+                object_t *obj = POPP();
+                do_bitwise_not(obj);
                 break;
             }
             case OPCODE_MUL: {

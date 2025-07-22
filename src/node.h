@@ -27,6 +27,10 @@ typedef enum ast_node_type_struct {
     // Unary operators
     AstUnaryPlusPlus,
     AstUnaryMinusMinus,
+    AstUnaryPlus,
+    AstUnaryMinus,
+    AstUnaryNot,
+    AstUnaryBitnot,
     AstUnarySpread,
     AstNew,
     // Binary operators

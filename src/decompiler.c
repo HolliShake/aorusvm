@@ -210,6 +210,26 @@ void decompile(code_t* _code, bool _with_header) {
                 PRINT_OPCODE("increment\n");
                 break;
             }
+            case OPCODE_DECREMENT: {
+                PRINT_OPCODE("decrement\n");
+                break;
+            }
+            case OPCODE_UNARY_PLUS: {
+                PRINT_OPCODE("unary_plus\n");
+                break;
+            }
+            case OPCODE_UNARY_MINUS: {
+                PRINT_OPCODE("unary_minus\n");
+                break;
+            }
+            case OPCODE_NOT: {
+                PRINT_OPCODE("not\n");
+                break;
+            }
+            case OPCODE_BITWISE_NOT: {
+                PRINT_OPCODE("bitwise_not\n");
+                break;
+            }
             case OPCODE_MUL: {
                 PRINT_OPCODE("mul (*)\n");
                 break;

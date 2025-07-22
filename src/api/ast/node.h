@@ -190,6 +190,42 @@ DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t
 DLLEXPORT ast_node_t* ast_unary_minus_minus_node(position_t* _position, ast_node_t* _value);
 
 /*
+ * Unary plus node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary plus node.
+ */
+DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _value);
+
+/*
+ * Unary minus node.
+
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary minus node.
+ */
+DLLEXPORT ast_node_t* ast_unary_minus_node(position_t* _position, ast_node_t* _value);
+
+/*
+ * Unary not node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary not node.
+ */
+DLLEXPORT ast_node_t* ast_unary_not_node(position_t* _position, ast_node_t* _value);
+
+/*
+ * Unary bitnot node.
+ *
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary bitnot node.
+ */
+DLLEXPORT ast_node_t* ast_unary_bitnot_node(position_t* _position, ast_node_t* _value);
+
+/*
  * Unary spread node.
  *
  * @param _position The position of the node.

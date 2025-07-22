@@ -144,6 +144,30 @@ DLLEXPORT ast_node_t* ast_unary_minus_minus_node(position_t* _position, ast_node
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_unary_plus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryPlus, _position);
+    node->ast0 = _value;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_unary_minus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryMinus, _position);
+    node->ast0 = _value;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_unary_not_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryNot, _position);
+    node->ast0 = _value;
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_unary_bitnot_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryBitnot, _position);
+    node->ast0 = _value;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value) {
     ast_node_t* node = ast_node_new(AstUnarySpread, _position);
     node->ast0 = _value;
