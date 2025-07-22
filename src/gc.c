@@ -24,17 +24,28 @@ INTERNAL void gc_free_object(object_t* _obj) {
     if (_obj == NULL) {
         return;
     }
-    if (OBJECT_TYPE_STRING(_obj)) {
-        free(_obj->value.opaque);
-    } else if (OBJECT_TYPE_ARRAY(_obj)) {
-        array_free((array_t*) _obj->value.opaque);
-    } else if (OBJECT_TYPE_RANGE(_obj)) {
-        range_free((range_t*) _obj->value.opaque);
-    } else if (OBJECT_TYPE_ITERATOR(_obj)) {
-        iterator_free((iterator_t*) _obj->value.opaque);
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_free((hashmap_t*) _obj->value.opaque);
+    
+    // Free type-specific resources
+    switch (_obj->type) {
+        case OBJECT_TYPE_STRING:
+            free(_obj->value.opaque);
+            break;
+        case OBJECT_TYPE_ARRAY:
+            array_free((array_t*)_obj->value.opaque);
+            break;
+        case OBJECT_TYPE_RANGE:
+            range_free((range_t*)_obj->value.opaque);
+            break;
+        case OBJECT_TYPE_ITERATOR:
+            iterator_free((iterator_t*)_obj->value.opaque);
+            break;
+        case OBJECT_TYPE_OBJECT:
+            hashmap_free((hashmap_t*)_obj->value.opaque);
+            break;
+        // Other types don't need special cleanup
     }
+    
+    // Free the object itself
     free(_obj);
 }
 
@@ -43,54 +54,62 @@ INTERNAL void gc_mark_object(object_t* _obj) {
         return;
     }
 
-    object_t* current = _obj;
-    current->marked = true;
-    if (OBJECT_TYPE_ARRAY(_obj)) {
-        array_t* array = (array_t*) _obj->value.opaque;
-        for (size_t i = 0; i < array_length(array); i++) {
-            gc_mark_object(array_get(array, i));
-        }
-    } else if (OBJECT_TYPE_ITERATOR(_obj)) {
-        iterator_t* iterator = (iterator_t*) _obj->value.opaque;
-        gc_mark_object(iterator->obj);
-    } else if (OBJECT_TYPE_OBJECT(_obj)) {
-        hashmap_t* hashmap = (hashmap_t*) _obj->value.opaque;
-        for (size_t i = 0; i < hashmap->bucket_count; i++) {
-            if (hashmap->buckets[i] == NULL) {
-                continue;
+    // Mark the object itself
+    _obj->marked = true;
+
+    // Handle different object types
+    switch (_obj->type) {
+        case OBJECT_TYPE_ARRAY: {
+            array_t* array = (array_t*)_obj->value.opaque;
+            size_t length = array_length(array);
+            for (size_t i = 0; i < length; i++) {
+                gc_mark_object(array_get(array, i));
             }
-            hashmap_node_t* node = hashmap->buckets[i];
-            while (node) {
-                hashmap_node_t* next = node->next;
-                gc_mark_object(node->key);
-                gc_mark_object(node->value);
-                node = next;
-            }
+            break;
         }
-    } else if (OBJECT_TYPE_USER_TYPE(_obj)) {
-        user_type_t* user = (user_type_t*) _obj->value.opaque;
-        if (user->super != NULL) {
+        case OBJECT_TYPE_ITERATOR: {
+            iterator_t* iterator = (iterator_t*)_obj->value.opaque;
+            gc_mark_object(iterator->obj);
+            break;
+        }
+        case OBJECT_TYPE_OBJECT: {
+            hashmap_t* hashmap = (hashmap_t*)_obj->value.opaque;
+            for (size_t i = 0; i < hashmap->bucket_count; i++) {
+                hashmap_node_t* node = hashmap->buckets[i];
+                while (node) {
+                    gc_mark_object(node->key);
+                    gc_mark_object(node->value);
+                    node = node->next;
+                }
+            }
+            break;
+        }
+        case OBJECT_TYPE_USER_TYPE: {
+            user_type_t* user = (user_type_t*)_obj->value.opaque;
             gc_mark_object(user->super);
-        }
-        if (user->prototype != NULL) {
             gc_mark_object(user->prototype);
+            break;
         }
-    } else if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
-        user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
-        if (instance->constructor != NULL) {
+        case OBJECT_TYPE_USER_TYPE_INSTANCE: {
+            user_type_instance_t* instance = (user_type_instance_t*)_obj->value.opaque;
             gc_mark_object(instance->constructor);
-        }
-        if (instance->object != NULL) {
             gc_mark_object(instance->object);
+            break;
         }
-    } else if (OBJECT_TYPE_FUNCTION(_obj)) {
-        code_t* code = (code_t*) _obj->value.opaque;
-        if (code->environment != NULL) {
-            gc_mark_env_content(code->environment);
+        case OBJECT_TYPE_FUNCTION: {
+            code_t* code = (code_t*)_obj->value.opaque;
+            if (code->environment != NULL) {
+                gc_mark_env_content(code->environment);
+            }
+            break;
         }
-    } else if (OBJECT_TYPE_ERROR(_obj)) {
-        gc_mark_object((object_t*) _obj->value.opaque);
-    } 
+        case OBJECT_TYPE_ERROR:
+            gc_mark_object((object_t*)_obj->value.opaque);
+            break;
+        default:
+            // Other types don't have references to mark
+            break;
+    }
 }
 
 INTERNAL void gc_mark_vm_content(vm_t* _vm) {
@@ -105,40 +124,54 @@ INTERNAL void gc_mark_vm_content(vm_t* _vm) {
 
 INTERNAL void gc_mark_env_content(env_t* _env) {
     env_t* current = _env;
+    // First mark all objects in the current environment chain
     while (current != NULL) {
-        object_t** list = env_get_object_list(current);
-        for (size_t i = 0; list[i] != NULL; i++) {
-            gc_mark_object(list[i]);
+        // Get and mark all objects in the current environment
+        object_t** objects = env_get_object_list(current);
+        for (size_t i = 0; objects[i] != NULL; i++) {
+            gc_mark_object(objects[i]);
         }
-        free(list);
+        free(objects);
         current = current->parent;
     }
+    
+    // Then handle parent and closure environments if they exist
+    // Note: This is recursive and could be optimized with a non-recursive approach
+    // but keeping the recursive structure as instructed
     if (_env->parent != NULL) {
         gc_mark_env_content(_env->parent);
     }
+    
     if (_env->closure != NULL) {
         gc_mark_env_content(_env->closure);
     }
 }
 
 INTERNAL void gc_sweep(vm_t* _vm, bool _free_all) {
+    // Sweep through objects, freeing unmarked ones
     object_t** current = &_vm->root;
-
+    
     while (*current != NULL) {
         object_t* obj = *current;
-
+        
         if (!obj->marked) {
+            // Object not marked, collect it
             ++gc_collected_count;
-            *current = obj->next; // unlink
-            gc_free_object(obj);
+            *current = obj->next;  // Remove from linked list
+            gc_free_object(obj);   // Free the object
         } else {
+            // Reset mark for next collection cycle
             obj->marked = false;
-            current = &obj->next;
+            current = &obj->next;  // Move to next object
         }
     }
+    
+    // Early return if we're not freeing everything
     if (!_free_all) return;
-    // free the function table
+    
+    // Free the function table when doing a full cleanup
     for (size_t i = 0; i < _vm->function_table_size; i++) {
+        // Free environment first, then the code object
         env_free(_vm->function_table_item[i]->environment);
         code_free(_vm->function_table_item[i]);
     }
