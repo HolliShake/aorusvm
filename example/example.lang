@@ -36,8 +36,9 @@ println("Done!", func() {
 
 
 var y = 11.."asdasd";
-var x = 2 + y;
-println(x);
+println(y);
+var xxxx = 2 + 2 * x;
+println("x value >>", xxxx);
 
 println(!x);
 println(x, ~x);

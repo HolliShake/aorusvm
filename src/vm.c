@@ -471,8 +471,7 @@ void do_add(object_t *_lhs, object_t *_rhs) {
         return;
     }
 
-    // Handle string + non-string case
-    if (OBJECT_TYPE_STRING(_lhs) || OBJECT_TYPE_STRING(_rhs)) {
+    if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
 

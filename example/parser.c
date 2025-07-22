@@ -30,10 +30,6 @@ bool parser_check(parser_t* _parser, bool _is_type, token_type_t _type, char* _v
 
 void parser_accept(parser_t* _parser, bool _is_type, token_type_t _type, char* _value) {
     if (parser_check(_parser, _is_type, _type, _value)) {
-        if (_parser->current->type == TTKEY || _parser->current->type == TTSYM) {
-            free(_parser->current->value);
-            free(_parser->current);
-        }
         _parser->current = tokenizer_next(_parser->tokenizer);
         return;
     }

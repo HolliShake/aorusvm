@@ -260,6 +260,12 @@ INTERNAL void generator_assignment(generator_t* _generator, code_t* _code, scope
             emit_string(_code, lhs->ast1->str0);
             break;
         default:
+            __THROW_ERROR(
+                _generator->fpath,
+                _generator->fdata,
+                _expression->position,
+                "assignment expression must be a name or member access, but received %d", _expression->type
+            );
     }
 }
 
