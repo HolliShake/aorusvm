@@ -181,6 +181,15 @@ DLLEXPORT ast_node_t* ast_call_node(position_t* _position, ast_node_t* _function
 DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t* _value);
 
 /*
+ * Unary minus minus node.
+
+ * @param _position The position of the node.
+ * @param _value The value of the node.
+ * @return The unary minus minus node.
+ */
+DLLEXPORT ast_node_t* ast_unary_minus_minus_node(position_t* _position, ast_node_t* _value);
+
+/*
  * Unary spread node.
  *
  * @param _position The position of the node.

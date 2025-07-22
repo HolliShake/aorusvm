@@ -183,6 +183,36 @@ void do_increment(object_t* _obj) {
 }
 
 INTERNAL
+void do_decrement(object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        long result = (long)_obj->value.i32 - 1;
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            PUSH(object_new_int((int)result));
+            return;
+        }
+        PUSH(object_new_double((double)result));
+        return;
+    }
+
+    double result = number_coerce_to_double(_obj);
+    result -= 1;
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    char* message = string_format(
+        "cannot decrement type %s", 
+        object_type_to_string(_obj)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
+}
+
+INTERNAL
 void do_mul(object_t *_lhs, object_t *_rhs) {
     // Fast path for integers
     if (OBJECT_TYPE_INT(_lhs) && OBJECT_TYPE_INT(_rhs)) {
@@ -1500,6 +1530,11 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_INCREMENT: {
                 object_t *obj = POPP();
                 do_increment(obj);
+                break;
+            }
+            case OPCODE_DECREMENT: {
+                object_t *obj = POPP();
+                do_decrement(obj);
                 break;
             }
             case OPCODE_MUL: {

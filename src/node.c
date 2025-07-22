@@ -138,6 +138,12 @@ DLLEXPORT ast_node_t* ast_unary_plus_plus_node(position_t* _position, ast_node_t
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_unary_minus_minus_node(position_t* _position, ast_node_t* _value) {
+    ast_node_t* node = ast_node_new(AstUnaryMinusMinus, _position);
+    node->ast0 = _value;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_unary_spread_node(position_t* _position, ast_node_t* _value) {
     ast_node_t* node = ast_node_new(AstUnarySpread, _position);
     node->ast0 = _value;

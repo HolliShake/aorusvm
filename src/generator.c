@@ -46,6 +46,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstIndex:
         case AstCall:
         case AstUnaryPlusPlus:
+        case AstUnaryMinusMinus:
         case AstUnarySpread:
         case AstNew:
         case AstBinaryMul:
@@ -823,6 +824,21 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             generator_assignment0(_generator, _code, _scope, expression);
             emit(_code, OPCODE_INCREMENT);
+            generator_assignment1(_generator, _code, _scope, expression);
+            break;
+        }
+        case AstUnaryMinusMinus: {
+            ast_node_t* expression = _expression->ast0;
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "unary expression must have an expression, but received NULL"
+                );
+            }
+            generator_assignment0(_generator, _code, _scope, expression);
+            emit(_code, OPCODE_DECREMENT);
             generator_assignment1(_generator, _code, _scope, expression);
             break;
         }
