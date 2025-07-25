@@ -216,6 +216,16 @@ INTERNAL void rotate4() {
     instance->evaluation_stack[instance->sp-4] = C;
 }
 
+INTERNAL void rotate_left_3() {
+    // A B C -> B C A
+    object_t* A = instance->evaluation_stack[instance->sp-1];
+    object_t* B = instance->evaluation_stack[instance->sp-2];
+    object_t* C = instance->evaluation_stack[instance->sp-3];
+    instance->evaluation_stack[instance->sp-1] = B;
+    instance->evaluation_stack[instance->sp-2] = C;
+    instance->evaluation_stack[instance->sp-3] = A;
+}
+
 INTERNAL
 void do_decrement(object_t* _obj) {
     if (OBJECT_TYPE_INT(_obj)) {
@@ -1163,7 +1173,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     free(message);
 }
 
-INTERNAL void set_index(object_t* _obj, object_t* _index, object_t* _value) {
+INTERNAL void do_set_index(object_t* _obj, object_t* _index, object_t* _value) {
     // Check if object is a collection type, but not range (range can't be indexed and set)
     if (!OBJECT_TYPE_COLLECTION(_obj) || OBJECT_TYPE_RANGE(_obj)) {
         goto ERROR;
@@ -1186,8 +1196,7 @@ INTERNAL void set_index(object_t* _obj, object_t* _index, object_t* _value) {
     // This should never happen due to the OBJECT_TYPE_COLLECTION check above
     // but keeping as a safeguard
     ERROR:;
-    rotate3();
-    rotate3();
+    rotate_left_3();
     POPP(); // POP the value
     char* message = string_format(
         "expected array or object, got \"%s\"",
@@ -1655,7 +1664,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_SET_INDEX: {
                 object_t* index = POPP();
                 object_t* obj = POPP();
-                set_index(obj, index, PEEK());
+                do_set_index(obj, index, PEEK());
                 break;
             }
             case OPCODE_CALL_CONSTRUCTOR: {
