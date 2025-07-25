@@ -244,7 +244,7 @@ INTERNAL void generator_assignment(generator_t* _generator, code_t* _code, scope
             _generator->fpath,
             _generator->fdata,
             _expression->position,
-            "assignment expression must be an expression, but received %d", _expression->type
+            "assignment expression must be a name or member access"
         );
     }
     ast_node_t* lhs = _expression->ast0;
@@ -266,12 +266,12 @@ INTERNAL void generator_assignment(generator_t* _generator, code_t* _code, scope
                 _generator->fpath,
                 _generator->fdata,
                 _expression->position,
-                "assignment expression must be a name or member access, but received %d", _expression->type
+                "assignment expression must be a name or member access"
             );
     }
 }
 
-INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression) {
+INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scope_t* _scope, ast_node_t* _expression, bool _is_postfix) {
     if (_expression == NULL) {
         __THROW_ERROR(
             _generator->fpath,
@@ -285,7 +285,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
             _generator->fpath,
             _generator->fdata,
             _expression->position,
-            "assignment expression must be an expression, but received %d", _expression->type
+            "assignment expression must be a name or member access"
         );
     }
     switch (_expression->type) {
@@ -295,9 +295,9 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
             if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
                 scope_save_capture(_scope, _expression->str0);
             }
-            emit(_code, OPCODE_DUPTOP);
+            if (_is_postfix) emit(_code, OPCODE_DUPTOP); 
             break;
-        case AstMemberAccess:
+        case AstMemberAccess: {
             ast_node_t* obj = _expression->ast0;
             ast_node_t* mem = _expression->ast1;
             if (obj == NULL) {
@@ -316,25 +316,75 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
                     "member access must have a member, but received NULL"
                 );
             }
+            if (!generator_is_expression_type(obj)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have an object"
+                );
+            }
             if (mem->type != AstName) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
-                    "member access must be a name, but received %d", mem->type
+                    "member access must be a name"
                 );
             }
             generator_expression(_generator, _code, _scope, obj);
             emit(_code, OPCODE_GET_PROPERTY);
             emit_string(_code, mem->str0);
-            emit(_code, OPCODE_DUPTOP);
+            if (_is_postfix) emit(_code, OPCODE_DUPTOP);
             break;
+        }
+        case AstIndex: {
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* idx = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an object, but received NULL"
+                );
+            }
+            if (idx == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an index, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(obj)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an object"
+                );
+            }
+            if (!generator_is_expression_type(idx)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an index"
+                );
+            }
+            generator_expression(_generator, _code, _scope, obj);
+            generator_expression(_generator, _code, _scope, idx);
+            emit(_code, OPCODE_INDEX);
+            if (_is_postfix) emit(_code, OPCODE_DUPTOP);
+            break;
+        }
         default:
             __THROW_ERROR(
                 _generator->fpath, 
                 _generator->fdata, 
                 _expression->position, 
-                "assignment expression must be a name, but received %d", _expression->type
+                "assignment expression must be a name or member access"
             );
     }
 }
@@ -353,11 +403,27 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
             _generator->fpath, 
             _generator->fdata, 
             _expression->position, 
-            "assignment expression must be an expression, but received %d", _expression->type
+            "assignment expression must be a name or member access"
         );
     }
     switch (_expression->type) {
         case AstName:
+            if (_expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "assignment expression must have an expression, but received NULL"
+                );
+            }
+            if (_expression->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "assignment expression must be a name"
+                );
+            }
             if (!scope_has(_scope, _expression->str0, true)) {
                 __THROW_ERROR(
                     _generator->fpath, 
@@ -381,21 +447,98 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
                 _code, 
                 _expression->str0
             );
-            emit(_code, OPCODE_POPTOP);
+            if (_is_postfix) emit(_code, OPCODE_POPTOP);
             break;
-        case AstMemberAccess:
+        case AstMemberAccess: {
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* mem = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have an object, but received NULL"
+                );
+            }
+            if (mem == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have a member, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(obj)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have an object"
+                );
+            }
+            if (mem->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must be a name"
+                );
+            }
             if (_is_postfix) emit(_code, OPCODE_ROT3);
-            generator_expression(_generator, _code, _scope, _expression->ast0);
+            generator_expression(_generator, _code, _scope, obj);
             emit(_code, OPCODE_SET_PROPERTY);
-            emit_string(_code, _expression->ast1->str0);
-            emit(_code, OPCODE_POPTOP);
+            emit_string(_code, mem->str0);
+            if (_is_postfix) emit(_code, OPCODE_POPTOP);
             break;
+        }
+        case AstIndex: {
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* idx = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an object, but received NULL"
+                );
+            }
+            if (idx == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an index, but received NULL"
+                );
+            }
+            if (!generator_is_expression_type(obj)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an object"
+                );
+            }
+            if (!generator_is_expression_type(idx)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "index must have an index"
+                );
+            }
+            if (_is_postfix) emit(_code, OPCODE_ROT3);
+            generator_expression(_generator, _code, _scope, obj); // object
+            generator_expression(_generator, _code, _scope, idx); // index
+            emit(_code, OPCODE_SET_INDEX);
+            if (_is_postfix) emit(_code, OPCODE_POPTOP);
+            break;
+        }
         default:
             __THROW_ERROR(
                 _generator->fpath, 
                 _generator->fdata, 
                 _expression->position, 
-                "assignment expression must be a name, but received %d", _expression->type
+                "assignment expression must be a name or member access"
             );
     }
 }
@@ -871,7 +1014,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "unary expression must have an expression, but received NULL"
                 );
             }
-            generator_assignment0(_generator, _code, _scope, expression);
+            generator_assignment0(_generator, _code, _scope, expression, true);
             emit(_code, OPCODE_INCREMENT);
             generator_assignment1(_generator, _code, _scope, expression, true);
             break;
@@ -886,7 +1029,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "unary expression must have an expression, but received NULL"
                 );
             }
-            generator_assignment0(_generator, _code, _scope, expression);
+            generator_assignment0(_generator, _code, _scope, expression, false);
             emit(_code, OPCODE_INCREMENT);
             generator_assignment1(_generator, _code, _scope, expression, false);
             break;
@@ -901,7 +1044,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "unary expression must have an expression, but received NULL"
                 );
             }
-            generator_assignment0(_generator, _code, _scope, expression);
+            generator_assignment0(_generator, _code, _scope, expression, false);
             emit(_code, OPCODE_DECREMENT);
             generator_assignment1(_generator, _code, _scope, expression, false);
             break;

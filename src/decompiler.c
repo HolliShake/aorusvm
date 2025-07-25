@@ -431,6 +431,14 @@ void decompile(code_t* _code, bool _with_header) {
                 PRINT_OPCODE("rot2\n");
                 break;
             }
+            case OPCODE_ROT3: {
+                PRINT_OPCODE("rot3\n");
+                break;
+            }
+            case OPCODE_ROT4: {
+                PRINT_OPCODE("rot4\n");
+                break;
+            }
             case OPCODE_SAVE_CAPTURES: {
                 int capture_count = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("save_captures: (capture_count = %d) ", capture_count);

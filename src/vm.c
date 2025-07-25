@@ -1133,6 +1133,38 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     free(message);
 }
 
+INTERNAL void set_index(object_t* _obj, object_t* _index, object_t* _value) {
+    // Check if object is a collection type, but not range (range can't be indexed and set)
+    if (!OBJECT_TYPE_COLLECTION(_obj) || OBJECT_TYPE_RANGE(_obj)) {
+        goto ERROR;
+    }
+
+    // Handle arrays
+    if (OBJECT_TYPE_ARRAY(_obj)) {
+        array_t* array = (array_t*)_obj->value.opaque;
+        array_set(array, number_coerce_to_long(_index), _value);
+        return;
+    }
+
+    // Handle objects (maps)
+    if (OBJECT_TYPE_OBJECT(_obj)) {
+        hashmap_t* map = (hashmap_t*)_obj->value.opaque;
+        hashmap_put(map, _index, _value);
+        return;
+    }
+
+    // This should never happen due to the OBJECT_TYPE_COLLECTION check above
+    // but keeping as a safeguard
+    ERROR:;
+    POPP();
+    char* message = string_format(
+        "expected array or object, got \"%s\"",
+        object_to_string(_obj)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+}
+
 INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
     code_t* code = (code_t *)_function->value.opaque;
     object_t* this = _is_method ? POPP() : NULL;
@@ -1586,6 +1618,12 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* index = POPP();
                 object_t* obj = POPP();
                 do_index(obj, index);
+                break;
+            }
+            case OPCODE_SET_INDEX: {
+                object_t* index = POPP();
+                object_t* obj = POPP();
+                set_index(obj, index, PEEK());
                 break;
             }
             case OPCODE_CALL_CONSTRUCTOR: {
