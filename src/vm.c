@@ -1990,6 +1990,16 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 instance->evaluation_stack[instance->sp-2] = A;
                 break;
             }
+            case OPCODE_ROT3: {
+                // A B C -> C A B
+                object_t *A = instance->evaluation_stack[instance->sp-1];
+                object_t *B = instance->evaluation_stack[instance->sp-2];
+                object_t *C = instance->evaluation_stack[instance->sp-3];
+                instance->evaluation_stack[instance->sp-1] = C;
+                instance->evaluation_stack[instance->sp-2] = A;
+                instance->evaluation_stack[instance->sp-3] = B;
+                break;
+            }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
                 code_t* code = 

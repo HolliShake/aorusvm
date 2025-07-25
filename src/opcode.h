@@ -68,12 +68,13 @@ typedef enum opcode_enum {
     OPCODE_COMPLETE_BLOCK               = 138,  // No following bytes
     OPCODE_DUPTOP                       = 139,  // No following bytes
     OPCODE_ROT2                         = 140,  // No following bytes
-    OPCODE_SAVE_CAPTURES                = 141,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
-    OPCODE_GET_ITERATOR_OR_JUMP         = 142,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_HAS_NEXT                     = 143,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_GET_NEXT_VALUE               = 144,  // No following bytes
-    OPCODE_GET_NEXT_KEY_VALUE           = 145,  // No following bytes
-    OPCODE_SET_PROPERTY                 = 146,  // Followed by the length of the property in bytes + 1 (for the null terminator)
+    OPCODE_ROT3                         = 141,  // No following bytes
+    OPCODE_SAVE_CAPTURES                = 142,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
+    OPCODE_GET_ITERATOR_OR_JUMP         = 143,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_HAS_NEXT                     = 144,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_GET_NEXT_VALUE               = 145,  // No following bytes
+    OPCODE_GET_NEXT_KEY_VALUE           = 146,  // No following bytes
+    OPCODE_SET_PROPERTY                 = 147,  // Followed by the length of the property in bytes + 1 (for the null terminator)
     // NOTE: 255 is the last opcode
 } opcode_t;
 

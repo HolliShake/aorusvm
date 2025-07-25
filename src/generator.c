@@ -295,6 +295,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
             if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
                 scope_save_capture(_scope, _expression->str0);
             }
+            emit(_code, OPCODE_DUPTOP);
             break;
         default:
             __THROW_ERROR(
@@ -342,12 +343,13 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
                     "constant variable %s cannot be re-assigned", _expression->str0
                 );
             }
-            if (_is_postfix) emit(_code, OPCODE_ROT2);
+            if (_is_postfix) emit(_code, OPCODE_ROT3);
             emit(_code, OPCODE_SET_NAME);
             emit_string(
                 _code, 
                 _expression->str0
             );
+            emit(_code, OPCODE_POPTOP);
             break;
         case AstMemberAccess:
             generator_expression(_generator, _code, _scope, _expression->ast0);
