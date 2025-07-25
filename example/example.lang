@@ -15,3 +15,5 @@ var z = {
 };
 println(2 * 3 + ++z["value"] + z["value"] + 12);
 println(z.value);
+
+println(2["asdasd"]++);
