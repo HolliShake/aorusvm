@@ -4,7 +4,7 @@
 var x = {
     "value": 5
 };
-println(2 * 3 + x.value++ + 12);
+println(2 * 3 + x.value++ + x.value + 12);
 println(x.value);
 
 
