@@ -297,6 +297,38 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
             }
             emit(_code, OPCODE_DUPTOP);
             break;
+        case AstMemberAccess:
+            ast_node_t* obj = _expression->ast0;
+            ast_node_t* mem = _expression->ast1;
+            if (obj == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have an object, but received NULL"
+                );
+            }
+            if (mem == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must have a member, but received NULL"
+                );
+            }
+            if (mem->type != AstName) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "member access must be a name, but received %d", mem->type
+                );
+            }
+            generator_expression(_generator, _code, _scope, obj);
+            emit(_code, OPCODE_GET_PROPERTY);
+            emit_string(_code, mem->str0);
+            emit(_code, OPCODE_DUPTOP);
+            break;
         default:
             __THROW_ERROR(
                 _generator->fpath, 
@@ -352,9 +384,11 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
             emit(_code, OPCODE_POPTOP);
             break;
         case AstMemberAccess:
+            if (_is_postfix) emit(_code, OPCODE_ROT3);
             generator_expression(_generator, _code, _scope, _expression->ast0);
             emit(_code, OPCODE_SET_PROPERTY);
             emit_string(_code, _expression->ast1->str0);
+            emit(_code, OPCODE_POPTOP);
             break;
         default:
             __THROW_ERROR(

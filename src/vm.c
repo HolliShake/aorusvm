@@ -2000,6 +2000,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 instance->evaluation_stack[instance->sp-3] = B;
                 break;
             }
+            case OPCODE_ROT4: {
+                // A B C D -> D A B C
+                object_t *A = instance->evaluation_stack[instance->sp-1];
+                object_t *B = instance->evaluation_stack[instance->sp-2];
+                object_t *C = instance->evaluation_stack[instance->sp-3];
+                object_t *D = instance->evaluation_stack[instance->sp-4];
+            }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
                 code_t* code = 
