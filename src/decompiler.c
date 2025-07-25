@@ -185,6 +185,10 @@ void decompile(code_t* _code, bool _with_header) {
                 PRINT_OPCODE("index\n");
                 break;
             }
+            case OPCODE_SET_INDEX: {
+                PRINT_OPCODE("set_index\n");
+                break;
+            }
             case OPCODE_CALL_CONSTRUCTOR: {
                 int argc = decompiler_get_int(bytecode, ip);
                 PRINT_OPCODE("call_constructor: (argc = %d)\n", argc);

@@ -1196,8 +1196,8 @@ INTERNAL void do_set_index(object_t* _obj, object_t* _index, object_t* _value) {
     // This should never happen due to the OBJECT_TYPE_COLLECTION check above
     // but keeping as a safeguard
     ERROR:;
-    rotate_left_3();
-    POPP(); // POP the value
+    rotate2();
+    POPP();
     char* message = string_format(
         "expected array or object, got \"%s\"",
         object_to_string(_obj)
@@ -1656,15 +1656,15 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_INDEX: {
-                object_t* index = POPP();
+                object_t* idx = POPP();
                 object_t* obj = POPP();
-                do_index(obj, index);
+                do_index(obj, idx);
                 break;
             }
             case OPCODE_SET_INDEX: {
-                object_t* index = POPP();
+                object_t* idx = POPP();
                 object_t* obj = POPP();
-                do_set_index(obj, index, PEEK());
+                do_set_index(obj, idx, PEEK());
                 break;
             }
             case OPCODE_CALL_CONSTRUCTOR: {
