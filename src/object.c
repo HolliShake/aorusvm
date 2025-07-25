@@ -256,7 +256,7 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             return string_allocate("native function(...){...}");
         }
         case OBJECT_TYPE_ERROR: {
-            return string_format("error: %s", object_to_string((object_t*) _obj->value.opaque));
+            return string_format("<error: %s/>", object_to_string((object_t*) _obj->value.opaque));
         }
         default: {
             return string_allocate("unknown object");

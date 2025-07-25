@@ -186,6 +186,36 @@ void do_increment(object_t* _obj) {
     return;
 }
 
+INTERNAL void rotate2() {
+    // A B -> B A
+    object_t* A = instance->evaluation_stack[instance->sp-1];
+    object_t* B = instance->evaluation_stack[instance->sp-2];
+    instance->evaluation_stack[instance->sp-1] = B;
+    instance->evaluation_stack[instance->sp-2] = A;
+}
+
+INTERNAL void rotate3() {
+    // A B C -> C A B
+    object_t* A = instance->evaluation_stack[instance->sp-1];
+    object_t* B = instance->evaluation_stack[instance->sp-2];
+    object_t* C = instance->evaluation_stack[instance->sp-3];
+    instance->evaluation_stack[instance->sp-1] = C;
+    instance->evaluation_stack[instance->sp-2] = A;
+    instance->evaluation_stack[instance->sp-3] = B;
+}
+
+INTERNAL void rotate4() {
+    // A B C D -> D A B C
+    object_t *A = instance->evaluation_stack[instance->sp-1];
+    object_t *B = instance->evaluation_stack[instance->sp-2];
+    object_t *C = instance->evaluation_stack[instance->sp-3];
+    object_t *D = instance->evaluation_stack[instance->sp-4];
+    instance->evaluation_stack[instance->sp-1] = D;
+    instance->evaluation_stack[instance->sp-2] = A;
+    instance->evaluation_stack[instance->sp-3] = B;
+    instance->evaluation_stack[instance->sp-4] = C;
+}
+
 INTERNAL
 void do_decrement(object_t* _obj) {
     if (OBJECT_TYPE_INT(_obj)) {
@@ -1156,7 +1186,9 @@ INTERNAL void set_index(object_t* _obj, object_t* _index, object_t* _value) {
     // This should never happen due to the OBJECT_TYPE_COLLECTION check above
     // but keeping as a safeguard
     ERROR:;
-    POPP();
+    rotate3();
+    rotate3();
+    POPP(); // POP the value
     char* message = string_format(
         "expected array or object, got \"%s\"",
         object_to_string(_obj)
@@ -1943,6 +1975,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_POPTOP: {
+                // printf("POPTOP %s\n", object_to_string(PEEK()));
                 POPP();
                 break;
             }
@@ -2022,28 +2055,18 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_ROT2: {
                 // A B -> B A
-                object_t *A = instance->evaluation_stack[instance->sp-1];
-                object_t *B = instance->evaluation_stack[instance->sp-2];
-                instance->evaluation_stack[instance->sp-1] = B;
-                instance->evaluation_stack[instance->sp-2] = A;
+                rotate2();
                 break;
             }
             case OPCODE_ROT3: {
                 // A B C -> C A B
-                object_t *A = instance->evaluation_stack[instance->sp-1];
-                object_t *B = instance->evaluation_stack[instance->sp-2];
-                object_t *C = instance->evaluation_stack[instance->sp-3];
-                instance->evaluation_stack[instance->sp-1] = C;
-                instance->evaluation_stack[instance->sp-2] = A;
-                instance->evaluation_stack[instance->sp-3] = B;
+                rotate3();
                 break;
             }
             case OPCODE_ROT4: {
                 // A B C D -> D A B C
-                object_t *A = instance->evaluation_stack[instance->sp-1];
-                object_t *B = instance->evaluation_stack[instance->sp-2];
-                object_t *C = instance->evaluation_stack[instance->sp-3];
-                object_t *D = instance->evaluation_stack[instance->sp-4];
+                rotate4();
+                break;
             }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
