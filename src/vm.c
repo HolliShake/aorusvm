@@ -1094,13 +1094,7 @@ INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _valu
 INTERNAL void do_index(object_t* _obj, object_t* _index) {
     // Check if object is a collection type
     if (!OBJECT_TYPE_COLLECTION(_obj)) {
-        char* message = string_format(
-            "expected collection, got \"%s\"", 
-            object_to_string(_obj)
-        );
-        PUSH(object_new_error(message, true));
-        free(message);
-        return;
+        goto ERROR;
     }
 
     // Handle arrays
@@ -1174,6 +1168,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
 
     // This should never happen due to the OBJECT_TYPE_COLLECTION check above
     // but keeping as a safeguard
+    ERROR:;
     char* message = string_format(
         "expected array or object, got \"%s\"", 
         object_to_string(_obj)
