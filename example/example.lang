@@ -1,20 +1,17 @@
 
-
 var x = 5;
-println(2 * 3 + x++ + x + 12);
+println(2 * 3 + ++x + x + 12);
 println(x);
 
 var y = {
     "value": 5
 };
-println(2 * 3 + y.value++ + y.value + 12);
+println(2 * 3 + ++y.value + y.value + 12);
 println(y.value);
 
 var z = {
     "value": 5
 };
-println(2 * 3 + z["value"]++ + z["value"] + 12);
+println(2 * 3 + ++z["value"] + z["value"] + 12);
 println(z.value);
-println(2["asdasd"]++ + 2, "END", z.asdasd++, "asdasd");
-println("Done!");
 
