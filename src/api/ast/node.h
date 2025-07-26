@@ -433,16 +433,6 @@ DLLEXPORT ast_node_t* ast_logical_and_node(position_t* _position, ast_node_t* _l
 DLLEXPORT ast_node_t* ast_logical_or_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
- * Assign node.
-
- * @param _position The position of the node.
- * @param _lhs The left hand side of the node.
- * @param _rhs The right hand side of the node.
- * @return The assign node.
- */
-DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
-
-/*
  * Range node.
  *
  * @param _position The position of the node.
@@ -451,6 +441,16 @@ DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, a
  * @return The range node.
  */
 DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
+
+/*
+ * Assign node.
+
+ * @param _position The position of the node.
+ * @param _lhs The left hand side of the node.
+ * @param _rhs The right hand side of the node.
+ * @return The assign node.
+ */
+DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
  * Catch node.
