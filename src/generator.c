@@ -1011,11 +1011,28 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
-                    "unary expression must have an expression, but received NULL"
+                    "postfix decrement expression must have an expression, but received NULL"
                 );
             }
             generator_assignment0(_generator, _code, _scope, expression, true);
             emit(_code, OPCODE_INCREMENT);
+            emit(_code, true); // flag 1 for postfix
+            generator_assignment1(_generator, _code, _scope, expression, true);
+            break;
+        }
+        case AstPostfixMinusMinus: {
+            ast_node_t* expression = _expression->ast0;
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "postfix decrement expression must have an expression, but received NULL"
+                );
+            }
+            generator_assignment0(_generator, _code, _scope, expression, true);
+            emit(_code, OPCODE_DECREMENT);
+            emit(_code, true); // flag 1 for postfix
             generator_assignment1(_generator, _code, _scope, expression, true);
             break;
         }
@@ -1031,6 +1048,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             generator_assignment0(_generator, _code, _scope, expression, false);
             emit(_code, OPCODE_INCREMENT);
+            emit(_code, false); // flag 0 for prefix
             generator_assignment1(_generator, _code, _scope, expression, false);
             break;
         }
@@ -1046,6 +1064,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             }
             generator_assignment0(_generator, _code, _scope, expression, false);
             emit(_code, OPCODE_DECREMENT);
+            emit(_code, false); // flag 0 for prefix
             generator_assignment1(_generator, _code, _scope, expression, false);
             break;
         }

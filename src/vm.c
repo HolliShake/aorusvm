@@ -65,7 +65,14 @@
 }
 
 #define DUMP_STACK() { \
-    for (size_t i = instance->sp; i > 0; i--) { \
+    for (size_t i = instance->sp-1; i > 0; i--) { \
+        if (i == instance->sp-1) { \
+            printf("TOP: "); \
+        } else if (i == 1) { \
+            printf("BOT: "); \
+        } else { \
+            printf("     "); \
+        } \
         printf("[%02zu]: %s", i, object_to_string(instance->evaluation_stack[i])); \
         if (i - 1 > 0) printf("\n"); \
     } \
@@ -152,40 +159,6 @@ char* get_string(uint8_t *_bytecode, size_t _ip) {
     return str;
 }
 
-INTERNAL
-void do_increment(object_t* _obj) {
-    if (OBJECT_TYPE_INT(_obj)) {
-        long result = (long)_obj->value.i32 + 1;
-        if (result >= INT32_MIN && result <= INT32_MAX) {
-            PUSH(object_new_int((int)result));
-            return;
-        }
-        PUSH(object_new_double((double)result));
-        return;
-    }
-
-    if (!OBJECT_TYPE_NUMBER(_obj)) {
-        goto ERROR;
-    }
-
-    double result = number_coerce_to_double(_obj);
-    result += 1;
-    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
-        PUSH(object_new_int((int)result));
-        return;
-    }
-    PUSH(object_new_double(result));
-    return;
-    ERROR:;
-    char* message = string_format(
-        "cannot increment type %s", 
-        object_type_to_string(_obj)
-    );
-    PUSH(object_new_error(message, true));
-    free(message);
-    return;
-}
-
 INTERNAL void rotate2() {
     // A B -> B A
     object_t* A = instance->evaluation_stack[instance->sp-1];
@@ -227,7 +200,42 @@ INTERNAL void rotate_left_3() {
 }
 
 INTERNAL
-void do_decrement(object_t* _obj) {
+void do_increment(bool _is_postfix, object_t* _obj) {
+    if (OBJECT_TYPE_INT(_obj)) {
+        long result = (long)_obj->value.i32 + 1;
+        if (result >= INT32_MIN && result <= INT32_MAX) {
+            PUSH(object_new_int((int)result));
+            return;
+        }
+        PUSH(object_new_double((double)result));
+        return;
+    }
+
+    if (!OBJECT_TYPE_NUMBER(_obj)) {
+        goto ERROR;
+    }
+
+    double result = number_coerce_to_double(_obj);
+    result += 1;
+    if (result == (double)(int)result && result <= INT32_MAX && result >= INT32_MIN) {
+        PUSH(object_new_int((int)result));
+        return;
+    }
+    PUSH(object_new_double(result));
+    return;
+    ERROR:;
+    if (_is_postfix) rotate2();
+    char* message = string_format(
+        "cannot increment type %s", 
+        object_type_to_string(_obj)
+    );
+    PUSH(object_new_error(message, true));
+    free(message);
+    return;
+}
+
+INTERNAL
+void do_decrement(bool _is_postfix, object_t* _obj) {
     if (OBJECT_TYPE_INT(_obj)) {
         long result = (long)_obj->value.i32 - 1;
         if (result >= INT32_MIN && result <= INT32_MAX) {
@@ -251,6 +259,7 @@ void do_decrement(object_t* _obj) {
     PUSH(object_new_double(result));
     return;
     ERROR:;
+    if (_is_postfix) rotate2();
     char* message = string_format(
         "cannot decrement type %s", 
         object_type_to_string(_obj)
@@ -1196,8 +1205,7 @@ INTERNAL void do_set_index(object_t* _obj, object_t* _index, object_t* _value) {
     // This should never happen due to the OBJECT_TYPE_COLLECTION check above
     // but keeping as a safeguard
     ERROR:;
-    rotate2();
-    POPP();
+    POPP(); // POP the value
     char* message = string_format(
         "expected array or object, got \"%s\"",
         object_to_string(_obj)
@@ -1766,13 +1774,17 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_INCREMENT: {
+                bool is_postfix = bytecode[ip];
                 object_t *obj = POPP();
-                do_increment(obj);
+                do_increment(is_postfix, obj);
+                FORWARD(1);
                 break;
             }
             case OPCODE_DECREMENT: {
+                bool is_postfix = bytecode[ip];
                 object_t *obj = POPP();
-                do_decrement(obj);
+                do_decrement(is_postfix, obj);
+                FORWARD(1);
                 break;
             }
             case OPCODE_UNARY_PLUS: {
