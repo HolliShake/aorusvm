@@ -750,40 +750,15 @@ ast_node_t* parser_logical(parser_t* _parser) {
     return node;
 }
 
-ast_node_t* parser_assign(parser_t* _parser) {
-    ast_node_t* node = parser_logical(_parser);
-    if (node == NULL) {
-        return NULL;
-    }
-    while (CHECKV(EQUAL)) {
-        ACCEPTV(EQUAL);
-        ast_node_t* right = parser_logical(_parser);
-        if (right == NULL) {
-            __THROW_ERROR(
-                _parser->fpath,
-                _parser->fdata,
-                _parser->current->position,
-                "missing right operand for ="
-            );
-        }
-        node = ast_assign_node(
-            position_merge(ast_position(node), ast_position(right)), 
-            node, 
-            right
-        );
-    }
-    return node;
-}
-
 ast_node_t* parser_generator(parser_t* _parser) {
-    ast_node_t* node = parser_assign(_parser);
+    ast_node_t* node = parser_logical(_parser);
     if (node == NULL) {
         return NULL;
     }
     while (CHECKV(DOTDOT)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
-        ast_node_t* right = parser_assign(_parser);
+        ast_node_t* right = parser_logical(_parser);
         if (right == NULL) {
             __THROW_ERROR(
                 _parser->fpath,
@@ -801,9 +776,35 @@ ast_node_t* parser_generator(parser_t* _parser) {
     return node;
 }
 
+
+ast_node_t* parser_assign(parser_t* _parser) {
+    ast_node_t* node = parser_generator(_parser);
+    if (node == NULL) {
+        return NULL;
+    }
+    while (CHECKV(EQUAL)) {
+        ACCEPTV(EQUAL);
+        ast_node_t* right = parser_generator(_parser);
+        if (right == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing right operand for ="
+            );
+        }
+        node = ast_assign_node(
+            position_merge(ast_position(node), ast_position(right)), 
+            node, 
+            right
+        );
+    }
+    return node;
+}
+
 ast_node_t* parser_catch(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ast_node_t* error = parser_generator(_parser);
+    ast_node_t* error = parser_assign(_parser);
     if (error == NULL) {
         return NULL;
     }
