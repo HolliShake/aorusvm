@@ -29,7 +29,11 @@ Animal.bark = func() {
     println("Arf!!");
 };
 
-for (i in 0..100) {
+const getNum = func(num) {
+    return num * 2;
+};
+
+for (i in 0..getNum(50)) {
     println(i, new Dog());
 }
 
