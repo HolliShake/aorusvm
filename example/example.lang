@@ -16,9 +16,7 @@ println(2 * 3 + ++z["value"] + z["value"] + 12);
 println(z.value);
 
 class Animal {
-    func bark() {
-        println("Arf!!");
-    }
+    
 }
 
 class Dog extends Animal {
@@ -27,6 +25,12 @@ class Dog extends Animal {
     }
 }
 
+Animal.bark = func() {
+    println("Arf!!");
+};
 
-println(new Dog());
+for (i in 0..100) {
+    println(i, new Dog());
+}
+
 
