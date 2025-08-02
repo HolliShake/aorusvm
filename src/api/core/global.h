@@ -11,7 +11,12 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#include <execinfo.h>
+#if defined(__linux__) || defined(__APPLE__)
+    #include <execinfo.h>
+#elif defined(_WIN32) || defined(_WIN64)
+    #include <windows.h>
+    #include <dbghelp.h>
+#endif
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -24,14 +29,21 @@
 #ifndef API_CORE_GLOBAL_H
 #define API_CORE_GLOBAL_H
 
+// Initialize all OS macros to 0 first
+#define OS_WINDOWS 0
+#define OS_MACOS 0
+#define OS_LINUX 0
+
+// Then define the appropriate one based on platform
 #if defined(__WIN32__) || defined(_WIN32) || defined(__WIN64__) || defined(_WIN64)
+    #undef OS_WINDOWS
     #define OS_WINDOWS 1
 #elif defined(__APPLE__) || defined(__MACH__) || defined(__MACOS__)
+    #undef OS_MACOS
     #define OS_MACOS 1
 #elif defined(__linux__) || defined(__linux)
+    #undef OS_LINUX
     #define OS_LINUX 1
-#else
-    #error "Unsupported OS"
 #endif
 
 #if OS_WINDOWS

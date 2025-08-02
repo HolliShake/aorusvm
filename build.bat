@@ -2,36 +2,36 @@
 
 REM Common flags and files
 if "%*"==*"--production"* (
-    set SHARED_FLAGS=/DLL /LIBPATH:. /O2
+    set SHARED_FLAGS=-shared -O2 -fPIC
     set DEBUG_FLAG=
 ) else (
-    set SHARED_FLAGS=/DLL /LIBPATH:. /DEBUG
-    set DEBUG_FLAG=/DEBUG
+    set SHARED_FLAGS=-shared -g -fPIC
+    set DEBUG_FLAG=-g
 )
 
-set STATIC_FLAGS=/MT
-set SRC_FILES=aorusvm.c src\*.c
-set OUTPUT_DIR=.\bin
+set STATIC_FLAGS=-static
+set SRC_FILES=aorusvm.c src/*.c
+set OUTPUT_DIR=./bin
 set OUTPUT_SHARED_LIB=%OUTPUT_DIR%\aorusvm.dll
-set OUTPUT_STATIC_LIB=%OUTPUT_DIR%\aorusvm.lib
-set OUTPUT_EXE=aorusvm.exe
+set OUTPUT_STATIC_LIB=%OUTPUT_DIR%\libaorusvm.a
+set OUTPUT_EXE=%OUTPUT_DIR%\aorusvm.exe
 
 REM Create bin directory if it doesn't exist
-if not exist %OUTPUT_DIR% mkdir %OUTPUT_DIR%
+if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 if "%*"==*"--warn"* (
-    set WARNING_FLAG=/W3
+    set WARNING_FLAG=-Wall
 ) else (
-    set WARNING_FLAG=/w
+    set WARNING_FLAG=-w
 )
 
 REM Build shared library
-cl %WARNING_FLAG% %SHARED_FLAGS% %SRC_FILES% /Fe%OUTPUT_SHARED_LIB%
+gcc %WARNING_FLAG% %SHARED_FLAGS% -Wl,--out-implib,%OUTPUT_DIR%/libaorusvm.dll.a %SRC_FILES% -o %OUTPUT_SHARED_LIB%
 
 REM Build static library
-cl %WARNING_FLAG% %DEBUG_FLAG% /c %SRC_FILES%
-lib *.obj /OUT:%OUTPUT_STATIC_LIB%
-del *.obj
+gcc %WARNING_FLAG% %DEBUG_FLAG% -c %SRC_FILES%
+ar rcs %OUTPUT_STATIC_LIB% *.o
+rm -f *.o
 
 REM Build executable
-cl %WARNING_FLAG% %DEBUG_FLAG% aorusvm.c /Fe%OUTPUT_EXE% /link /LIBPATH:%OUTPUT_DIR% aorusvm.lib
+gcc %WARNING_FLAG% %DEBUG_FLAG% aorusvm.c -o %OUTPUT_EXE% -L%OUTPUT_DIR% -laorusvm

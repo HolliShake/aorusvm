@@ -15,3 +15,18 @@ var z = {
 println(2 * 3 + ++z["value"] + z["value"] + 12);
 println(z.value);
 
+class Animal {
+    func bark() {
+        println("Arf!!");
+    }
+}
+
+class Dog extends Animal {
+    func init() {
+        this.bark();
+    }
+}
+
+
+println(new Dog());
+
