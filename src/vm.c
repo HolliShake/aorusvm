@@ -1405,13 +1405,13 @@ INTERNAL void do_panic(int _argc) {
     exit(EXIT_FAILURE);
 }
 
-INTERNAL void do_resolve() {
+INTERNAL void do_resolve(vm_block_signal_t _signal) {
     object_t* return_value = POPP();
     if (!OBJECT_TYPE_PROMISE(return_value)) {
         PD("internal logic error!!!");
     }
     async_promise_t* promise = (async_promise_t*) return_value->value.opaque;
-    if (promise->state == ASYNC_STATE_RESOLVED) {
+    if (_signal == VmBlockSignalReturned && promise->state == ASYNC_STATE_RESOLVED) {
         PUSH_REF(promise->value);
     } else {
         // Push back
@@ -2301,7 +2301,7 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
         async_t* async = vm_dequeue();
         instance->sp = async->top;
         vm_block_signal_t signal = vm_execute(async->env, async->ip, async->code);
-        do_resolve();
+        do_resolve(signal);
     }
     
     // Evaluation stack must contain exactly 1 object
