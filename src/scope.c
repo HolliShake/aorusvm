@@ -57,7 +57,7 @@ bool scope_has(scope_t* _scope, char* _name, bool _recurse) {
 bool scope_function_has(scope_t* _scope, char* _name) {
     scope_t* current = _scope;
     while (current != NULL) {
-        if (current->type == ScopeTypeLocal && current->parent != NULL && current->parent->type == ScopeTypeFunction) {
+        if (current->type == ScopeTypeLocal && current->parent != NULL && (current->parent->type == ScopeTypeFunction || current->parent->type == ScopeTypeAsyncFunction)) {
             if (scope_has(current, _name, false)) return true;
             return false;
         }
@@ -189,7 +189,7 @@ bool scope_save_capture(scope_t* _scope, char* _name) {
             }
         }
         if (exists) return true;
-        if (current->type == ScopeTypeFunction) {
+        if (current->type == ScopeTypeFunction || current->type == ScopeTypeAsyncFunction) {
             current->captures[current->capture_count++] = strdup(_name);
             current->captures = (char**) realloc(current->captures, sizeof(char*) * (current->capture_count + 1));
             current->captures[current->capture_count] = NULL;
