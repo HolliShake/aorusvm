@@ -27,7 +27,7 @@ typedef enum opcode_enum {
     OPCODE_CALL                         = 97,   // Followed by 4 bytes (aka the number of arguments)
     OPCODE_CALL_METHOD                  = 98,   // Followed by N bytes (aka the method name) + 1 byte (for the null terminator) + 4 bytes (aka the number of arguments)
     OPCODE_INCREMENT                    = 99,   // No following bytes
-    OPCODE_DECREMENT                    = 100,   // No following bytes
+    OPCODE_DECREMENT                    = 100,  // No following bytes
     OPCODE_UNARY_PLUS                   = 101,  // No following bytes
     OPCODE_UNARY_MINUS                  = 102,  // No following bytes
     OPCODE_NOT                          = 103,  // No following bytes
@@ -66,18 +66,19 @@ typedef enum opcode_enum {
     OPCODE_BEGIN_BLOCK                  = 136,  // Followed by 8 bytes (aka code_t pointer/serialized address)
     OPCODE_SETUP_CATCH_BLOCK            = 137,  // Followed by 8 bytes (aka code_t pointer/serialized address)
     OPCODE_RETURN                       = 138,  // No following bytes
-    OPCODE_COMPLETE_BLOCK               = 139,  // No following bytes
-    OPCODE_DUPTOP                       = 140,  // No following bytes
-    OPCODE_ROT2                         = 141,  // No following bytes
-    OPCODE_ROT3                         = 142,  // No following bytes
-    OPCODE_ROT4                         = 143,  // No following bytes
-    OPCODE_SAVE_CAPTURES                = 144,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
-    OPCODE_GET_ITERATOR_OR_JUMP         = 145,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_HAS_NEXT                     = 146,  // Followed by 4 bytes (aka jump offset)
-    OPCODE_GET_NEXT_VALUE               = 147,  // No following bytes
-    OPCODE_GET_NEXT_KEY_VALUE           = 148,  // No following bytes
-    OPCODE_SET_PROPERTY                 = 149,  // Followed by the length of the property in bytes + 1 (for the null terminator)
-    OPCODE_AWAIT                        = 150,  // No following bytes
+    OPCODE_RETURN_ASYNC                 = 139,  // No following bytes
+    OPCODE_COMPLETE_BLOCK               = 140,  // No following bytes
+    OPCODE_DUPTOP                       = 141,  // No following bytes
+    OPCODE_ROT2                         = 142,  // No following bytes
+    OPCODE_ROT3                         = 143,  // No following bytes
+    OPCODE_ROT4                         = 144,  // No following bytes
+    OPCODE_SAVE_CAPTURES                = 145,  // Followed by 4 bytes (aka the number of captures) + N bytes separated by null terminators
+    OPCODE_GET_ITERATOR_OR_JUMP         = 146,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_HAS_NEXT                     = 147,  // Followed by 4 bytes (aka jump offset)
+    OPCODE_GET_NEXT_VALUE               = 148,  // No following bytes
+    OPCODE_GET_NEXT_KEY_VALUE           = 149,  // No following bytes
+    OPCODE_SET_PROPERTY                 = 150,  // Followed by the length of the property in bytes + 1 (for the null terminator)
+    OPCODE_AWAIT                        = 151,  // No following bytes
     // NOTE: 255 is the last opcode
 } opcode_t;
 

@@ -39,6 +39,11 @@
         "decompiler.h": "c",
         "hashmap.h": "c",
         "async.h": "c",
-        "array.h": "c"
+        "array.h": "c",
+        "algorithm": "c",
+        "chrono": "c",
+        "xlocmon": "c",
+        "xtr1common": "c",
+        "xutility": "c"
     }
 }

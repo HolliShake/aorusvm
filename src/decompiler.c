@@ -423,8 +423,16 @@ void _decompile(code_t* _code, size_t _ip) {
                 PRINT_OPCODE("return\n");
                 break;
             }
+            case OPCODE_RETURN_ASYNC: {
+                PRINT_OPCODE("return_async\n");
+                break;
+            }
             case OPCODE_COMPLETE_BLOCK: {
                 PRINT_OPCODE("complete_block\n");
+                break;
+            }
+            case OPCODE_AWAIT: {
+                PRINT_OPCODE("await\n");
                 break;
             }
             case OPCODE_DUPTOP: {

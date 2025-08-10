@@ -114,9 +114,9 @@ DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
     return obj;
 }
 
-DLLEXPORT object_t* object_new_promise() {
+DLLEXPORT object_t* object_new_promise(async_state_t _state, object_t* _value) {
     object_t* obj = object_new(OBJECT_TYPE_PROMISE);
-    obj->value.i32 = (int) ASYNC_STATE_PENDING;
+    obj->value.opaque = async_promise_new(_state, _value);
     return obj;
 }
 
@@ -143,11 +143,12 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             return string_allocate("null");
         }
         case OBJECT_TYPE_PROMISE: {
-            switch ((async_state_t) _obj->value.i32) {
+            async_promise_t* promise = (async_promise_t*) _obj->value.opaque;
+            switch (promise->state) {
                 case ASYNC_STATE_PENDING:
                     return string_allocate("promise { <pending> }");
                 case ASYNC_STATE_RESOLVED: {
-                    char* resolved_str = object_to_string((object_t*) _obj->value.opaque);
+                    char* resolved_str = object_to_string(promise->value);
                     char* result = string_format("promise { %s }", resolved_str);
                     free(resolved_str);
                     return result;

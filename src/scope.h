@@ -10,6 +10,7 @@ typedef enum scope_type_enum {
     ScopeTypeLocal,
     ScopeTypeClass,
     ScopeTypeFunction,
+    ScopeTypeAsyncFunction,
     ScopeTypeCatch,
     ScopeTypeSingle,
     ScopeTypeLoop,
@@ -124,6 +125,14 @@ bool scope_is_class(scope_t* _scope);
  * @return True if the scope is a function, false otherwise.
  */
 bool scope_is_function(scope_t* _scope);
+
+/*
+ * Check if a scope is an async function.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is an async function, false otherwise.
+ */
+bool scope_is_async_function(scope_t* _scope);
 
 /*
  * Check if a scope is a catch.

@@ -133,6 +133,15 @@ bool scope_is_function(scope_t* _scope) {
     return false;
 }
 
+bool scope_is_async_function(scope_t* _scope) {
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeAsyncFunction) return true;
+        current = current->parent;
+    }
+    return false;
+}
+
 bool scope_is_catch(scope_t* _scope) {
     scope_t* current = _scope;
     while (current != NULL) {

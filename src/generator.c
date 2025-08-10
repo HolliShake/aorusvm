@@ -2181,8 +2181,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             break;
         }
         case AstReturnStatement: {
-            bool is_func = false, is_catch = false;
-            if (!(is_func = scope_is_function(_scope)) && !(is_catch = scope_is_catch(_scope))) {
+            bool is_func = false, is_async, is_catch = false;
+            if (!(is_func = scope_is_function(_scope)) && !(is_func = is_async = scope_is_async_function(_scope)) && !(is_catch = scope_is_catch(_scope))) {
                 __THROW_ERROR(
                     _generator->fpath, 
                     _generator->fdata, 
@@ -2192,7 +2192,9 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             }
             // Find function scope and set returned flag
             scope_t* current;
-            if (is_func) {
+            if (is_async) {
+                for (current = _scope; current->type != ScopeTypeAsyncFunction; current = current->parent);
+            } else if (is_func) {
                 for (current = _scope; current->type != ScopeTypeFunction; current = current->parent);
             } else if (is_catch) {
                 for (current = _scope; current->type != ScopeTypeCatch; current = current->parent);
@@ -2206,7 +2208,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             } else {
                 emit(_code, OPCODE_LOAD_NULL);
             }
-            emit(_code, OPCODE_RETURN);
+            if (is_async) emit(_code, OPCODE_RETURN_ASYNC);
+            else emit(_code, OPCODE_RETURN);
             break;
         }
         case AstExpressionStatement: {
@@ -2488,7 +2491,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             emit(_code, OPCODE_BEGIN_FUNCTION);
             emit_memory(_code, (void*) _func);
             // Create function scope
-            scope_t* function_scope = scope_new(_scope, ScopeTypeFunction);
+            scope_t* function_scope = scope_new(_scope, (is_async ? ScopeTypeAsyncFunction : ScopeTypeFunction));
             scope_t* local_scope = scope_new(function_scope, ScopeTypeLocal);
             // Compile parameters
             for (size_t i = 0; params[i] != NULL; i++) {

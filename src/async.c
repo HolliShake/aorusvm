@@ -11,13 +11,21 @@ async_t* async_new(size_t ip, size_t top, env_t* env, code_t* code, object_t* pr
     return async;
 }
 
-// 
-void async_resolve(object_t* promise, object_t* value) {
-    promise->value.i32 = (int) ASYNC_STATE_RESOLVED;
-    promise->value.opaque = value;
+async_promise_t* async_promise_new(async_state_t _state, object_t* _value) {
+    async_promise_t* promise = malloc(sizeof(async_promise_t));
+    if (!promise) PD("failed to allocate memory for async_promise_t");
+    promise->state = _state;
+    promise->value = _value;
+    return promise;
 }
 
-void async_reject(object_t* promise, object_t* value) {
-    promise->value.i32 = (int) ASYNC_STATE_REJECTED;
-    promise->value.opaque = value;
+// 
+void async_resolve(object_t* _promise, object_t* _value) {
+    _promise->value.i32 = (int) ASYNC_STATE_RESOLVED;
+    _promise->value.opaque = _value;
+}
+
+void async_reject(object_t* _promise, object_t* _value) {
+    _promise->value.i32 = (int) ASYNC_STATE_REJECTED;
+    _promise->value.opaque = _value;
 }

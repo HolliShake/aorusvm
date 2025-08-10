@@ -1405,6 +1405,20 @@ INTERNAL void do_panic(int _argc) {
     exit(EXIT_FAILURE);
 }
 
+INTERNAL void do_resolve() {
+    object_t* return_value = POPP();
+    if (!OBJECT_TYPE_PROMISE(return_value)) {
+        PD("internal logic error!!!");
+    }
+    async_promise_t* promise = (async_promise_t*) return_value->value.opaque;
+    if (promise->state == ASYNC_STATE_RESOLVED) {
+        PUSH_REF(promise->value);
+    } else {
+        // Push back
+        PUSH_REF(return_value);
+    }
+}
+
 INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
     ASSERTNULL(instance, "VM is not initialized");
 
@@ -2028,15 +2042,19 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_AWAIT: {
                 object_t* awaited = PEEK();
+                async_promise_t* promise = (async_promise_t*) awaited->value.opaque;
+
                 size_t awaited_index;
                 
-                if (!OBJECT_TYPE_PROMISE(awaited)) {
+                if (OBJECT_TYPE_PROMISE(awaited) && promise->state == ASYNC_STATE_RESOLVED) {
+                    POPP(); // Pop promise and push value
+                    PUSH_REF(promise->value);
                     awaited_index = instance->sp;
                 } else {
                     awaited_index = instance->sp - 1; // minus 1 to point to the actual return;
                 }
                 
-                object_t* obj = object_new_promise();
+                object_t* obj = object_new_promise(ASYNC_STATE_PENDING, NULL);
                 PUSH(obj);
                 
                 async_t* async = async_new(ip, awaited_index, _env, _code, obj);
@@ -2045,6 +2063,11 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 return VmBlockSignalPending;
             }
             case OPCODE_RETURN: {
+                return VmBlockSignalReturned;
+            }
+            case OPCODE_RETURN_ASYNC: {
+                object_t* value = object_new_promise(ASYNC_STATE_RESOLVED, POPP());
+                PUSH(value);
                 return VmBlockSignalReturned;
             }
             case OPCODE_COMPLETE_BLOCK: {
@@ -2278,11 +2301,7 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
         async_t* async = vm_dequeue();
         instance->sp = async->top;
         vm_block_signal_t signal = vm_execute(async->env, async->ip, async->code);
-        if (signal == VmBlockSignalReturned) {
-            async_resolve(async->promise, PEEK());
-        } else {
-            async_reject(async->promise, PEEK());
-        }
+        do_resolve();
     }
     
     // Evaluation stack must contain exactly 1 object

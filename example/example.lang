@@ -20,3 +20,11 @@ func asyncFn() async {
 const x = asyncFn();
 println("Naahhh!!");
 println(x);
+
+
+func immediate() async {
+    return "Hello";
+}
+
+
+println(">>", immediate());
