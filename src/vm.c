@@ -2302,6 +2302,9 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
         instance->sp = async->top;
         vm_block_signal_t signal = vm_execute(async->env, async->ip, async->code);
         do_resolve(signal);
+        if (signal == VmBlockSignalReturned) {
+            async_free(async);
+        }
     }
     
     // Evaluation stack must contain exactly 1 object

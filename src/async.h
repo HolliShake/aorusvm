@@ -33,4 +33,6 @@ void async_resolve(object_t* _promise, object_t* _value);
 // Reject promise
 void async_reject(object_t* _promise, object_t* _value);
 
+void async_free(async_t* _async);
+
 #endif

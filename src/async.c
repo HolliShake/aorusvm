@@ -21,11 +21,18 @@ async_promise_t* async_promise_new(async_state_t _state, object_t* _value) {
 
 // 
 void async_resolve(object_t* _promise, object_t* _value) {
-    _promise->value.i32 = (int) ASYNC_STATE_RESOLVED;
-    _promise->value.opaque = _value;
+    async_promise_t* promise = (async_promise_t*) _promise->value.opaque;
+    promise->state = ASYNC_STATE_RESOLVED;
+    promise->value = _value;
 }
 
 void async_reject(object_t* _promise, object_t* _value) {
-    _promise->value.i32 = (int) ASYNC_STATE_REJECTED;
-    _promise->value.opaque = _value;
+    async_promise_t* promise = (async_promise_t*) _promise->value.opaque;
+    promise->state = ASYNC_STATE_REJECTED;
+    promise->value = _value;
+}
+
+void async_free(async_t* _async) {
+    env_free(_async->env);
+    free(_async);
 }

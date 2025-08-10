@@ -42,6 +42,9 @@ INTERNAL void gc_free_object(object_t* _obj) {
         case OBJECT_TYPE_OBJECT:
             hashmap_free((hashmap_t*)_obj->value.opaque);
             break;
+        case OBJECT_TYPE_PROMISE:
+            free(_obj->value.opaque);
+            break;
         // Other types don't need special cleanup
     }
     
@@ -106,6 +109,9 @@ INTERNAL void gc_mark_object(object_t* _obj) {
         case OBJECT_TYPE_ERROR:
             gc_mark_object((object_t*)_obj->value.opaque);
             break;
+        case OBJECT_TYPE_PROMISE:
+            gc_mark_object(((async_promise_t*)_obj->value.opaque)->value);
+            break;
         default:
             // Other types don't have references to mark
             break;
@@ -119,6 +125,12 @@ INTERNAL void gc_mark_vm_content(vm_t* _vm) {
 
     for (size_t i = 0; i < _vm->sp; i++) {
         gc_mark_object(_vm->evaluation_stack[i]);
+    }
+
+    for (size_t i = 0; i < _vm->aq; i++) {
+        async_t* async = _vm->queque[i];
+        gc_mark_object(async->promise);
+        gc_mark_env_content(async->env);
     }
 }
 
