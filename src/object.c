@@ -146,17 +146,17 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             async_promise_t* promise = (async_promise_t*) _obj->value.opaque;
             switch (promise->state) {
                 case ASYNC_STATE_PENDING:
-                    return string_allocate("promise { <pending> }");
+                    return string_allocate("Promise { <pending> }");
                 case ASYNC_STATE_RESOLVED: {
                     char* resolved_str = object_to_string(promise->value);
-                    char* result = string_format("promise { %s }", resolved_str);
+                    char* result = string_format("Promise { %s }", resolved_str);
                     free(resolved_str);
                     return result;
                 }
                 case ASYNC_STATE_REJECTED:
-                    return string_allocate("promise { <rejected> }");
+                    return string_allocate("Promise { <rejected> }");
                 default:
-                    return string_allocate("promise { <unknown> }");
+                    return string_allocate("Promise { <unknown> }");
             }
         }
         case OBJECT_TYPE_ARRAY: {
@@ -243,17 +243,17 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         }
         case OBJECT_TYPE_RANGE: {
             range_t* range = (range_t*) _obj->value.opaque;
-            return string_format("range(%ld, %ld, %ld)", range->start, range->end, range->step);
+            return string_format("Range(%ld, %ld, %ld)", range->start, range->end, range->step);
         }
         case OBJECT_TYPE_ITERATOR: {
-            return string_format("<iterator.%s/>", object_type_to_string(_obj->value.opaque));
+            return string_format("<Iterator.%s/>", object_type_to_string(_obj->value.opaque));
         }
         case OBJECT_TYPE_OBJECT: {
             return object_object_to_string_with_indent(_obj, 0);
         }
         case OBJECT_TYPE_USER_TYPE: {
             user_type_t* utype = (user_type_t*) _obj->value.opaque;
-            return string_format("class %s %s", utype->name, object_to_string(utype->prototype));
+            return string_format("Class %s %s", utype->name, object_to_string(utype->prototype));
         }
         case OBJECT_TYPE_USER_TYPE_INSTANCE: {
             user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
@@ -277,13 +277,13 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
             return str;
         }
         case OBJECT_TYPE_NATIVE_FUNCTION: {
-            return string_allocate("native function(...){...}");
+            return string_allocate("Native Function(...){...}");
         }
         case OBJECT_TYPE_ERROR: {
-            return string_format("<error: %s/>", object_to_string((object_t*) _obj->value.opaque));
+            return string_format("<Error: %s/>", object_to_string((object_t*) _obj->value.opaque));
         }
         default: {
-            return string_allocate("unknown object");
+            return string_allocate("Unknown object");
         }
     }
 }
@@ -393,37 +393,37 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
     if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
         case OBJECT_TYPE_INT:
-            return string_allocate("int");
+            return string_allocate("Int");
         case OBJECT_TYPE_DOUBLE:
-            return string_allocate("number");
+            return string_allocate("Number");
         case OBJECT_TYPE_STRING:
-            return string_allocate("string");
+            return string_allocate("String");
         case OBJECT_TYPE_BOOL:
-            return string_allocate("boolean");
+            return string_allocate("Boolean");
         case OBJECT_TYPE_NULL:
-            return string_allocate("null");
+            return string_allocate("Null");
         case OBJECT_TYPE_PROMISE:
-            return string_allocate("promise");
+            return string_allocate("Promise");
         case OBJECT_TYPE_ARRAY:
-            return string_allocate("array");
+            return string_allocate("Array");
         case OBJECT_TYPE_RANGE:
-            return string_allocate("range");
+            return string_allocate("Range");
         case OBJECT_TYPE_ITERATOR:
-            return string_format("<iterator.%s/>", object_to_string(_obj->value.opaque));
+            return string_format("<Iterator.%s/>", object_to_string(_obj->value.opaque));
         case OBJECT_TYPE_OBJECT:
-            return string_allocate("object");
+            return string_allocate("Object");
         case OBJECT_TYPE_USER_TYPE:
-            return string_format("<class.%s/>", ((user_type_t*) _obj->value.opaque)->name);
+            return string_format("<Class.%s/>", ((user_type_t*) _obj->value.opaque)->name);
         case OBJECT_TYPE_USER_TYPE_INSTANCE:
             user_type_instance_t* instance = (user_type_instance_t*) _obj->value.opaque;
             user_type_t* utype = (user_type_t*) instance->constructor->value.opaque;
             return string_format("<%s/>", utype->name);
         case OBJECT_TYPE_FUNCTION:
-            return string_allocate("function");
+            return string_allocate("Function");
         case OBJECT_TYPE_NATIVE_FUNCTION:
-            return string_allocate("native function");
+            return string_allocate("Native Function");
         case OBJECT_TYPE_ERROR:
-            return string_allocate("error");
+            return string_allocate("Error");
         default:
             return string_format("<unknown.%d/>", _obj->type);
     }
