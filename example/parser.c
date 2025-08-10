@@ -484,7 +484,20 @@ ast_node_t* parser_unary(parser_t* _parser) {
         }
         ended = ast_position(node);
         return ast_unary_spread_node(position_merge(start, ended), node);
-    } 
+    } else if (CHECKV(KEY_AWAIT)) {
+        ACCEPTV(KEY_AWAIT);
+        ast_node_t* node = parser_unary(_parser);
+        if (node == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing operand for await"
+            );
+        }
+        ended = ast_position(node);
+        return ast_await_node(position_merge(start, ended), node);
+    }
     return parser_postfix(_parser);
 }
 
@@ -986,6 +999,12 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
         }
     }
     ACCEPTV(RPAREN);
+
+    bool is_async = CHECKV(KEY_ASYNC);
+    if (is_async) {
+        ACCEPTV(KEY_ASYNC);
+    }
+
     index = 0;
     ast_node_list_t body = (ast_node_list_t) malloc(sizeof(ast_node_t*));
     body[0] = NULL;
@@ -1002,6 +1021,9 @@ ast_node_t* parser_function_declaration(parser_t* _parser) {
     }
     ended = _parser->current->position;
     ACCEPTV(RBRACKET);
+    if (is_async) {
+        return ast_async_function_node(position_merge(start, ended), name, parameters, body);
+    }
     return ast_function_node(position_merge(start, ended), name, parameters, body);
 }
 

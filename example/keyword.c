@@ -24,6 +24,7 @@ const char* KEYWORDS[] = {
     KEY_NEW,
     KEY_THIS,
     KEY_SUPER,
+    KEY_AWAIT,
     KEY_CATCH,
     NULL
 };

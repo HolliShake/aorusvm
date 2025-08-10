@@ -51,8 +51,8 @@ void* decompile_get_memory(uint8_t* bytecode, size_t _ip) {
 #define OPCODE (bytecode[ip])
 #define PRINT_OPCODE(format, ...) printf("[%.*zu] " format, (int)log10(bytecode_size) + 1, ip-1, ##__VA_ARGS__)
 
-void decompile(code_t* _code, bool _with_header) {  
-    size_t ip = 0;
+void _decompile(code_t* _code, size_t _ip) {  
+    size_t ip = _ip;
     // String for the module name
     char* module_name = _code->file_name;
     printf("[MOD NAME]: %s\n", module_name);
@@ -486,6 +486,14 @@ void decompile(code_t* _code, bool _with_header) {
                 exit(EXIT_FAILURE);
         }
     }
+}
+
+void decompile(code_t* _code, bool _with_header) {
+    _decompile(_code, 0);
+}
+
+void decompile_with_ip(code_t* _code, size_t _ip) {
+    _decompile(_code, _ip);
 }
 
 #undef FORWARD

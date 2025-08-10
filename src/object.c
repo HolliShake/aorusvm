@@ -1,4 +1,5 @@
 #include "api/core/object.h"
+#include "async.h"
 #include "error.h"
 #include "internal.h"
 #include "object.h"
@@ -113,6 +114,12 @@ DLLEXPORT object_t* object_new_error(void* _message, bool _vm_error) {
     return obj;
 }
 
+DLLEXPORT object_t* object_new_promise() {
+    object_t* obj = object_new(OBJECT_TYPE_PROMISE);
+    obj->value.i32 = (int) ASYNC_STATE_PENDING;
+    return obj;
+}
+
 DLLEXPORT char* object_to_string(object_t* _obj) {
     if (_obj == NULL) return string_allocate("<cnull>");
     switch (_obj->type) {
@@ -134,6 +141,22 @@ DLLEXPORT char* object_to_string(object_t* _obj) {
         }
         case OBJECT_TYPE_NULL: {
             return string_allocate("null");
+        }
+        case OBJECT_TYPE_PROMISE: {
+            switch ((async_state_t) _obj->value.i32) {
+                case ASYNC_STATE_PENDING:
+                    return string_allocate("promise { <pending> }");
+                case ASYNC_STATE_RESOLVED: {
+                    char* resolved_str = object_to_string((object_t*) _obj->value.opaque);
+                    char* result = string_format("promise { %s }", resolved_str);
+                    free(resolved_str);
+                    return result;
+                }
+                case ASYNC_STATE_REJECTED:
+                    return string_allocate("promise { <rejected> }");
+                default:
+                    return string_allocate("promise { <unknown> }");
+            }
         }
         case OBJECT_TYPE_ARRAY: {
             array_t* array = (array_t*) _obj->value.opaque;
@@ -321,6 +344,8 @@ DLLEXPORT bool object_equals(object_t* _obj1, object_t* _obj2) {
             return _obj1->value.i32 == _obj2->value.i32;
         case OBJECT_TYPE_NULL:
             return _obj2->type == OBJECT_TYPE_NULL;
+        case OBJECT_TYPE_PROMISE:
+            return _obj1 == _obj2;
         case OBJECT_TYPE_ARRAY: {
             if (_obj1 == _obj2) return true;
             array_t* array1 = (array_t*) _obj1->value.opaque;
@@ -376,6 +401,8 @@ DLLEXPORT char* object_type_to_string(object_t* _obj) {
             return string_allocate("boolean");
         case OBJECT_TYPE_NULL:
             return string_allocate("null");
+        case OBJECT_TYPE_PROMISE:
+            return string_allocate("promise");
         case OBJECT_TYPE_ARRAY:
             return string_allocate("array");
         case OBJECT_TYPE_RANGE:
@@ -436,6 +463,15 @@ DLLEXPORT size_t object_hash(object_t* _obj) {
             return (size_t) _obj->value.i32;
         case OBJECT_TYPE_NULL:
             return 0;
+        case OBJECT_TYPE_PROMISE: {
+            uintptr_t addr = (uintptr_t)_obj;
+            addr ^= (addr >> 33);
+            addr *= 0xff51afd7ed558ccdULL;
+            addr ^= (addr >> 33);
+            addr *= 0xc4ceb9fe1a85ec53ULL;
+            addr ^= (addr >> 33);
+            return (size_t) addr;
+        }
         case OBJECT_TYPE_ARRAY: {
             #if IS_64BIT
                 size_t hash = 14695981039346656037u;  // FNV offset basis (Fowler–Noll–Vo)

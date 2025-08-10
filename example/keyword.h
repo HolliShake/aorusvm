@@ -26,6 +26,7 @@
 #define KEY_THIS "this"
 #define KEY_SUPER "super"
 #define KEY_NEW "new"
+#define KEY_AWAIT "await"
 #define KEY_CATCH "catch"
 
 extern const char* KEYWORDS[];

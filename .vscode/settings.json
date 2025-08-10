@@ -35,6 +35,10 @@
         "iterator.h": "c",
         "func.h": "c",
         "scope.h": "c",
-        "dbghelp.h": "c"
+        "dbghelp.h": "c",
+        "decompiler.h": "c",
+        "hashmap.h": "c",
+        "async.h": "c",
+        "array.h": "c"
     }
 }

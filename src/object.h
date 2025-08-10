@@ -33,6 +33,8 @@ typedef struct user_type_instance_struct {
     object_t* object;
 } user_type_instance_t;
 
+object_t* object_new_promise();
+
 // NOTE: This is a special object type that is used to create user-defined types.
 // It is not a regular object type, it is a special object type that is used to create user-defined types.
 // It is not a regular object type, it is a special object type that is used to create user-defined types.
@@ -43,9 +45,6 @@ object_t* object_new_user_type(char* _name, object_t* _super, object_t* _prototy
 // It is not a regular object type, it is a special object type that is used to create user-defined types.
 object_t* object_new_user_type_instance(object_t* _constructor, object_t* _object);
 
-// NOTE: This is a special function that is used to create a string representation of an object with indentation.
-// It is not a regular function, it is a special function that is used to create a string representation of an object with indentation.
-// It is not a regular function, it is a special function that is used to create a string representation of an object with indentation.
 char* object_object_to_string_with_indent(object_t* _obj, int _indent);
 
 #endif

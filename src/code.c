@@ -3,6 +3,7 @@
 code_t* code_new_module(char* _file_name, char* _block_name) {
     code_t* code = malloc(sizeof(code_t));
     ASSERTNULL(code, "Failed to allocate memory for code");
+    code->top = code->bot = 0;
     code->is_scoped   = false;
     code->file_name   = _file_name;
     code->block_name  = _block_name;
@@ -18,6 +19,7 @@ code_t* code_new_module(char* _file_name, char* _block_name) {
 code_t* code_new_function(char* _file_name, char* _block_name, bool _is_scoped, bool _is_async, size_t _param_count, uint8_t* _bytecode, size_t _size) {
     code_t* code = malloc(sizeof(code_t));
     ASSERTNULL(code, "Failed to allocate memory for code");
+    code->top = code->bot = 0;
     code->is_scoped   = _is_scoped;
     code->file_name   = _file_name;
     code->block_name  = _block_name;
@@ -32,6 +34,7 @@ code_t* code_new_function(char* _file_name, char* _block_name, bool _is_scoped, 
 code_t* code_new_block(char* _file_name, char* _block_name, uint8_t* _bytecode, size_t _size) {
     code_t* code = malloc(sizeof(code_t));
     ASSERTNULL(code, "Failed to allocate memory for code");
+    code->top = code->bot = 0;
     code->is_scoped   = true;
     code->file_name   = _file_name;
     code->block_name  = _block_name;

@@ -1,5 +1,6 @@
 #include "api/core/vm.h"
 #include "array.h"
+#include "async.h"
 #include "code.h"
 #include "decompiler.h"
 #include "hashmap.h"
@@ -19,7 +20,9 @@ typedef enum vm_block_signal_t {
 typedef struct vm_struct {
     // evaluation stack
     object_t** evaluation_stack;
+    async_t** queque;
     size_t sp;
+    size_t aq;
     // function table
     size_t function_table_size;
     code_t** function_table_item;

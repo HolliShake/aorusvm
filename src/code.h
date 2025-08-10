@@ -5,6 +5,8 @@
 #define CODE_H
 
 typedef struct code_struct {
+    size_t   top;
+    size_t   bot;
     bool     is_scoped;
     char*    file_name;
     char*    block_name;

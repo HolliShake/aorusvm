@@ -1,40 +1,22 @@
+func nameF(params) async {
+    println(params);
+    return "Done " + params;
+}
 
-var x = 5;
-println(2 * 3 + ++x + x + 12);
+func awaitable() async {
+    const x = await nameF("Awaitable function called");
+    println("awaitable::x", x);
+    return 69420;
+}
+
+func asyncFn() async {
+    println("Begin");
+    const x = await awaitable();
+    println("Continue", x);
+    await awaitable();
+    return 1;
+}
+
+const x = asyncFn();
+println("Naahhh!!");
 println(x);
-
-var y = {
-    "value": 5
-};
-println(2 * 3 + ++y.value + y.value + 12);
-println(y.value);
-
-var z = {
-    "value": 5
-};
-println(2 * 3 + ++z["value"] + z["value"] + 12);
-println(z.value);
-
-class Animal {
-    
-}
-
-class Dog extends Animal {
-    func init() {
-        this.bark();
-    }
-}
-
-Animal.bark = func() {
-    println("Arf!!");
-};
-
-const getNum = func(num) {
-    return num * 2;
-};
-
-for (i in 0..getNum(50)) {
-    println(i, new Dog());
-}
-
-

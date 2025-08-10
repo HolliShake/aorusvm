@@ -42,6 +42,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstArray:
         case AstObject:
         case AstFunctionExpression:
+        case AstNew:
         case AstMemberAccess:
         case AstIndex:
         case AstCall:
@@ -54,7 +55,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstUnaryNot:
         case AstUnaryBitnot:
         case AstUnarySpread:
-        case AstNew:
+        case AstAwait:
         case AstBinaryMul:
         case AstBinaryDiv:
         case AstBinaryMod:
@@ -1147,6 +1148,28 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             emit(_code, OPCODE_EXTEND_ARRAY);
             break;
         }
+        case AstAwait: {
+            ast_node_t* expression = _expression->ast0;
+            if (expression == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "await expression must have an expression, but received NULL"
+                );
+            }
+            if (expression->type != AstCall) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "await expression must have a call expression, but received %d", expression->type
+                );
+            }
+            generator_expression(_generator, _code, _scope, expression);
+            emit(_code, OPCODE_AWAIT);
+            break;
+        }
         case AstBinaryMul: {
             if (_expression->ast0 == NULL || _expression->ast1 == NULL) {
                 __THROW_ERROR(
@@ -1675,7 +1698,12 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             break;
         }
         default:
-            PD("unsupported expression type %d, but received %d", _expression->type, _expression->type);
+            __THROW_ERROR(
+                _generator->fpath,
+                _generator->fdata,
+                _expression->position,
+                "unsupported expression type %d, but received %d", _expression->type, _expression->type
+            );
     }
 }
 

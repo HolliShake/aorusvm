@@ -18,6 +18,7 @@
 
 #define VERSION 0x001 // 0.0.1
 #define EVALUATION_STACK_SIZE 1024
+#define ASYNC_QUEUE_SIZE 500
 #define SLICE_INT(value) (value & 0xFF), ((value >> 8) & 0xFF), ((value >> 16) & 0xFF), ((value >> 24) & 0xFF)
 #define SLICE_LONG(value) (value & 0xFF), ((value >> 8) & 0xFF), ((value >> 16) & 0xFF), ((value >> 24) & 0xFF), ((value >> 32) & 0xFF), ((value >> 40) & 0xFF), ((value >> 48) & 0xFF), ((value >> 56) & 0xFF)
 #define MAGIC_NUMBER 0xbadc0de

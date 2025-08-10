@@ -80,6 +80,8 @@
 }
 
 vm_t *instance = NULL;
+size_t save_top = 0;
+size_t save_bot = 0;
 
 INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code);
 
@@ -157,6 +159,24 @@ char* get_string(uint8_t *_bytecode, size_t _ip) {
         _ip++;
     }
     return str;
+}
+
+INTERNAL void vm_enqueue(async_t* _async) {
+    instance->queque[instance->aq++] = _async;
+}
+
+INTERNAL async_t* vm_dequeue() {
+    if (instance->aq == 0) {
+        return NULL;
+    }
+    async_t* async = instance->queque[0];
+    // Shift left
+    for (size_t i = 0; i < instance->aq; i++) {
+        instance->queque[i] = instance->queque[i+1];
+    }
+    instance->queque[instance->aq-1] = NULL;
+    instance->aq--;
+    return async;
 }
 
 INTERNAL void rotate2() {
@@ -978,13 +998,17 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
  */
 INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t* _signal) {
     // _closure is a short lived object here, we will convert it into function and execute it.
-    code_t* code = (code_t *)_closure->value.opaque;
-    env_t* block_env 
-        = env_new(_parent_env);
+    code_t* code = (code_t*)_closure->value.opaque;
+    env_t* block_env = env_new(_parent_env);
+    
     block_env->closure = code->environment;
     *_signal = vm_execute(block_env, 0, code);
-    if (*_signal == VmBlockSignalComplete) POPP();
-    block_env->parent  = NULL;
+    
+    if (*_signal == VmBlockSignalComplete) {
+        POPP();
+    }
+    
+    block_env->parent = NULL;
     block_env->closure = NULL;
     env_free(block_env);
 }
@@ -1210,10 +1234,11 @@ INTERNAL void do_set_index(object_t* _obj, object_t* _index, object_t* _value) {
 }
 
 INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
-    code_t* code = (code_t *)_function->value.opaque;
+    code_t* code = (code_t*)_function->value.opaque;
     object_t* this = _is_method ? POPP() : NULL;
+    
     if (code->param_count != _argc) {
-        // pop all arguments, before returning error
+        // Pop all arguments before returning error
         POPN(_argc);
         char* message = string_format(
             "expected %ld arguments, got %d", 
@@ -1224,13 +1249,20 @@ INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, 
         free(message);
         return;
     }
-    env_t* func_env = 
-        env_new(_parent_env);
+    
+    env_t* func_env = env_new(_parent_env);
     func_env->closure = code->environment;
-    if (this != NULL) env_put(func_env, string_allocate("this"), this);
-    vm_execute(func_env, 0, code);
+    
+    if (this != NULL) {
+        env_put(func_env, string_allocate("this"), this);
+    }
+    
+    vm_block_signal_t signal = vm_execute(func_env, 0, code);
     func_env->closure = NULL;
-    env_free(func_env);
+    
+    if (signal != VmBlockSignalPending) {
+        env_free(func_env);
+    }
 }
 
 INTERNAL void do_native_call(object_t* _function, int _argc) {
@@ -1991,9 +2023,26 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 break;
             }
             case OPCODE_POPTOP: {
-                // printf("POPTOP %s\n", object_to_string(PEEK()));
                 POPP();
                 break;
+            }
+            case OPCODE_AWAIT: {
+                object_t* awaited = PEEK();
+                size_t awaited_index;
+                
+                if (!OBJECT_TYPE_PROMISE(awaited)) {
+                    awaited_index = instance->sp;
+                } else {
+                    awaited_index = instance->sp - 1; // minus 1 to point to the actual return;
+                }
+                
+                object_t* obj = object_new_promise();
+                PUSH(obj);
+                
+                async_t* async = async_new(ip, awaited_index, _env, _code, obj);
+                vm_enqueue(async);
+                
+                return VmBlockSignalPending;
             }
             case OPCODE_RETURN: {
                 return VmBlockSignalReturned;
@@ -2128,7 +2177,10 @@ DLLEXPORT void vm_init() {
     instance->evaluation_stack = 
         (object_t **)malloc(sizeof(object_t*) * EVALUATION_STACK_SIZE);
     ASSERTNULL(instance->evaluation_stack, "failed to allocate memory for evaluation stack");
+    instance->queque = (async_t**)malloc(sizeof(async_t*) * ASYNC_QUEUE_SIZE);
+    ASSERTNULL(instance->queque, "failed to allocate memory for async queue");
     instance->sp = 0;
+    instance->aq = 0;
     // function table
     instance->function_table_size = 0;
     instance->function_table_item = (code_t**)malloc(sizeof(code_t*));
@@ -2214,20 +2266,31 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 
 DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
+    
     // Create a new environment for the main function
-    // decompile(_bytecode, false);
-    // return;
-    env_t* env = 
-        env_new(instance->env);
+    env_t* env = env_new(instance->env);
     env->closure = _bytecode->environment;
     vm_execute(env, 0, _bytecode);
     env->closure = NULL;
-    // Evaluation stack must contain 1 object
+
+    // Process async queue
+    while (instance->aq > 0) {
+        async_t* async = vm_dequeue();
+        instance->sp = async->top;
+        vm_block_signal_t signal = vm_execute(async->env, async->ip, async->code);
+        if (signal == VmBlockSignalReturned) {
+            async_resolve(async->promise, PEEK());
+        } else {
+            async_reject(async->promise, PEEK());
+        }
+    }
+    
+    // Evaluation stack must contain exactly 1 object
     if (instance->sp != 1) {
         DUMP_STACK();
-        // decompile(_bytecode, false);
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
+    
     POPP();
     gc_collect_all(instance);
 }   

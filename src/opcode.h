@@ -77,6 +77,7 @@ typedef enum opcode_enum {
     OPCODE_GET_NEXT_VALUE               = 147,  // No following bytes
     OPCODE_GET_NEXT_KEY_VALUE           = 148,  // No following bytes
     OPCODE_SET_PROPERTY                 = 149,  // Followed by the length of the property in bytes + 1 (for the null terminator)
+    OPCODE_AWAIT                        = 150,  // No following bytes
     // NOTE: 255 is the last opcode
 } opcode_t;
 

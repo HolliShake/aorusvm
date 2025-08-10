@@ -35,6 +35,7 @@ typedef enum ast_node_type_struct {
     AstUnaryNot,
     AstUnaryBitnot,
     AstUnarySpread,
+    AstAwait,
     AstNew,
     // Binary operators
     AstRange,
