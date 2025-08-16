@@ -694,7 +694,7 @@ ast_node_t* parser_bitwise(parser_t* _parser) {
     if (node == NULL) {
         return NULL;
     }
-    while (CHECKV(BITWISE_AND) || CHECKV(BITWISE_OR) || CHECKV(BITWISE_XOR)) {
+    while (CHECKV(BITWISE_AND) || CHECKV(PIPE) || CHECKV(BITWISE_XOR)) {
         char* op = _parser->current->value;
         ACCEPTV(op);
         ast_node_t* right = parser_equality(_parser);
@@ -712,7 +712,7 @@ ast_node_t* parser_bitwise(parser_t* _parser) {
                 node, 
                 right
             );
-        } else if (strcmp(op, BITWISE_OR) == 0) {
+        } else if (strcmp(op, PIPE) == 0) {
             node = ast_binary_or_node(
                 position_merge(ast_position(node), ast_position(right)), 
                 node, 
@@ -763,41 +763,14 @@ ast_node_t* parser_logical(parser_t* _parser) {
     return node;
 }
 
-ast_node_t* parser_generator(parser_t* _parser) {
-    ast_node_t* node = parser_logical(_parser);
-    if (node == NULL) {
-        return NULL;
-    }
-    while (CHECKV(DOTDOT)) {
-        char* op = _parser->current->value;
-        ACCEPTV(op);
-        ast_node_t* right = parser_logical(_parser);
-        if (right == NULL) {
-            __THROW_ERROR(
-                _parser->fpath,
-                _parser->fdata,
-                _parser->current->position,
-                "missing right operand for %s", op
-            );
-        }
-        node = ast_range_node(
-            position_merge(ast_position(node), ast_position(right)), 
-            node, 
-            right
-        );
-    }
-    return node;
-}
-
-
 ast_node_t* parser_assign(parser_t* _parser) {
-    ast_node_t* node = parser_generator(_parser);
+    ast_node_t* node = parser_logical(_parser);
     if (node == NULL) {
         return NULL;
     }
     while (CHECKV(EQUAL)) {
         ACCEPTV(EQUAL);
-        ast_node_t* right = parser_generator(_parser);
+        ast_node_t* right = parser_logical(_parser);
         if (right == NULL) {
             __THROW_ERROR(
                 _parser->fpath,
@@ -815,9 +788,175 @@ ast_node_t* parser_assign(parser_t* _parser) {
     return node;
 }
 
+ast_node_t* parser_range(parser_t* _parser) {
+    ast_node_t* node = parser_assign(_parser);
+    if (node == NULL) {
+        return NULL;
+    }
+    while (CHECKV(DOTDOT)) {
+        char* op = _parser->current->value;
+        ACCEPTV(op);
+        ast_node_t* right = parser_assign(_parser);
+        if (right == NULL) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "missing right operand for %s", op
+            );
+        }
+        node = ast_range_node(
+            position_merge(ast_position(node), ast_position(right)), 
+            node, 
+            right
+        );
+    }
+    return node;
+}
+
+ast_node_t* parser_if_expression(parser_t* _parser) {
+    if (!CHECKV(KEY_IF)) {
+        return parser_range(_parser);
+    }
+
+    /*** if/else expression or maybe ternary expression ***/
+    position_t* start = _parser->current->position, *ended = start;
+    ACCEPTV(KEY_IF);
+    ACCEPTV(LPAREN);
+    ast_node_t* condition = parser_range(_parser);
+    if (condition == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "if condition expected"
+        );
+    }
+    ACCEPTV(RPAREN);
+    // recurse
+    ast_node_t* _then = parser_if_expression(_parser);
+    if (_then == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "if then expected"
+        );
+    }
+    ACCEPTV(KEY_ELSE);
+    ast_node_t* _else = parser_if_expression(_parser);
+    if (_else == NULL) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "if else expected"
+        );
+    }
+    ended = ast_position(_else);
+    return ast_ternary_node(position_merge(start, ended), condition, _then, _else);
+}
+
+ast_node_t* parser_switch_expression(parser_t* _parser) {
+    position_t* start = _parser->current->position;
+    position_t* ended = start;
+
+    // Parse initial condition
+    ast_node_t* condition = parser_if_expression(_parser);
+    if (!condition) {
+        return NULL;
+    }
+
+    // If no 'switch', return the condition directly
+    if (!CHECKV(KEY_SWITCH)) {
+        return condition;
+    }
+
+    ACCEPTV(KEY_SWITCH);
+    ACCEPTV(LBRACKET);
+
+    bool is_default_found = false;
+    ast_node_t* default_case = NULL;
+
+    // Parse cases
+    while (CHECKV(PIPE)) {
+        ACCEPTV(PIPE);
+
+        // Default case (no LBRACE)
+        if (!CHECKV(LBRACE)) {
+            if (is_default_found) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "multiple default cases"
+                );
+            }
+
+            ACCEPTV(ARROW);
+            is_default_found = true;
+            default_case = parser_switch_expression(_parser);
+
+            if (!default_case) {
+                __THROW_ERROR(
+                    _parser->fpath,
+                    _parser->fdata,
+                    _parser->current->position,
+                    "default case expected"
+                );
+            }
+
+            ACCEPTV(SEMICOLON);
+            continue;
+        }
+
+        // Pattern case
+        ast_node_t* patterns = parser_array(_parser);
+        if (!patterns) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "switch pattern expected"
+            );
+        }
+
+        ACCEPTV(ARROW);
+
+        ast_node_t* value = parser_switch_expression(_parser);
+        if (!value) {
+            __THROW_ERROR(
+                _parser->fpath,
+                _parser->fdata,
+                _parser->current->position,
+                "switch value expected"
+            );
+        }
+
+        ACCEPTV(SEMICOLON);
+    }
+
+    // Require default case
+    if (!is_default_found) {
+        __THROW_ERROR(
+            _parser->fpath,
+            _parser->fdata,
+            _parser->current->position,
+            "default case expected"
+        );
+    }
+
+    ACCEPTV(SEMICOLON);
+    
+    ended = _parser->current->position;
+    ACCEPTV(RBRACKET);
+
+    return NULL;
+}
+
 ast_node_t* parser_catch(parser_t* _parser) {
     position_t* start = _parser->current->position, *ended = start;
-    ast_node_t* error = parser_assign(_parser);
+    ast_node_t* error = parser_switch_expression(_parser);
     if (error == NULL) {
         return NULL;
     }

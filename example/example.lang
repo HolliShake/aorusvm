@@ -26,3 +26,18 @@ func immediate() async {
 }
 
 println(">>", immediate());
+
+const xx = 
+    if (3 < 2) 
+        322 
+    else 
+        220 
+    ;
+
+println(xx);
+
+const gg = ((2 + 2) switch {
+    |        => 3;
+    |[1,2,3] => 2;
+    ;
+});

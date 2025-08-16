@@ -29,7 +29,7 @@
 #define EQUALTO       "=="
 #define NOT_EQUALTO   "!="
 #define BITWISE_AND   "&"
-#define BITWISE_OR    "|"
+#define PIPE          "|"
 #define BITWISE_XOR   "^"
 #define AND           "&&"
 #define OR            "||"
@@ -37,5 +37,6 @@
 #define COMMA         ","
 #define SEMICOLON     ";"
 #define COLON         ":"
+#define ARROW         "=>"
 
 #endif

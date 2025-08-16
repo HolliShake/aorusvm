@@ -76,6 +76,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstLogicalOr:
         case AstAssign:
         case AstRange:
+        case AstTernary:
         case AstCatch:
             return true;
         default:
@@ -1618,6 +1619,27 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             generator_expression(_generator, _code, _scope, rhs);
             generator_expression(_generator, _code, _scope, lhs);
             emit(_code, OPCODE_RANGE);
+            break;
+        }
+        case AstTernary: {
+            ast_node_t* cond = _expression->ast0;
+            ast_node_t* tvalue = _expression->ast1;
+            ast_node_t* fvalue = _expression->ast2;
+            if (cond == NULL || tvalue == NULL || fvalue == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "ternary expression requires a condition, a true value, and a false value"
+                );
+            }
+            generator_expression(_generator, _code, _scope, cond);
+            int jump_start = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
+            generator_expression(_generator, _code, _scope, tvalue);
+            int jump_end = emit_jump(_code, OPCODE_JUMP_FORWARD);
+            label(_code, jump_start);
+            generator_expression(_generator, _code, _scope, fvalue);
+            label(_code, jump_end);
             break;
         }
         case AstCatch: {

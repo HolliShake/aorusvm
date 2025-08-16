@@ -38,7 +38,6 @@ typedef enum ast_node_type_struct {
     AstAwait,
     AstNew,
     // Binary operators
-    AstRange,
     AstBinaryMul,
     AstBinaryDiv,
     AstBinaryMod,
@@ -58,6 +57,8 @@ typedef enum ast_node_type_struct {
     AstLogicalAnd,
     AstLogicalOr,
     AstAssign,
+    AstRange,
+    AstTernary,
     AstCatch,
     // Statements and declarations
     AstVarStatement,

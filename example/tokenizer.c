@@ -204,7 +204,7 @@ token_t* tokenizer_symbol(tokenizer_t* _tokenizer) {
         case '=': {
             append_str(value, _tokenizer->look);
             tokenizer_forward(_tokenizer);
-            if (_tokenizer->look == '=') {
+            if (_tokenizer->look == '=' || _tokenizer->look == '>') {
                 append_str(value, _tokenizer->look);
                 tokenizer_forward(_tokenizer);
             }

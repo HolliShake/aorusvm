@@ -11,6 +11,7 @@ const char* KEYWORDS[] = {
     KEY_RETURN,
     KEY_IF,
     KEY_ELSE,
+    KEY_SWITCH,
     KEY_FOR,
     KEY_WHILE,
     KEY_DO,

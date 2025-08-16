@@ -462,6 +462,17 @@ DLLEXPORT ast_node_t* ast_range_node(position_t* _position, ast_node_t* _lhs, as
 DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, ast_node_t* _rhs);
 
 /*
+ * Ternary node.
+
+ * @param _position The position of the node.
+ * @param _condition The condition of the node.
+ * @param _tvalue The true value of the node.
+ * @param _fvalue The false value of the node.
+ * @return The ternary node.
+ */
+DLLEXPORT ast_node_t* ast_ternary_node(position_t* _position, ast_node_t* _cond, ast_node_t* _tvalue, ast_node_t* _fvalue);
+
+/*
  * Catch node.
 
  * @param _position The position of the node.
