@@ -895,8 +895,9 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
 
             ACCEPTV(ARROW);
             is_default_found = true;
-            default_case = parser_switch_expression(_parser);
 
+            default_case = parser_switch_expression(_parser);
+            
             if (!default_case) {
                 __THROW_ERROR(
                     _parser->fpath,
@@ -947,7 +948,7 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
     }
 
     ACCEPTV(SEMICOLON);
-    
+
     ended = _parser->current->position;
     ACCEPTV(RBRACKET);
 
