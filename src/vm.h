@@ -15,6 +15,9 @@ typedef enum vm_block_signal_t {
     VmBlockSignalReturned,
     VmBlockSignalComplete,
     VmBlockSignalPending,
+    // For control flow statements
+    VmBlockSignalContinue,
+    VmBlockSignalBreak,
 } vm_block_signal_t;
 
 typedef struct vm_struct {

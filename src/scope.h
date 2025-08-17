@@ -49,6 +49,8 @@ typedef struct scope_struct {
     size_t         bcount;
     int*           con_jump;
     int*           brk_jump;
+    // Block
+    bool           is_block;
 } scope_t;
 
 /*
@@ -59,6 +61,15 @@ typedef struct scope_struct {
  * @return The new scope.
  */
 scope_t* scope_new(scope_t* _parent, scope_type_t _type);
+
+/*
+ * Create a new block scope.
+ *
+ * @param _parent The parent scope.
+ * @param _type The type of the scope.
+ * @return The new scope.
+ */
+scope_t* scope_block_new(scope_t* _parent, scope_type_t _type);
 
 /*
  * Check if a scope has a value.
@@ -113,6 +124,14 @@ bool scope_is_global(scope_t* _scope);
  * @return True if the scope is a local, false otherwise.
  */
 bool scope_is_local(scope_t* _scope);
+
+/*
+ * Check if a scope is a block.
+ *
+ * @param _scope The scope to check.
+ * @return True if the scope is a block, false otherwise.
+ */
+bool scope_is_block(scope_t* _scope);
 
 /*
  * Check if a scope is a class.

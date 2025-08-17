@@ -21,6 +21,13 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type) {
     scope->bcount = 0;
     scope->con_jump = NULL;
     scope->brk_jump = NULL;
+    scope->is_block = false;
+    return scope;
+}
+
+scope_t* scope_block_new(scope_t* _parent, scope_type_t _type) {
+    scope_t* scope = scope_new(_parent, _type);
+    scope->is_block = true;
     return scope;
 }
 
@@ -118,6 +125,15 @@ bool scope_is_global(scope_t* _scope) {
 
 bool scope_is_local(scope_t* _scope) {
     return _scope->type == ScopeTypeLocal;
+}
+
+bool scope_is_block(scope_t* _scope) {
+    scope_t* current = _scope;
+    while (current != NULL) {
+        if (current->type == ScopeTypeLocal && current->is_block) return true;
+        current = current->parent;
+    }
+    return false;
 }
 
 bool scope_is_class(scope_t* _scope) {

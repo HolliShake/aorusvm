@@ -419,6 +419,14 @@ void _decompile(code_t* _code, size_t _ip) {
                 FORWARD(8);
                 break;
             }
+            case OPCODE_CONTINUE: {
+                PRINT_OPCODE("continue\n");
+                break;
+            }
+            case OPCODE_BREAK: {
+                PRINT_OPCODE("break\n");
+                break;
+            }
             case OPCODE_RETURN: {
                 PRINT_OPCODE("return\n");
                 break;

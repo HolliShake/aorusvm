@@ -1,67 +1,8 @@
 
-func nameF(params) async {
-    println(params);
-    return "Done " + params;
-}
-
-func awaitable() async {
-    const x = await nameF("Awaitable function called");
-    println("awaitable::x", x);
-    return 69420;
-}
-
-func asyncFn() async {
-    println("Begin");
-    const x = await awaitable();
-    println("Continue", x);
-    await awaitable();
-    return 1;
-}
-
-const x = asyncFn();
-println("Naahhh!!");
-println(x);
-
-func immediate() async {
-    return "Hello";
-}
-
-println(">>", immediate());
-
-const xx = 
-    if (3 < 2) 
-        322 
-    else 
-        220 
-    ;
-
-println(xx);
-
-const gg = ((2 + 2) switch {
-    |[1,2,3] => 200;
-    |[4,5,6] => 300;
-    |        => 100;
-    ;
-});
-
-println("GG:", gg);
-
-func bbbb() {
-    await println("hello");
-    return 1;
-}
-
-func cccc() {
-    local x = await bbbb();
-    println("cccc->x", x);
-}
-
-cccc();
 
 for (i in 0..10) {
     if (i == 5) {
-        println(i);
-        break;
+        continue;
     }
     println(i);
 }

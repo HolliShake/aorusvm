@@ -313,7 +313,7 @@ INTERNAL void generator_assignment0(generator_t* _generator, code_t* _code, scop
         case AstName:
             emit(_code, OPCODE_LOAD_NAME);
             emit_string(_code, _expression->str0);
-            if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
+            if ((scope_is_function(_scope) || scope_is_async_function(_scope)) && !scope_function_has(_scope, _expression->str0)) {
                 scope_save_capture(_scope, _expression->str0);
             }
             if (_is_postfix) emit(_code, OPCODE_DUPTOP); 
@@ -683,7 +683,7 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
         case AstName:
             emit(_code, OPCODE_LOAD_NAME);
             emit_string(_code, _expression->str0);
-            if (scope_is_function(_scope) && !scope_function_has(_scope, _expression->str0)) {
+            if ((scope_is_function(_scope) || scope_is_async_function(_scope)) && !scope_function_has(_scope, _expression->str0)) {
                 scope_save_capture(_scope, _expression->str0);
             }
             break;
@@ -2498,9 +2498,22 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "continue statement must be in a loop"
                 );
             }
+
             scope_t* loop_scope;
             for (loop_scope = _scope; loop_scope->type != ScopeTypeLoop; loop_scope = loop_scope->parent);
-            int loc = emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, 0);
+
+            /*
+             * If the scope is a block, we need to return from the block.
+             * This is because the block is a function, and we need to return from the function.
+             * This is also the case for the catch block.
+             */
+
+            int loc = emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, -1);
+
+            if (scope_is_block(_scope)) {
+                emit(_code, OPCODE_CONTINUE);
+            }
+
             // Save the location
             loop_scope->con_jump[loop_scope->ccount++] = loc;
             loop_scope->con_jump = (int*) realloc(loop_scope->con_jump, sizeof(int) * (loop_scope->ccount + 1));
@@ -2515,6 +2528,12 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "break statement must be in a loop"
                 );
             }
+
+            if (scope_is_block(_scope)) {
+                emit(_code, OPCODE_BREAK);
+                break;
+            }
+
             scope_t* loop_scope;
             for (loop_scope = _scope; loop_scope->type != ScopeTypeLoop; loop_scope = loop_scope->parent);
             int loc = emit_jump(_code, OPCODE_JUMP_FORWARD);
@@ -2915,7 +2934,7 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 (uint8_t*) malloc(sizeof(uint8_t)),
                 0
             );
-            scope_t* block_scope = scope_new(_scope, ScopeTypeLocal);
+            scope_t* block_scope = scope_block_new(_scope, ScopeTypeLocal);
             // Setup block and reserve space for metadata
             emit(_code, OPCODE_SETUP_BLOCK);
             emit(_code, OPCODE_BEGIN_BLOCK);

@@ -23,3 +23,21 @@ This project provides a basic example of implementing a programming language in 
 ### Understanding the Example
 1. Look at the keyword definitions in `example/keyword.h`:
 
+## TODOS:
+
+- [x] classes
+- [x] function/closure
+- [x] switch expression
+- [x] if/else expression 
+- [x] spread operator
+- [x] async/await
+- [x] array
+- [x] object
+- [x] for loop
+- [x] while loop
+- [x] do/while loop
+- [x] catch expression       
+- [x] unary (++|--) expression        
+- [ ] continue statement (priority)
+- [ ] break statement (priority)
+- [ ] import statements

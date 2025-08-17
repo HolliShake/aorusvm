@@ -2079,6 +2079,12 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             case OPCODE_COMPLETE_BLOCK: {
                 return VmBlockSignalComplete;
             }
+            case OPCODE_CONTINUE: {
+                return VmBlockSignalContinue;
+            }
+            case OPCODE_BREAK: {
+                return VmBlockSignalBreak;
+            }
             case OPCODE_SETUP_CLASS:
             case OPCODE_BEGIN_CLASS: {
                 if (opcode == OPCODE_SETUP_CLASS)
@@ -2090,7 +2096,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 SAVE_FUNCTION(class_bytecode); // Slow!, optimize later
                 object_t* closure = vm_to_heap(object_new_function(class_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
-                do_block(_env, closure, &signal);   
+                do_block(_env, closure, &signal);
                 FORWARD(8);
                 break;
             }
@@ -2128,10 +2134,15 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 SAVE_FUNCTION(block_bytecode); // Slow!, optimize later
                 object_t* closure = vm_to_heap(object_new_function(block_bytecode));
                 vm_block_signal_t signal = VmBlockSignalPending;
-                do_block(_env, closure, &signal);   
+                do_block(_env, closure, &signal);
                 FORWARD(8);
-                if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
                 if (signal == VmBlockSignalComplete) break;
+                if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
+                if (signal == VmBlockSignalContinue) {
+                    PD("continue");
+                    return VmBlockSignalContinue;
+                }
+                if (signal == VmBlockSignalBreak   ) return VmBlockSignalBreak; //Propagate break signal to the parent block
                 PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
@@ -2295,7 +2306,7 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 
 DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
-    
+    decompile(_bytecode, false);
     // Create a new environment for the main function
     env_t* env = env_new(instance->env);
     env->closure = _bytecode->environment;
