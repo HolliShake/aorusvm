@@ -1644,6 +1644,30 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "ternary expression requires a condition, a true value, and a false value"
                 );
             }
+            if (!generator_is_expression_type(cond)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "ternary expression condition must be an expression"
+                );
+            }
+            if (!generator_is_expression_type(tvalue)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "ternary expression true value must be an expression"
+                );
+            }
+            if (!generator_is_expression_type(fvalue)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "ternary expression false value must be an expression"
+                );
+            }
             generator_expression(_generator, _code, _scope, cond);
             int jump_start = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
             generator_expression(_generator, _code, _scope, tvalue);
@@ -1666,12 +1690,28 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     "switch expression requires a condition"
                 );
             }
+            if (!generator_is_expression_type(condition)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression condition must be an expression"
+                );
+            }
             if (default_case == NULL) {
                 __THROW_ERROR(
                     _generator->fpath,
                     _generator->fdata,
                     _expression->position,
                     "switch expression requires a default case"
+                );
+            }
+            if (!generator_is_expression_type(default_case)) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression default case must be an expression"
                 );
             }
             if (patterns == NULL) {
@@ -1702,6 +1742,23 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             // Iterate over values
             for (size_t i = 0; values[i] != NULL; i++) {
                 ast_node_t* value = values[i];
+                if (value == NULL) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "switch value must not be NULL"
+                    );
+                }
+
+                if (!generator_is_expression_type(value)) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "switch value must be an expression"
+                    );
+                }
 
                 ast_node_t* pattern = patterns[i];
                 // Iterate over pattern values
@@ -1732,6 +1789,16 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                             "switch pattern must be a valid pattern"
                         );
                     }
+
+                    if (!generator_is_expression_type(pattern_value)) {
+                        __THROW_ERROR(
+                            _generator->fpath,
+                            _generator->fdata,
+                            _expression->position,
+                            "switch pattern must be an expression"
+                        );
+                    }
+
                     emit(_code, OPCODE_DUPTOP); // duplicate the top of the stock
                     /****/
                     generator_expression(_generator, _code, _scope, pattern_value); // -> must be top of the stock
@@ -1751,6 +1818,8 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
                     label(_code, jumps[j]);
                 }
                 free(jumps);
+
+                VALUE:;
                 // Value
                 generator_expression(_generator, _code, _scope, value);
                 
