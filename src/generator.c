@@ -77,6 +77,7 @@ INTERNAL bool generator_is_expression_type(ast_node_t* _expression) {
         case AstAssign:
         case AstRange:
         case AstTernary:
+        case AstSwitchExpression:
         case AstCatch:
             return true;
         default:
@@ -111,6 +112,16 @@ INTERNAL bool generator_is_constant_node(ast_node_t* _expression) {
 
 INTERNAL bool generator_is_logical_expression(ast_node_t* _expression) {
     return _expression->type == AstLogicalAnd || _expression->type == AstLogicalOr;
+}
+
+INTERNAL bool generator_is_valid_switch_pattern(ast_node_t* _expression) {
+    // negate, for fast approach
+    if (
+        (_expression->type == AstUnarySpread) 
+    ) {
+        return false;
+    }
+    return true;
 }
 
 INTERNAL void resize(code_t* _code, size_t _size) {
@@ -1640,6 +1651,130 @@ INTERNAL void generator_expression(generator_t* _generator, code_t* _code, scope
             label(_code, jump_start);
             generator_expression(_generator, _code, _scope, fvalue);
             label(_code, jump_end);
+            break;
+        }
+        case AstSwitchExpression: {
+            ast_node_t* condition = _expression->ast0;
+            ast_node_t* default_case = _expression->ast1;
+            ast_node_list_t patterns = _expression->array0;
+            ast_node_list_t values = _expression->array1;
+            if (condition == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression requires a condition"
+                );
+            }
+            if (default_case == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression requires a default case"
+                );
+            }
+            if (patterns == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression requires patterns"
+                );
+            }
+            if (values == NULL) {
+                __THROW_ERROR(
+                    _generator->fpath,
+                    _generator->fdata,
+                    _expression->position,
+                    "switch expression requires values"
+                );
+            }
+            // Condition
+            generator_expression(_generator, _code, _scope, condition);
+
+            size_t cases;
+            for (cases = 0; patterns[cases] != NULL; cases++); // (cases|patterns) == values
+
+            int  indx = 0;
+            int* ends = (int*) malloc(sizeof(int) * (cases + 1));
+
+            // Iterate over values
+            for (size_t i = 0; values[i] != NULL; i++) {
+                ast_node_t* value = values[i];
+
+                ast_node_t* pattern = patterns[i];
+                // Iterate over pattern values
+                if (pattern->type != AstArray) {
+                    __THROW_ERROR(
+                        _generator->fpath,
+                        _generator->fdata,
+                        _expression->position,
+                        "switch pattern must be an array"
+                    );
+                }
+
+                ast_node_list_t pattern_values = pattern->array0;
+
+                size_t plen;
+                for (plen = 0; pattern_values[plen] != NULL; plen++);
+
+                int  pindx = 0;
+                int* jumps = (int*) malloc(sizeof(int) * plen);
+
+                for (size_t j = 0; pattern_values[j] != NULL; j++) {
+                    ast_node_t* pattern_value = pattern_values[j];
+                    if (!generator_is_valid_switch_pattern(pattern_value)) {
+                        __THROW_ERROR(
+                            _generator->fpath,
+                            _generator->fdata,
+                            _expression->position,
+                            "switch pattern must be a valid pattern"
+                        );
+                    }
+                    emit(_code, OPCODE_DUPTOP); // duplicate the top of the stock
+                    /****/
+                    generator_expression(_generator, _code, _scope, pattern_value); // -> must be top of the stock
+                    emit(_code, OPCODE_CMP_EQ);
+                    // Jump to the value immediately if the pattern is valid
+                    int jump_to_value = emit_jump(_code, OPCODE_POP_JUMP_IF_TRUE);
+
+                    // Store the jump
+                    jumps[pindx++] = jump_to_value;
+                    jumps = (int*) realloc(jumps, sizeof(int) * (pindx + 1));
+                }
+                // Jump to the next case
+                int jump_to_next_case = emit_jump(_code, OPCODE_JUMP_FORWARD);
+
+                // Jump to the value immediately if the pattern is valid
+                for (size_t j = 0; j < pindx; j++) {
+                    label(_code, jumps[j]);
+                }
+                free(jumps);
+                // Value
+                generator_expression(_generator, _code, _scope, value);
+                
+                // Jump to the end switch
+                int end_switch_jump = emit_jump(_code, OPCODE_JUMP_FORWARD);
+
+                // Store the end jump
+                ends[indx++] = end_switch_jump;
+                ends = (int*) realloc(ends, sizeof(int) * (indx + 1));
+
+                // Jump to the next case
+                label(_code, jump_to_next_case);
+            }
+    
+            DEFAULT:;
+            // Jump to the default case
+            generator_expression(_generator, _code, _scope, default_case);
+
+            ENDSWITCH:;
+            // End of switch
+            for (size_t i = 0; i < indx; i++) {
+                label(_code, ends[i]);
+            }
+            free(ends);
             break;
         }
         case AstCatch: {

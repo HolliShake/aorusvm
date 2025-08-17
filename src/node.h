@@ -59,6 +59,7 @@ typedef enum ast_node_type_struct {
     AstAssign,
     AstRange,
     AstTernary,
+    AstSwitchExpression,
     AstCatch,
     // Statements and declarations
     AstVarStatement,

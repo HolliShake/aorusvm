@@ -473,6 +473,18 @@ DLLEXPORT ast_node_t* ast_assign_node(position_t* _position, ast_node_t* _lhs, a
 DLLEXPORT ast_node_t* ast_ternary_node(position_t* _position, ast_node_t* _cond, ast_node_t* _tvalue, ast_node_t* _fvalue);
 
 /*
+ * Switch expression node.
+
+ * @param _position The position of the node.
+ * @param _condition The condition of the node.
+ * @param _patterns The patterns of the node.
+ * @param _values The values of the node.
+ * @param _default The default of the node.
+ * @return The switch expression node.
+ */
+DLLEXPORT ast_node_t* ast_switch_expression_node(position_t* _position, ast_node_t* _condition, ast_node_list_t _patterns, ast_node_list_t _values, ast_node_t* _default);
+
+/*
  * Catch node.
 
  * @param _position The position of the node.

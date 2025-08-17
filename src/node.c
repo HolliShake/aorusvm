@@ -340,6 +340,15 @@ DLLEXPORT ast_node_t* ast_ternary_node(position_t* _position, ast_node_t* _cond,
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_switch_expression_node(position_t* _position, ast_node_t* _condition, ast_node_list_t _patterns, ast_node_list_t _values, ast_node_t* _default) {
+    ast_node_t* node = ast_node_new(AstSwitchExpression, _position);
+    node->ast0 = _condition;
+    node->ast1 = _default;
+    node->array0 = _patterns;
+    node->array1 = _values;
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_catch_node(position_t* _position, ast_node_t* _error, ast_node_t* _placeholder, ast_node_list_t _body) {
     ast_node_t* node = ast_node_new(AstCatch, _position);
     node->ast0 = _error;

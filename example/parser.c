@@ -875,8 +875,14 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
     ACCEPTV(KEY_SWITCH);
     ACCEPTV(LBRACKET);
 
-    bool is_default_found = false;
     ast_node_t* default_case = NULL;
+
+    ast_node_list_t p = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    ast_node_list_t v = (ast_node_list_t) malloc(sizeof(ast_node_t*));
+    p[0] = NULL;
+    v[0] = NULL;
+
+    size_t i = 0, j = 0;
 
     // Parse cases
     while (CHECKV(PIPE)) {
@@ -884,7 +890,7 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
 
         // Default case (no LBRACE)
         if (!CHECKV(LBRACE)) {
-            if (is_default_found) {
+            if (default_case != NULL) {
                 __THROW_ERROR(
                     _parser->fpath,
                     _parser->fdata,
@@ -894,10 +900,9 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
             }
 
             ACCEPTV(ARROW);
-            is_default_found = true;
 
             default_case = parser_switch_expression(_parser);
-            
+
             if (!default_case) {
                 __THROW_ERROR(
                     _parser->fpath,
@@ -935,10 +940,18 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
         }
 
         ACCEPTV(SEMICOLON);
+
+        p[i++] = patterns;
+        p = (ast_node_list_t) realloc(p, (sizeof(ast_node_t*) * (i + 1)));
+        p[i] = NULL;
+
+        v[j++] = value;
+        v = (ast_node_list_t) realloc(v, (sizeof(ast_node_t*) * (j + 1)));
+        v[j] = NULL;
     }
 
     // Require default case
-    if (!is_default_found) {
+    if (default_case == NULL) {
         __THROW_ERROR(
             _parser->fpath,
             _parser->fdata,
@@ -952,7 +965,7 @@ ast_node_t* parser_switch_expression(parser_t* _parser) {
     ended = _parser->current->position;
     ACCEPTV(RBRACKET);
 
-    return NULL;
+    return ast_switch_expression_node(position_merge(start, ended), condition, p, v, default_case);
 }
 
 ast_node_t* parser_catch(parser_t* _parser) {
