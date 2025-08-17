@@ -44,6 +44,11 @@ typedef struct scope_struct {
     char**         captures;
     // Carry flags
     bool           is_returned;
+    // Continues
+    size_t         ccount;
+    size_t         bcount;
+    int*           con_jump;
+    int*           brk_jump;
 } scope_t;
 
 /*

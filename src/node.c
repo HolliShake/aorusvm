@@ -415,6 +415,16 @@ DLLEXPORT ast_node_t* ast_for_multiple_initializer_node(position_t* _position, a
     return node;
 }
 
+DLLEXPORT ast_node_t* ast_continue_statement_node(position_t* _position) {
+    ast_node_t* node = ast_node_new(AstContinueStatement, _position);
+    return node;
+}
+
+DLLEXPORT ast_node_t* ast_break_statement_node(position_t* _position) {
+    ast_node_t* node = ast_node_new(AstBreakStatement, _position);
+    return node;
+}
+
 DLLEXPORT ast_node_t* ast_return_statement_node(position_t* _position, ast_node_t* _expr) {
     ast_node_t* node = ast_node_new(AstReturnStatement, _position);
     node->ast0 = _expr;

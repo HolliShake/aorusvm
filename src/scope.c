@@ -15,7 +15,12 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type) {
     scope->size = 0;
     scope->capture_count = 0;
     scope->captures = (char**) malloc(sizeof(char*));
+    ASSERTNULL(scope->captures, "failed to allocate memory for captures");
     scope->captures[0] = NULL;
+    scope->ccount = 0;
+    scope->bcount = 0;
+    scope->con_jump = NULL;
+    scope->brk_jump = NULL;
     return scope;
 }
 

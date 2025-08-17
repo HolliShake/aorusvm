@@ -572,6 +572,22 @@ DLLEXPORT ast_node_t* ast_for_statement_node(position_t* _position, ast_node_t* 
 DLLEXPORT ast_node_t* ast_for_multiple_initializer_node(position_t* _position, ast_node_t* _k, ast_node_t* _v);
 
 /*
+ * Continue statement node.
+ *
+ * @param _position The position of the node.
+ * @return The continue statement node.
+ */
+DLLEXPORT ast_node_t* ast_continue_statement_node(position_t* _position);
+
+/*
+ * Break statement node.
+ *
+ * @param _position The position of the node.
+ * @return The break statement node.
+ */
+DLLEXPORT ast_node_t* ast_break_statement_node(position_t* _position);
+
+/*
  * Return statement node.
  *
  * @param _position The position of the node.

@@ -184,13 +184,21 @@ INTERNAL int emit_jump(code_t* _code, opcode_t _opcode) {
     return start;
 }
 
-INTERNAL void emit_jumpto(code_t* _code, opcode_t _opcode, int _start) {
+INTERNAL int emit_jumpto(code_t* _code, opcode_t _opcode, int _start) {
     emit(_code, _opcode);
+    int begin = (int) _code->size;
     emit_int(_code, _start);
+    return begin;
 }
 
 INTERNAL int here(code_t* _code) {
-    return _code->size;
+    return (int) _code->size;
+}
+
+INTERNAL void label_continue(code_t* _code, int _continue, int _start) {
+    for (size_t i = 0; i < 4; i++) {
+        _code->bytecode[_continue + i] = (_start >> (i * 8)) & 0xFF;
+    }
 }
 
 INTERNAL void label(code_t* _code, int _start) {
@@ -2128,6 +2136,11 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 );
             }
             scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
+            while_scope->con_jump = (int*) malloc(sizeof(int));
+            while_scope->brk_jump = (int*) malloc(sizeof(int));
+            while_scope->ccount = 0;
+            while_scope->bcount = 0;
+
             size_t loop_start = here(_code);
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
@@ -2180,6 +2193,24 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     label(_code, jump_start_r);
                 }
             }
+
+            // Continue
+            for (size_t i = 0; i < while_scope->ccount; i++) {
+                label_continue(_code, while_scope->con_jump[i], loop_start);
+            }
+            // Break
+            for (size_t i = 0; i < while_scope->bcount; i++) {
+                label(_code, while_scope->brk_jump[i]);
+            }
+
+            // Cleanup jumps
+            free(while_scope->con_jump);
+            free(while_scope->brk_jump);
+            while_scope->con_jump = NULL;
+            while_scope->brk_jump = NULL;
+            while_scope->ccount = 0;
+            while_scope->bcount = 0;
+
             scope_free(while_scope);
             break;
         }
@@ -2194,7 +2225,13 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "do while statement must have a condition and a body"
                 );
             }
+
             scope_t* do_while_scope = scope_new(_scope, ScopeTypeLoop);
+            do_while_scope->con_jump = (int*) malloc(sizeof(int));
+            do_while_scope->brk_jump = (int*) malloc(sizeof(int));
+            do_while_scope->ccount = 0;
+            do_while_scope->bcount = 0;
+
             size_t loop_start = here(_code);
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Body
@@ -2250,6 +2287,24 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     label(_code, jump_start_r);
                 }
             }
+
+            // Continue
+            for (size_t i = 0; i < do_while_scope->ccount; i++) {
+                label_continue(_code, do_while_scope->con_jump[i], loop_start);
+            }
+            // Break
+            for (size_t i = 0; i < do_while_scope->bcount; i++) {
+                label(_code, do_while_scope->brk_jump[i]);
+            }
+
+            // Cleanup jumps
+            free(do_while_scope->con_jump);
+            free(do_while_scope->brk_jump);
+            do_while_scope->con_jump = NULL;
+            do_while_scope->brk_jump = NULL;
+            do_while_scope->ccount = 0;
+            do_while_scope->bcount = 0;
+
             scope_free(do_while_scope);
             break;
         }
@@ -2282,6 +2337,11 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 );
             }
             scope_t* for_scope = scope_new(_scope, ScopeTypeLoop);
+            for_scope->con_jump = (int*) malloc(sizeof(int));
+            for_scope->brk_jump = (int*) malloc(sizeof(int));
+            for_scope->ccount = 0;
+            for_scope->bcount = 0;
+
             // Emit the iterable
             generator_expression(_generator, _code, _scope, iterable); // iterable  
             // Emit get iterator
@@ -2392,18 +2452,75 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "for statement must have a valid initializer"
                 );
             }
+
             // Emit the body
             generator_statement(_generator, _code, for_scope, body);
             // Jump backward to the has next address
             emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, loop_start);
+
+            // Continue
+            for (size_t i = 0; i < for_scope->ccount; i++) {
+                label_continue(_code, for_scope->con_jump[i], loop_start);
+            }
+            // Break
+            for (size_t i = 0; i < for_scope->bcount; i++) {
+                label(_code, for_scope->brk_jump[i]);
+                emit(_code, OPCODE_GET_NEXT_VALUE);
+                emit(_code, OPCODE_POPTOP);
+            }
+
             // Jump here if no next
             label(_code, jump_if_no_next);
+
             // Emit pop top to pop iterator
             emit(_code, OPCODE_POPTOP);
             // Jump here if not iterable
             label(_code, jump_if_not_iterable);
+
+            // Cleanup jumps
+            free(for_scope->con_jump);
+            free(for_scope->brk_jump);
+            for_scope->con_jump = NULL;
+            for_scope->brk_jump = NULL;
+            for_scope->ccount = 0;
+            for_scope->bcount = 0;
+
             // Free the scope
             scope_free(for_scope);
+            break;
+        }
+        case AstContinueStatement: {
+            if (!scope_is_loop(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "continue statement must be in a loop"
+                );
+            }
+            scope_t* loop_scope;
+            for (loop_scope = _scope; loop_scope->type != ScopeTypeLoop; loop_scope = loop_scope->parent);
+            int loc = emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, 0);
+            // Save the location
+            loop_scope->con_jump[loop_scope->ccount++] = loc;
+            loop_scope->con_jump = (int*) realloc(loop_scope->con_jump, sizeof(int) * (loop_scope->ccount + 1));
+            break;
+        }
+        case AstBreakStatement: {
+            if (!scope_is_loop(_scope)) {
+                __THROW_ERROR(
+                    _generator->fpath, 
+                    _generator->fdata, 
+                    _statement->position, 
+                    "break statement must be in a loop"
+                );
+            }
+            scope_t* loop_scope;
+            for (loop_scope = _scope; loop_scope->type != ScopeTypeLoop; loop_scope = loop_scope->parent);
+            int loc = emit_jump(_code, OPCODE_JUMP_FORWARD);
+            // Save the location
+            loop_scope->brk_jump[loop_scope->bcount++] = loc;
+            loop_scope->brk_jump = (int*) realloc(loop_scope->brk_jump, sizeof(int) * (loop_scope->bcount + 1));
             break;
         }
         case AstReturnStatement: {

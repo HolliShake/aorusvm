@@ -20,3 +20,8 @@ px = Person(1, 2)
 
 print(">>>>>>>>>>>>.", px, px.printxx())
 print(Person("Doy", 12))
+
+for i in range(10):
+    if i == 5:
+        continue
+    print(i)
