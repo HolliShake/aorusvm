@@ -44,3 +44,15 @@ const gg = ((2 + 2) switch {
 });
 
 println("GG:", gg);
+
+func bbbb() {
+    await println("hello");
+    return 1;
+}
+
+func cccc() {
+    local x = await bbbb();
+    println("cccc->x", x);
+}
+
+cccc();

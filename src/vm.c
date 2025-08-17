@@ -1408,7 +1408,8 @@ INTERNAL void do_panic(int _argc) {
 INTERNAL void do_resolve(vm_block_signal_t _signal) {
     object_t* return_value = POPP();
     if (!OBJECT_TYPE_PROMISE(return_value)) {
-        PD("internal logic error!!!");
+        PUSH_REF(return_value);
+        return;
     }
     async_promise_t* promise = (async_promise_t*) return_value->value.opaque;
     if (_signal == VmBlockSignalReturned && promise->state == ASYNC_STATE_RESOLVED) {
@@ -2042,6 +2043,11 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_AWAIT: {
                 object_t* awaited = PEEK();
+                
+                if (!OBJECT_TYPE_PROMISE(awaited)) {
+                    continue;
+                }
+
                 async_promise_t* promise = (async_promise_t*) awaited->value.opaque;
 
                 size_t awaited_index;
