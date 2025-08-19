@@ -246,7 +246,7 @@ void do_increment(bool _is_postfix, object_t* _obj) {
     ERROR:;
     if (_is_postfix) rotate2();
     char* message = string_format(
-        "cannot increment type %s", 
+        "cannot increment type %s",
         object_type_to_string(_obj)
     );
     PUSH(object_new_error(message, true));
@@ -281,7 +281,7 @@ void do_decrement(bool _is_postfix, object_t* _obj) {
     ERROR:;
     if (_is_postfix) rotate2();
     char* message = string_format(
-        "cannot decrement type %s", 
+        "cannot decrement type %s",
         object_type_to_string(_obj)
     );
     PUSH(object_new_error(message, true));
@@ -413,8 +413,8 @@ void do_mul(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot multiply type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot multiply type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -459,8 +459,8 @@ void do_div(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot divide type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot divide type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -505,8 +505,8 @@ void do_mod(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot modulo type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot modulo type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -528,7 +528,7 @@ void do_add(object_t *_lhs, object_t *_rhs) {
             return;
         }
         PUSH(object_new_int(sum));
-        return; 
+        return;
     }
 
     // Fast path for strings
@@ -558,8 +558,8 @@ void do_add(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot add type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot add type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -600,8 +600,8 @@ void do_sub(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot subtract type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot subtract type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -636,8 +636,8 @@ INTERNAL void do_shl(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot shift left type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot shift left type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -672,8 +672,8 @@ INTERNAL void do_shr(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot shift right type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot shift right type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -689,7 +689,7 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     if (!OBJECT_TYPE_NUMBER(_lhs) || !OBJECT_TYPE_NUMBER(_rhs)) {
         goto ERROR;
     }
-    
+
     // Coerce to long to avoid floating point comparisons
     long lhs_value = number_coerce_to_long(_lhs);
     long rhs_value = number_coerce_to_long(_rhs);
@@ -702,8 +702,8 @@ INTERNAL void do_cmp_lt(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare less than type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare less than type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -732,8 +732,8 @@ INTERNAL void do_cmp_lte(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare less than or equal to type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare less than or equal to type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -762,8 +762,8 @@ INTERNAL void do_cmp_gt(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare greater than type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare greater than type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -792,8 +792,8 @@ INTERNAL void do_cmp_gte(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare greater than or equal to type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare greater than or equal to type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -838,8 +838,8 @@ INTERNAL void do_cmp_eq(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare equal type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare equal type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -874,13 +874,13 @@ INTERNAL void do_cmp_ne(object_t *_lhs, object_t *_rhs) {
         PUSH_REF(instance->fobj);
         return;
     }
-    
+
     PUSH_REF(instance->tobj);
     return;
     ERROR:;
     char* message = string_format(
-        "cannot compare not equal type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot compare not equal type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -913,8 +913,8 @@ INTERNAL void do_and(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot bitwise and type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot bitwise and type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -947,8 +947,8 @@ INTERNAL void do_or(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot bitwise or type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot bitwise or type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -981,8 +981,8 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
     return;
     ERROR:;
     char* message = string_format(
-        "cannot bitwise xor type(s) %s and %s", 
-        object_type_to_string(_lhs), 
+        "cannot bitwise xor type(s) %s and %s",
+        object_type_to_string(_lhs),
         object_type_to_string(_rhs)
     );
     PUSH(object_new_error(message, true));
@@ -992,7 +992,7 @@ INTERNAL void do_xor(object_t *_lhs, object_t *_rhs) {
 
 /**
  * We will convert block into function and execute it.
- * 
+ *
  * @param _env The environment.
  * @param _closure The closure.
  */
@@ -1000,14 +1000,14 @@ INTERNAL void do_block(env_t* _parent_env, object_t* _closure, vm_block_signal_t
     // _closure is a short lived object here, we will convert it into function and execute it.
     code_t* code = (code_t*)_closure->value.opaque;
     env_t* block_env = env_new(_parent_env);
-    
+
     block_env->closure = code->environment;
     *_signal = vm_execute(block_env, 0, code);
-    
+
     if (*_signal == VmBlockSignalComplete) {
         POPP();
     }
-    
+
     block_env->parent = NULL;
     block_env->closure = NULL;
     env_free(block_env);
@@ -1017,26 +1017,26 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
     // Fast path for regular objects
     if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* map = (hashmap_t*)_obj->value.opaque;
-        return hashmap_has_string(map, _property_name) 
-            ? hashmap_get_string(map, _property_name) 
+        return hashmap_has_string(map, _property_name)
+            ? hashmap_get_string(map, _property_name)
             : NULL;
     }
-    
+
     // Handle user types (classes)
     if (OBJECT_TYPE_USER_TYPE(_obj)) {
         user_type_t* user_type;
-        
+
         for (object_t* current = _obj; current != NULL; current = user_type->super) {
             user_type = (user_type_t*)current->value.opaque;
             hashmap_t* map = (hashmap_t*)user_type->prototype->value.opaque;
-            
+
             if (hashmap_has_string(map, _property_name)) {
                 return hashmap_get_string(map, _property_name);
             }
         }
         return NULL;
-    } 
-    
+    }
+
     // Handle user type instances (objects)
     if (OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
         for (object_t* current = _obj; current != NULL;) {
@@ -1044,23 +1044,23 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
                 // Check instance properties first
                 user_type_instance_t* instance = (user_type_instance_t*)current->value.opaque;
                 hashmap_t* map = (hashmap_t*)instance->object->value.opaque;
-                
+
                 if (hashmap_has_string(map, _property_name)) {
                     return hashmap_get_string(map, _property_name);
                 }
-                
+
                 // Move up to constructor/class
                 current = instance->constructor;
-            } 
+            }
             else if (OBJECT_TYPE_USER_TYPE(current)) {
                 // Check class prototype
                 user_type_t* user_type = (user_type_t*)current->value.opaque;
                 hashmap_t* map = (hashmap_t*)user_type->prototype->value.opaque;
-                
+
                 if (hashmap_has_string(map, _property_name)) {
                     return hashmap_get_string(map, _property_name);
                 }
-                
+
                 // Move up to superclass
                 current = user_type->super;
             }
@@ -1069,14 +1069,14 @@ INTERNAL object_t* get_property(object_t* _obj, char* _property_name) {
             }
         }
     }
-    
+
     return NULL;
 }
 
 INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _value) {
     // Fast path: determine target hashmap directly based on object type
     hashmap_t* target_map = NULL;
-    
+
     switch (_obj->type) {
         case OBJECT_TYPE_USER_TYPE:
             target_map = (hashmap_t*)(((user_type_t*)_obj->value.opaque)->prototype->value.opaque);
@@ -1091,19 +1091,19 @@ INTERNAL void set_property(object_t* _obj, char* _property_name, object_t* _valu
             // No valid target map for other types
             return;
     }
-    
+
     // If no valid target map found, exit early
     if (!target_map) return;
-    
+
     // Check if property already exists before creating key object
     bool exists = hashmap_has_string(target_map, _property_name);
-    
+
     // Create string key object only once
     object_t* key = object_new_string(_property_name);
-    
+
     // Set the property
     hashmap_put(target_map, key, _value);
-    
+
     // Handle key object memory management
     if (exists) {
         // Property already exists, free our temporary key
@@ -1126,7 +1126,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
         // Validate index is a number
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
-                "expected number, got \"%s\"", 
+                "expected number, got \"%s\"",
                 object_to_string(_index)
             );
             PUSH(object_new_error(message, true));
@@ -1136,24 +1136,24 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
 
         long index = number_coerce_to_long(_index);
         array_t* array = (array_t*)_obj->value.opaque;
-        
+
         // Check bounds
         if (index < 0 || index >= array_length(array)) {
             PUSH(object_new_error("index out of bounds", true));
             return;
         }
-        
+
         // Get and push array element
         PUSH_REF(array_get(array, index));
         return;
-    } 
-    
+    }
+
     // Handle ranges
     else if (OBJECT_TYPE_RANGE(_obj)) {
         // Validate index is a number
         if (!OBJECT_TYPE_NUMBER(_index)) {
             char* message = string_format(
-                "expected number, got \"%s\"", 
+                "expected number, got \"%s\"",
                 object_to_string(_index)
             );
             PUSH(object_new_error(message, true));
@@ -1163,28 +1163,28 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
 
         long index = number_coerce_to_long(_index);
         range_t* range = (range_t*)_obj->value.opaque;
-        
+
         // Check bounds
         if (index < 0 || index >= range_length(range)) {
             PUSH(object_new_error("index out of bounds", true));
             return;
         }
-        
+
         // Get and push range element
         PUSH_REF(range_get(range, index));
         return;
-    } 
-    
+    }
+
     // Handle objects (maps)
     else if (OBJECT_TYPE_OBJECT(_obj)) {
         hashmap_t* map = (hashmap_t*)_obj->value.opaque;
-        
+
         // Check if key exists
         if (!hashmap_has(map, _index)) {
             PUSH(object_new_error("key not found", true));
             return;
         }
-        
+
         // Get and push object property
         PUSH_REF(hashmap_get(map, _index));
         return;
@@ -1194,7 +1194,7 @@ INTERNAL void do_index(object_t* _obj, object_t* _index) {
     // but keeping as a safeguard
     ERROR:;
     char* message = string_format(
-        "expected array or object, got \"%s\"", 
+        "expected array or object, got \"%s\"",
         object_to_string(_obj)
     );
     PUSH(object_new_error(message, true));
@@ -1236,30 +1236,30 @@ INTERNAL void do_set_index(object_t* _obj, object_t* _index, object_t* _value) {
 INTERNAL void do_call(env_t* _parent_env, bool _is_method, object_t *_function, int _argc) {
     code_t* code = (code_t*)_function->value.opaque;
     object_t* this = _is_method ? POPP() : NULL;
-    
+
     if (code->param_count != _argc) {
         // Pop all arguments before returning error
         POPN(_argc);
         char* message = string_format(
-            "expected %ld arguments, got %d", 
-            code->param_count, 
+            "expected %ld arguments, got %d",
+            code->param_count,
             _argc
         );
         PUSH(object_new_error(message, true));
         free(message);
         return;
     }
-    
+
     env_t* func_env = env_new(_parent_env);
     func_env->closure = code->environment;
-    
+
     if (this != NULL) {
         env_put(func_env, string_allocate("this"), this);
     }
-    
+
     vm_block_signal_t signal = vm_execute(func_env, 0, code);
     func_env->closure = NULL;
-    
+
     if (signal != VmBlockSignalPending) {
         env_free(func_env);
     }
@@ -1273,19 +1273,19 @@ INTERNAL void do_native_call(object_t* _function, int _argc) {
 INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _method_name, int _argc) {
     object_t* method = NULL;
     bool is_method_call = !OBJECT_TYPE_USER_TYPE(_obj);
-    
+
     // Find the method in the object or its prototype chain
     if (OBJECT_TYPE_USER_TYPE(_obj) || OBJECT_TYPE_USER_TYPE_INSTANCE(_obj)) {
         // Start with the constructor for instances, or the type itself
-        object_t* current = OBJECT_TYPE_USER_TYPE(_obj) 
-            ? _obj 
+        object_t* current = OBJECT_TYPE_USER_TYPE(_obj)
+            ? _obj
             : ((user_type_instance_t*)_obj->value.opaque)->constructor;
-        
+
         // Walk up the prototype chain
         while (current != NULL && OBJECT_TYPE_USER_TYPE(current)) {
             user_type_t* user_type = (user_type_t*)current->value.opaque;
             hashmap_t* prototype_map = (hashmap_t*)user_type->prototype->value.opaque;
-            
+
             if (hashmap_has_string(prototype_map, _method_name)) {
                 method = hashmap_get_string(prototype_map, _method_name);
                 break;
@@ -1308,9 +1308,9 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
         // Method not found
         POPN(_argc);
         if (is_method_call) POPP();
-        
+
         char* message = string_format(
-            "method \"%s\" not found in \"%s\"", 
+            "method \"%s\" not found in \"%s\"",
             _method_name,
             object_to_string(_obj)
         );
@@ -1323,9 +1323,9 @@ INTERNAL void vm_invoke_property(env_t* _parent_env, object_t* _obj, char* _meth
         // Method is not callable
         POPN(_argc);
         if (is_method_call) POPP();
-        
+
         char* message = string_format(
-            "method \"%s\" is not callable", 
+            "method \"%s\" is not callable",
             _method_name
         );
         PUSH(object_new_error(message, true));
@@ -1345,21 +1345,21 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
     char* constructor_name = "init";
     user_type_t* user_type = (user_type_t*)_constructor->value.opaque;
     hashmap_t* prototype_map;
-    
+
     // Create a new instance with empty object
     object_t* new_instance = vm_to_heap(object_new_user_type_instance(
-        _constructor, 
+        _constructor,
         vm_to_heap(object_new_object())
     ));
-    
+
     // Find constructor in prototype chain
     while (user_type != NULL) {
         prototype_map = (hashmap_t*)user_type->prototype->value.opaque;
-        
+
         if (hashmap_has_string(prototype_map, constructor_name)) {
             // Found constructor - check if it's callable
             object_t* constructor_fn = hashmap_get_string(prototype_map, constructor_name);
-            
+
             if (OBJECT_TYPE_CALLABLE(constructor_fn)) {
                 // Call the constructor with the new instance
                 vm_invoke_property(_parent_env, new_instance, constructor_name, _argc);
@@ -1371,7 +1371,7 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
                 // Constructor exists but isn't callable
                 POPN(_argc);
                 char* message = string_format(
-                    "constructor \"%s\" is not callable", 
+                    "constructor \"%s\" is not callable",
                     constructor_name
                 );
                 PUSH(object_new_error(message, true));
@@ -1379,11 +1379,11 @@ INTERNAL void do_new_constructor_call(env_t* _parent_env, object_t* _constructor
                 return;
             }
         }
-        
+
         // Move up the inheritance chain
         user_type = user_type->super ? (user_type_t*)user_type->super->value.opaque : NULL;
     }
-    
+
     // No constructor found - use default instance
     POPN(_argc);
     PUSH_REF(new_instance);
@@ -1430,6 +1430,10 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
 
     // Shallow copy the bytecode
     uint8_t* bytecode = _code->bytecode;
+
+    bool brk = false; // Breakpoint flag
+    bool con = false; // Continue flag
+    bool loop_thead = false; // Loop thread flag
 
     while (ip < _code->size) {
         opcode_t opcode = bytecode[ip++];
@@ -1499,22 +1503,22 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* this = env_get(_env, "this");
                 if (!OBJECT_TYPE_USER_TYPE_INSTANCE(this)) {
                     char* message = string_format(
-                        "expected \"user type instance\", got \"%s\"", 
+                        "expected \"user type instance\", got \"%s\"",
                         object_type_to_string(this)
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
                     break;
                 }
-                object_t* constructor = 
+                object_t* constructor =
                     ((user_type_instance_t*)this->value.opaque)->constructor;
                 /************/
-                object_t* super = 
+                object_t* super =
                     ((user_type_t*)constructor->value.opaque)->super;
                 /************/
                 if (super == NULL) {
                     char* message = string_format(
-                        "super is not defined for \"%s\"", 
+                        "super is not defined for \"%s\"",
                         object_to_string(this)
                     );
                     PUSH(object_new_error(message, true));
@@ -1540,7 +1544,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_ARRAY(array_src) && !OBJECT_TYPE_RANGE(array_src)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"array\", got \"%s\"", 
+                        "expected \"array\", got \"%s\"",
                         object_to_string(array_src)
                     );
                     PUSH(object_new_error(message, true));
@@ -1550,15 +1554,15 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_ARRAY(array_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"array\", got \"%s\"", 
+                        "expected \"array\", got \"%s\"",
                         object_to_string(array_dst)
                     );
                     PUSH(object_new_error(message, true));
                     free(message);
                     break;
                 }
-                array_t* src_array = (OBJECT_TYPE_ARRAY(array_src)) 
-                    ? (array_t*) array_src->value.opaque 
+                array_t* src_array = (OBJECT_TYPE_ARRAY(array_src))
+                    ? (array_t*) array_src->value.opaque
                     : (array_t*) (range_to_array((range_t*) array_src->value.opaque))->value.opaque;
                 /************/
                 array_extend((array_t*) array_dst->value.opaque, src_array);
@@ -1570,7 +1574,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_ARRAY(arr)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"array\", got \"%s\"", 
+                        "expected \"array\", got \"%s\"",
                         object_to_string(arr)
                     );
                     PUSH(object_new_error(message, true));
@@ -1587,7 +1591,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     object_t* key = POPP();
                     if (OBJECT_TYPE_COLLECTION(key)) {
                         char* message = string_format(
-                            "invalid key type %s", 
+                            "invalid key type %s",
                             object_to_string(key)
                         );
                         PUSH(object_new_error(message, true));
@@ -1607,7 +1611,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_OBJECT(obj_src)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"object\", got \"%s\"", 
+                        "expected \"object\", got \"%s\"",
                         object_to_string(obj_src)
                     );
                     PUSH(object_new_error(message, true));
@@ -1617,7 +1621,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"object\", got \"%s\"", 
+                        "expected \"object\", got \"%s\"",
                         object_to_string(obj_dst)
                     );
                     PUSH(object_new_error(message, true));
@@ -1633,7 +1637,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* obj_dst = PEEK();
                 if (OBJECT_TYPE_COLLECTION(key)) {
                     char* message = string_format(
-                        "invalid key type %s", 
+                        "invalid key type %s",
                         object_to_string(key)
                     );
                     PUSH(object_new_error(message, true));
@@ -1643,7 +1647,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_OBJECT(obj_dst)) {
                     POPP();
                     char* message = string_format(
-                        "expected \"object\", got \"%s\"", 
+                        "expected \"object\", got \"%s\"",
                         object_to_string(obj_dst)
                     );
                     PUSH(object_new_error(message, true));
@@ -1657,7 +1661,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* lhs = POPP();
                 if (!OBJECT_TYPE_NUMBER(lhs)) {
                     char* message = string_format(
-                        "expected \"number\", got \"%s\"", 
+                        "expected \"number\", got \"%s\"",
                         object_type_to_string(lhs)
                     );
                     PUSH(object_new_error(message, true));
@@ -1667,7 +1671,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* rhs = POPP();
                 if (!OBJECT_TYPE_NUMBER(rhs)) {
                     char* message = string_format(
-                        "expected \"number\", got \"%s\"", 
+                        "expected \"number\", got \"%s\"",
                         object_type_to_string(rhs)
                     );
                     PUSH(object_new_error(message, true));
@@ -1678,8 +1682,8 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 long ended = number_coerce_to_long(rhs);
                 long step  = (start < ended) ? 1 : -1;
                 PUSH(object_new_range(
-                    start, 
-                    ended, 
+                    start,
+                    ended,
                     step
                 ));
                 break;
@@ -1690,7 +1694,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 object_t* property = get_property(obj, name);
                 if (property == NULL) {
                     char* message = string_format(
-                        "property \"%s\" not found in \"%s\"", 
+                        "property \"%s\" not found in \"%s\"",
                         name,
                         object_to_string(obj)
                     );
@@ -1723,7 +1727,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_USER_TYPE(constructor)) {
                     for (int i = 0; i < argc; i++) POPP();
                     char* message = string_format(
-                        "expected \"constructor\", got \"%s\"", 
+                        "expected \"constructor\", got \"%s\"",
                         object_type_to_string(constructor)
                     );
                     PUSH(object_new_error(message, true));
@@ -1751,7 +1755,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (!OBJECT_TYPE_CALLABLE(function)) {
                     for (int i = 0; i < argc; i++) POPP();
                     char* message = string_format(
-                        "expected \"function\", got \"%s\"", 
+                        "expected \"function\", got \"%s\"",
                         object_type_to_string(function)
                     );
                     PUSH(object_new_error(message, true));
@@ -1787,7 +1791,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 char* name = get_string(bytecode, ip);
                 if (!env_has(_env, name, true)) {
                     char* message = string_format(
-                        "variable \"%s\" not found", 
+                        "variable \"%s\" not found",
                         name
                     );
                     PUSH(object_new_error(message, true));
@@ -2005,6 +2009,26 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 JUMP(get_int(bytecode, ip));
                 break;
             }
+            case OPCODE_JUMP_IF_CONTINUE: {
+                if (con) {
+                    JUMP(get_int(bytecode, ip));
+                    // reset
+                    con = false;
+                } else {
+                    FORWARD(4);
+                }
+                break;
+            }
+            case OPCODE_JUMP_IF_BREAK: {
+                if (brk) {
+                    JUMP(get_int(bytecode, ip));
+                    // reset
+                    brk = false;
+                } else {
+                    FORWARD(4);
+                }
+                break;
+            }
             case OPCODE_GET_ITERATOR_OR_JUMP: {
                 int jump_offset = get_int(bytecode, ip);
                 object_t* obj = POPP();
@@ -2026,7 +2050,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(4);
                 break;
             }
-            case OPCODE_GET_NEXT_VALUE: 
+            case OPCODE_GET_NEXT_VALUE:
             case OPCODE_GET_NEXT_KEY_VALUE: {
                 object_t* obj = PEEK();
                 object_t** values = iterator_next(obj);
@@ -2043,7 +2067,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_AWAIT: {
                 object_t* awaited = PEEK();
-                
+
                 if (!OBJECT_TYPE_PROMISE(awaited)) {
                     continue;
                 }
@@ -2051,7 +2075,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 async_promise_t* promise = (async_promise_t*) awaited->value.opaque;
 
                 size_t awaited_index;
-                
+
                 if (OBJECT_TYPE_PROMISE(awaited) && promise->state == ASYNC_STATE_RESOLVED) {
                     POPP(); // Pop promise and push value
                     PUSH_REF(promise->value);
@@ -2059,13 +2083,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 } else {
                     awaited_index = instance->sp - 1; // minus 1 to point to the actual return;
                 }
-                
+
                 object_t* obj = object_new_promise(ASYNC_STATE_PENDING, NULL);
                 PUSH(obj);
-                
+
                 async_t* async = async_new(ip, awaited_index, _env, _code, obj);
                 vm_enqueue(async);
-                
+
                 return VmBlockSignalPending;
             }
             case OPCODE_RETURN: {
@@ -2080,17 +2104,17 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 return VmBlockSignalComplete;
             }
             case OPCODE_CONTINUE: {
-                return VmBlockSignalContinue;
+                return VmBlockSignalCon;
             }
             case OPCODE_BREAK: {
-                return VmBlockSignalBreak;
+                return VmBlockSignalBrk;
             }
             case OPCODE_SETUP_CLASS:
             case OPCODE_BEGIN_CLASS: {
                 if (opcode == OPCODE_SETUP_CLASS)
                 if (OPCODE != OPCODE_BEGIN_CLASS) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* class_bytecode = 
+                code_t* class_bytecode =
                     (code_t*)get_memory(bytecode, ip);
                 /************/
                 SAVE_FUNCTION(class_bytecode); // Slow!, optimize later
@@ -2106,7 +2130,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                     break;
                 }
                 object_t* class = PEEK();
-                user_type_t* user = 
+                user_type_t* user =
                     (user_type_t*)class->value.opaque;
                 /************/
                 user->super = super;
@@ -2117,7 +2141,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 if (opcode == OPCODE_SETUP_FUNCTION)
                 if (OPCODE != OPCODE_BEGIN_FUNCTION) PD("incorrect bytecode format");
                 FORWARD(1);
-                code_t* function_bytecode = 
+                code_t* function_bytecode =
                     (code_t*)get_memory(bytecode, ip);
                 /************/
                 SAVE_FUNCTION(function_bytecode); // Slow!, optimize later
@@ -2138,11 +2162,16 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(8);
                 if (signal == VmBlockSignalComplete) break;
                 if (signal == VmBlockSignalReturned) return VmBlockSignalReturned;
-                if (signal == VmBlockSignalContinue) {
-                    PD("continue");
-                    return VmBlockSignalContinue;
+                if (signal == VmBlockSignalCon) {
+                    con = true;
+                    if (loop_thead) break;
+                    else return VmBlockSignalCon;
                 }
-                if (signal == VmBlockSignalBreak   ) return VmBlockSignalBreak; //Propagate break signal to the parent block
+                if (signal == VmBlockSignalBrk) {
+                    brk = true;
+                    if (loop_thead) break;
+                    else return VmBlockSignalBrk;
+                }
                 PD("invalid signal state (%d)", signal);
             }
             case OPCODE_SETUP_CATCH_BLOCK: {
@@ -2175,7 +2204,7 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_SAVE_CAPTURES: {
                 object_t* obj = PEEK();
-                code_t* code = 
+                code_t* code =
                     (code_t*)obj->value.opaque;
                 /************/
                 int capture_count = get_int(bytecode, ip);
@@ -2196,6 +2225,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(length);
                 break;
             }
+            case OPCODE_BEGIN_LOOP_THREAD: {
+                loop_thead = true;
+                break;
+            }
+            case OPCODE_END_LOOP_THREAD: {
+                loop_thead = false;
+                break;
+            }
             default: {
                 decompile(_code, false);
                 PD("unknown opcode 0x%02X at %02zu", opcode, ip-1);
@@ -2214,7 +2251,7 @@ DLLEXPORT void vm_init() {
     instance = (vm_t *) malloc(sizeof(vm_t));
     ASSERTNULL(instance, "failed to allocate memory for vm");
     // evaluation stack
-    instance->evaluation_stack = 
+    instance->evaluation_stack =
         (object_t **)malloc(sizeof(object_t*) * EVALUATION_STACK_SIZE);
     ASSERTNULL(instance->evaluation_stack, "failed to allocate memory for evaluation stack");
     instance->queque = (async_t**)malloc(sizeof(async_t*) * ASYNC_QUEUE_SIZE);
@@ -2274,7 +2311,7 @@ DLLEXPORT void vm_push(object_t* _obj) {
     ASSERTNULL(instance->evaluation_stack, "Evaluation stack is not initialized");
     if (instance->sp >= EVALUATION_STACK_SIZE) {
         PD("Stackoverflow: TOP(%s)", object_to_string(PEEK()));
-    } 
+    }
     if (_obj->next != NULL) {
         PD("Object is already in the root (%s)", object_to_string(_obj));
     }
@@ -2306,7 +2343,7 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 
 DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
-    decompile(_bytecode, false);
+    // decompile(_bytecode, false);
     // Create a new environment for the main function
     env_t* env = env_new(instance->env);
     env->closure = _bytecode->environment;
@@ -2323,13 +2360,13 @@ DLLEXPORT void vm_run_main(code_t* _bytecode) {
             async_free(async);
         }
     }
-    
+
     // Evaluation stack must contain exactly 1 object
     if (instance->sp != 1) {
         DUMP_STACK();
         PD("evaluation stack must contain 1 object, got %zu", instance->sp);
     }
-    
+
     POPP();
     gc_collect_all(instance);
-}   
+}

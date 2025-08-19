@@ -16,8 +16,8 @@ typedef enum vm_block_signal_t {
     VmBlockSignalComplete,
     VmBlockSignalPending,
     // For control flow statements
-    VmBlockSignalContinue,
-    VmBlockSignalBreak,
+    VmBlockSignalCon,
+    VmBlockSignalBrk,
 } vm_block_signal_t;
 
 typedef struct vm_struct {
@@ -43,6 +43,8 @@ typedef struct vm_struct {
     object_t *fobj;
     // env globals
     env_t* env;
+    // Accumolator
+    int acc;
 } vm_t;
 
 #endif

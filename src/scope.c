@@ -1,4 +1,5 @@
 #include "internal.h"
+#include <stdlib.h>
 #include "scope.h"
 
 #define SCOPE_BUCKET_COUNT 16
@@ -51,6 +52,34 @@ INTERNAL void scope_rehash(scope_t* _scope) {
     free(_scope->buckets);
     _scope->buckets = new_buckets;
     _scope->bucket_count = new_bucket_count;
+}
+
+void scope_init_jumps(scope_t* _scope) {
+    _scope->ccount = 0;
+    _scope->bcount = 0;
+    _scope->con_jump = (int*) malloc(sizeof(int));
+    _scope->brk_jump = (int*) malloc(sizeof(int));
+    _scope->con_jump[0] = 0;
+    _scope->brk_jump[0] = 0;
+}
+
+void scope_save_con(scope_t* _scope, int _continue) {
+    _scope->con_jump[_scope->ccount++] = _continue;
+    _scope->con_jump = realloc(_scope->con_jump, sizeof(int) * (_scope->ccount + 1));
+}
+
+void scope_save_brk(scope_t* _scope, int _breakpoint) {
+    _scope->brk_jump[_scope->bcount++] = _breakpoint;
+    _scope->brk_jump = realloc(_scope->brk_jump, sizeof(int) * (_scope->bcount + 1));
+}
+
+void scope_clear_scope_jumps(scope_t* _scope) {
+    free(_scope->con_jump);
+    free(_scope->brk_jump);
+    _scope->con_jump = NULL;
+    _scope->brk_jump = NULL;
+    _scope->ccount = 0;
+    _scope->bcount = 0;
 }
 
 bool scope_has(scope_t* _scope, char* _name, bool _recurse) {
