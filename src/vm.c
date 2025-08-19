@@ -1657,6 +1657,46 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 hashmap_put((hashmap_t*)obj_dst->value.opaque, key, val);
                 break;
             }
+            case OPCODE_STORE_NAME: {
+                char* name = get_string(bytecode, ip);
+                env_put(_env, name, POPP());
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
+            case OPCODE_STORE_CLASS: {
+                char* name = get_string(bytecode, ip);
+                object_t* obj = POPP();
+                object_t* user = object_new_user_type(name, NULL, obj);
+                env_put(_env, name, user);
+                PUSH_REF(user);
+                FORWARD(strlen(name) + 1);
+                break;
+            }
+            case OPCODE_SET_NAME: {
+                char* name = get_string(bytecode, ip);
+                if (!env_has(_env, name, true)) {
+                    char* message = string_format(
+                        "variable \"%s\" not found",
+                        name
+                    );
+                    PUSH(object_new_error(message, true));
+                    free(message);
+                    FORWARD(strlen(name) + 1);
+                    break;
+                }
+                env_t* env = _env;
+                while (env != NULL) {
+                    if (env_has(env, name, false)) {
+                        env_put(env, name, PEEK());
+                        break;
+                    }
+                    env = env_parent(env);
+                }
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
             case OPCODE_RANGE: {
                 object_t* lhs = POPP();
                 if (!OBJECT_TYPE_NUMBER(lhs)) {
@@ -1739,16 +1779,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(4);
                 break;
             }
-            case OPCODE_CALL_METHOD: {
-                char* method_name = get_string(bytecode, ip);
-                FORWARD(strlen(method_name) + 1);
-                int argc = get_int(bytecode, ip);
-                object_t* obj = POPP();
-                vm_invoke_property(_env, obj, method_name, argc);
-                FORWARD(4);
-                free(method_name);
-                break;
-            }
             case OPCODE_CALL: {
                 int argc = get_int(bytecode, ip);
                 object_t* function = POPP();
@@ -1771,52 +1801,14 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(4);
                 break;
             }
-            case OPCODE_STORE_NAME: {
-                char* name = get_string(bytecode, ip);
-                env_put(_env, name, POPP());
-                FORWARD(strlen(name) + 1);
-                free(name);
-                break;
-            }
-            case OPCODE_STORE_CLASS: {
-                char* name = get_string(bytecode, ip);
+            case OPCODE_CALL_METHOD: {
+                char* method_name = get_string(bytecode, ip);
+                FORWARD(strlen(method_name) + 1);
+                int argc = get_int(bytecode, ip);
                 object_t* obj = POPP();
-                object_t* user = object_new_user_type(name, NULL, obj);
-                env_put(_env, name, user);
-                PUSH_REF(user);
-                FORWARD(strlen(name) + 1);
-                break;
-            }
-            case OPCODE_SET_NAME: {
-                char* name = get_string(bytecode, ip);
-                if (!env_has(_env, name, true)) {
-                    char* message = string_format(
-                        "variable \"%s\" not found",
-                        name
-                    );
-                    PUSH(object_new_error(message, true));
-                    free(message);
-                    FORWARD(strlen(name) + 1);
-                    break;
-                }
-                env_t* env = _env;
-                while (env != NULL) {
-                    if (env_has(env, name, false)) {
-                        env_put(env, name, PEEK());
-                        break;
-                    }
-                    env = env_parent(env);
-                }
-                FORWARD(strlen(name) + 1);
-                free(name);
-                break;
-            }
-            case OPCODE_SET_PROPERTY: {
-                char* name = get_string(bytecode, ip);
-                object_t* obj = POPP();
-                set_property(obj, name, PEEK());
-                FORWARD(strlen(name) + 1);
-                free(name);
+                vm_invoke_property(_env, obj, method_name, argc);
+                FORWARD(4);
+                free(method_name);
                 break;
             }
             case OPCODE_INCREMENT: {
@@ -2001,10 +1993,6 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 }
                 break;
             }
-            case OPCODE_ABSOLUTE_JUMP: {
-                JUMP(get_int(bytecode, ip));
-                break;
-            }
             case OPCODE_JUMP_FORWARD: {
                 JUMP(get_int(bytecode, ip));
                 break;
@@ -2029,85 +2017,13 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 }
                 break;
             }
-            case OPCODE_GET_ITERATOR_OR_JUMP: {
-                int jump_offset = get_int(bytecode, ip);
-                object_t* obj = POPP();
-                if (!OBJECT_TYPE_COLLECTION(obj)) {
-                    JUMP(jump_offset);
-                    break;
-                }
-                PUSH(object_new_iterator(obj));
-                FORWARD(4);
-                break;
-            }
-            case OPCODE_HAS_NEXT: {
-                int jump_offset = get_int(bytecode, ip);
-                object_t* obj = PEEK();
-                if (!iterator_has_next(obj)) {
-                    JUMP(jump_offset);
-                    break;
-                }
-                FORWARD(4);
-                break;
-            }
-            case OPCODE_GET_NEXT_VALUE:
-            case OPCODE_GET_NEXT_KEY_VALUE: {
-                object_t* obj = PEEK();
-                object_t** values = iterator_next(obj);
-                if (opcode == OPCODE_GET_NEXT_KEY_VALUE) {
-                    if (values[1] != NULL) PUSH_REF(values[1]) // value
-                    else PUSH_REF(instance->null);
-                }
-                PUSH_REF(values[0]); // key
+            case OPCODE_ABSOLUTE_JUMP: {
+                JUMP(get_int(bytecode, ip));
                 break;
             }
             case OPCODE_POPTOP: {
                 POPP();
                 break;
-            }
-            case OPCODE_AWAIT: {
-                object_t* awaited = PEEK();
-
-                if (!OBJECT_TYPE_PROMISE(awaited)) {
-                    continue;
-                }
-
-                async_promise_t* promise = (async_promise_t*) awaited->value.opaque;
-
-                size_t awaited_index;
-
-                if (OBJECT_TYPE_PROMISE(awaited) && promise->state == ASYNC_STATE_RESOLVED) {
-                    POPP(); // Pop promise and push value
-                    PUSH_REF(promise->value);
-                    awaited_index = instance->sp;
-                } else {
-                    awaited_index = instance->sp - 1; // minus 1 to point to the actual return;
-                }
-
-                object_t* obj = object_new_promise(ASYNC_STATE_PENDING, NULL);
-                PUSH(obj);
-
-                async_t* async = async_new(ip, awaited_index, _env, _code, obj);
-                vm_enqueue(async);
-
-                return VmBlockSignalPending;
-            }
-            case OPCODE_RETURN: {
-                return VmBlockSignalReturned;
-            }
-            case OPCODE_RETURN_ASYNC: {
-                object_t* value = object_new_promise(ASYNC_STATE_RESOLVED, POPP());
-                PUSH(value);
-                return VmBlockSignalReturned;
-            }
-            case OPCODE_COMPLETE_BLOCK: {
-                return VmBlockSignalComplete;
-            }
-            case OPCODE_CONTINUE: {
-                return VmBlockSignalCon;
-            }
-            case OPCODE_BREAK: {
-                return VmBlockSignalBrk;
             }
             case OPCODE_SETUP_CLASS:
             case OPCODE_BEGIN_CLASS: {
@@ -2183,6 +2099,17 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 FORWARD(8);
                 break;
             }
+            case OPCODE_RETURN: {
+                return VmBlockSignalReturned;
+            }
+            case OPCODE_RETURN_ASYNC: {
+                object_t* value = object_new_promise(ASYNC_STATE_RESOLVED, POPP());
+                PUSH(value);
+                return VmBlockSignalReturned;
+            }
+            case OPCODE_COMPLETE_BLOCK: {
+                return VmBlockSignalComplete;
+            }
             case OPCODE_DUPTOP: {
                 PUSH_REF(PEEK());
                 break;
@@ -2224,6 +2151,79 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
                 }
                 FORWARD(length);
                 break;
+            }
+            case OPCODE_GET_ITERATOR_OR_JUMP: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t* obj = POPP();
+                if (!OBJECT_TYPE_COLLECTION(obj)) {
+                    JUMP(jump_offset);
+                    break;
+                }
+                PUSH(object_new_iterator(obj));
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_HAS_NEXT: {
+                int jump_offset = get_int(bytecode, ip);
+                object_t* obj = PEEK();
+                if (!iterator_has_next(obj)) {
+                    JUMP(jump_offset);
+                    break;
+                }
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_GET_NEXT_VALUE:
+            case OPCODE_GET_NEXT_KEY_VALUE: {
+                object_t* obj = PEEK();
+                object_t** values = iterator_next(obj);
+                if (opcode == OPCODE_GET_NEXT_KEY_VALUE) {
+                    if (values[1] != NULL) PUSH_REF(values[1]) // value
+                    else PUSH_REF(instance->null);
+                }
+                PUSH_REF(values[0]); // key
+                break;
+            }
+            case OPCODE_SET_PROPERTY: {
+                char* name = get_string(bytecode, ip);
+                object_t* obj = POPP();
+                set_property(obj, name, PEEK());
+                FORWARD(strlen(name) + 1);
+                free(name);
+                break;
+            }
+            case OPCODE_AWAIT: {
+                object_t* awaited = PEEK();
+
+                if (!OBJECT_TYPE_PROMISE(awaited)) {
+                    continue;
+                }
+
+                async_promise_t* promise = (async_promise_t*) awaited->value.opaque;
+
+                size_t awaited_index;
+
+                if (OBJECT_TYPE_PROMISE(awaited) && promise->state == ASYNC_STATE_RESOLVED) {
+                    POPP(); // Pop promise and push value
+                    PUSH_REF(promise->value);
+                    awaited_index = instance->sp;
+                } else {
+                    awaited_index = instance->sp - 1; // minus 1 to point to the actual return;
+                }
+
+                object_t* obj = object_new_promise(ASYNC_STATE_PENDING, NULL);
+                PUSH(obj);
+
+                async_t* async = async_new(ip, awaited_index, _env, _code, obj);
+                vm_enqueue(async);
+
+                return VmBlockSignalPending;
+            }
+            case OPCODE_CONTINUE: {
+                return VmBlockSignalCon;
+            }
+            case OPCODE_BREAK: {
+                return VmBlockSignalBrk;
             }
             case OPCODE_BEGIN_LOOP_THREAD: {
                 loop_thead = true;

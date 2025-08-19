@@ -44,11 +44,6 @@ typedef struct scope_struct {
     char**         captures;
     // Carry flags
     bool           is_returned;
-    // Continues
-    size_t         ccount;
-    size_t         bcount;
-    int*           con_jump;
-    int*           brk_jump;
     // Block
     bool           is_block;
 } scope_t;
@@ -70,36 +65,6 @@ scope_t* scope_new(scope_t* _parent, scope_type_t _type);
  * @return The new scope.
  */
 scope_t* scope_block_new(scope_t* _parent, scope_type_t _type);
-
-/*
- * Initialize jumps for a scope.
- *
- * @param _scope The scope to initialize.
- */
-void scope_init_jumps(scope_t* _scope);
-
-/*
- * Saves continue statement abs jump address.
- *
- * @param _scope The scope.
- * @param _continue The continue jump absolute address.
- */
-void scope_save_con(scope_t* _scope, int _continue);
-
-/*
- * Saves break statement jump address.
- *
- * @param _scope The scope.
- * @param _breakpoint The jump address for break.
- */
-void scope_save_brk(scope_t* _scope, int _breakpoint);
-
-/*
- * Clears continue and break jump addresses.
- *
- * @param _scope The scope.
- */
-void scope_clear_scope_jumps(scope_t* _scope);
 
 /*
  * Check if a scope has a value.
