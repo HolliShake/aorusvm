@@ -63,3 +63,15 @@ for (i in 0..10) {
     }
     println(i);
 }
+
+
+var z = 0;
+while (z < 20) {
+    z++;
+    if (z == 10) {
+        ++z;
+        println("z is 10");
+        continue;
+    }
+    println(z);
+}

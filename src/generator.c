@@ -2137,6 +2137,9 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             
             scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
 
+            // Begin loop thread
+            emit(_code, OPCODE_BEGIN_LOOP_THREAD);
+
             size_t loop_start = here(_code);
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Condition
@@ -2145,10 +2148,16 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 int jump_endwhile_if_false = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
                 // Body
                 generator_statement(_generator, _code, while_scope, body);
+                // Emit jump to the start if continue
+                emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                // Emit jump if break
+                int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                 // Jump to the start of the while loop
                 emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, loop_start);
                 // Jump to the end of the while loop
                 label(_code, jump_endwhile_if_false);
+                // Jump to the break location if break
+                label(_code, break_jump_location);
             } else {
                 ast_node_t* cond_l = cond->ast0;
                 ast_node_t* cond_r = cond->ast1;
@@ -2169,11 +2178,17 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     int jump_start_r = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
                     // true
                     generator_statement(_generator, _code, while_scope, body);
+                    // Emit jump to the start if continue
+                    emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                    // Emit jump if break
+                    int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                     // Jump to the start of the while loop
                     emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, loop_start);
                     // Jump to the end of the while loop
                     label(_code, jump_start_l);
                     label(_code, jump_start_r);
+                    // Jump to the break location if break
+                    label(_code, break_jump_location);
                 } else {
                     generator_expression(_generator, _code, _scope, cond_l);
                     int jump_start_l = emit_jump(_code, OPCODE_POP_JUMP_IF_TRUE);
@@ -2183,12 +2198,21 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     // true
                     label(_code, jump_start_l);
                     generator_statement(_generator, _code, while_scope, body);
+                    // Emit jump to the start if continue
+                    emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                    // Emit jump if break
+                    int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                     // Jump to the start of the while loop
                     emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, loop_start);
                     // false
                     label(_code, jump_start_r);
+                    // Jump to the break location if break
+                    label(_code, break_jump_location);
                 }
             }
+
+            // End loop thread
+            emit(_code, OPCODE_END_LOOP_THREAD);
 
             scope_free(while_scope);
             break;
@@ -2211,6 +2235,10 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
                 // Body
                 generator_statement(_generator, _code, do_while_scope, body);
+                // Emit jump to the start if continue
+                emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                // Emit jump if break
+                int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                 // Condition
                 generator_expression(_generator, _code, _scope, cond);
                 // Jump if false
@@ -2219,7 +2247,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 emit_jumpto(_code, OPCODE_ABSOLUTE_JUMP, loop_start);
                 // Jump to the end of the do while loop
                 label(_code, jump_endwhile_if_false);
-                break;
+                // Jump to the break location if break
+                label(_code, break_jump_location);
             } else {
                 ast_node_t* cond_l = cond->ast0;
                 ast_node_t* cond_r = cond->ast1;
@@ -2235,6 +2264,10 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 if (is_logical_and) {
                     // Body
                     generator_statement(_generator, _code, do_while_scope, body);
+                    // Emit jump to the start if continue
+                    emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                    // Emit jump if break
+                    int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                     // Condition
                     generator_expression(_generator, _code, _scope, cond_l);
                     int jump_start_l = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
@@ -2249,6 +2282,10 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 } else {
                     // Body
                     generator_statement(_generator, _code, do_while_scope, body);
+                    // Emit jump to the start if continue
+                    emit_jumpto(_code, OPCODE_JUMP_IF_CONTINUE, loop_start);
+                    // Emit jump if break
+                    int break_jump_location = emit_jump(_code, OPCODE_JUMP_IF_BREAK);
                     // Condition
                     generator_expression(_generator, _code, _scope, cond_l);
                     int jump_start_l = emit_jump(_code, OPCODE_POP_JUMP_IF_FALSE);
@@ -2260,6 +2297,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     // Jump to the end of the do while loop
                     label(_code, jump_start_l);
                     label(_code, jump_start_r);
+                    // Jump to the break location if break
+                    label(_code, break_jump_location);
                 }
             }
 

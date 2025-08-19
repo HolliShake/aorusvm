@@ -41,3 +41,4 @@ This project provides a basic example of implementing a programming language in 
 - [ ] continue statement (priority)
 - [ ] break statement (priority)
 - [ ] import statements
+- [ ] fix postfix inc/dec 
