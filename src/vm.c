@@ -2343,7 +2343,7 @@ DLLEXPORT void vm_define_global(char* _name, object_t* _value) {
 
 DLLEXPORT void vm_run_main(code_t* _bytecode) {
     ASSERTNULL(instance, "VM is not initialized");
-    // decompile(_bytecode, false);
+    decompile(_bytecode, false);
     // Create a new environment for the main function
     env_t* env = env_new(instance->env);
     env->closure = _bytecode->environment;

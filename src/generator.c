@@ -461,7 +461,6 @@ INTERNAL void generator_assignment1(generator_t* _generator, code_t* _code, scop
                     "constant variable %s cannot be re-assigned", _expression->str0
                 );
             }
-            if (_is_postfix) emit(_code, OPCODE_ROT3);
             emit(_code, OPCODE_SET_NAME);
             emit_string(
                 _code,

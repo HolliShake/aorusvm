@@ -211,11 +211,25 @@ void _decompile(code_t* _code, size_t _ip) {
                 break;
             }
             case OPCODE_INCREMENT: {
-                PRINT_OPCODE("increment\n");
+                bool is_postfix = bytecode[ip] == 1;
+                PRINT_OPCODE("increment: ");
+                if (is_postfix) {
+                    printf("postfix\n");
+                } else {
+                    printf("prefix\n");
+                }
+                FORWARD(1);
                 break;
             }
             case OPCODE_DECREMENT: {
-                PRINT_OPCODE("decrement\n");
+                PRINT_OPCODE("decrement: ");
+                bool is_postfix = bytecode[ip] == 1;
+                if (is_postfix) {
+                    printf("postfix\n");
+                } else {
+                    printf("prefix\n");
+                }
+                FORWARD(1);
                 break;
             }
             case OPCODE_UNARY_PLUS: {
