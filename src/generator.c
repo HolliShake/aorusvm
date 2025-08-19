@@ -2134,11 +2134,8 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                     "while statement must have a condition and a body"
                 );
             }
+            
             scope_t* while_scope = scope_new(_scope, ScopeTypeLoop);
-            while_scope->con_jump = (int*) malloc(sizeof(int));
-            while_scope->brk_jump = (int*) malloc(sizeof(int));
-            while_scope->ccount = 0;
-            while_scope->bcount = 0;
 
             size_t loop_start = here(_code);
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
@@ -2193,23 +2190,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 }
             }
 
-            // Continue
-            for (size_t i = 0; i < while_scope->ccount; i++) {
-                label_continue(_code, while_scope->con_jump[i], loop_start);
-            }
-            // Break
-            for (size_t i = 0; i < while_scope->bcount; i++) {
-                label(_code, while_scope->brk_jump[i]);
-            }
-
-            // Cleanup jumps
-            free(while_scope->con_jump);
-            free(while_scope->brk_jump);
-            while_scope->con_jump = NULL;
-            while_scope->brk_jump = NULL;
-            while_scope->ccount = 0;
-            while_scope->bcount = 0;
-
             scope_free(while_scope);
             break;
         }
@@ -2226,10 +2206,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
             }
 
             scope_t* do_while_scope = scope_new(_scope, ScopeTypeLoop);
-            do_while_scope->con_jump = (int*) malloc(sizeof(int));
-            do_while_scope->brk_jump = (int*) malloc(sizeof(int));
-            do_while_scope->ccount = 0;
-            do_while_scope->bcount = 0;
 
             size_t loop_start = here(_code);
             if (generator_is_constant_node(cond) || !generator_is_logical_expression(cond)) {
@@ -2287,23 +2263,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 }
             }
 
-            // Continue
-            for (size_t i = 0; i < do_while_scope->ccount; i++) {
-                label_continue(_code, do_while_scope->con_jump[i], loop_start);
-            }
-            // Break
-            for (size_t i = 0; i < do_while_scope->bcount; i++) {
-                label(_code, do_while_scope->brk_jump[i]);
-            }
-
-            // Cleanup jumps
-            free(do_while_scope->con_jump);
-            free(do_while_scope->brk_jump);
-            do_while_scope->con_jump = NULL;
-            do_while_scope->brk_jump = NULL;
-            do_while_scope->ccount = 0;
-            do_while_scope->bcount = 0;
-
             scope_free(do_while_scope);
             break;
         }
@@ -2336,7 +2295,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
                 );
             }
             scope_t* for_scope = scope_new(_scope, ScopeTypeLoop);
-            scope_init_jumps(for_scope);
 
             // Start loop
             emit(_code, OPCODE_BEGIN_LOOP_THREAD);
@@ -2478,9 +2436,6 @@ INTERNAL void generator_statement(generator_t* _generator, code_t* _code, scope_
 
             // End loop
             emit(_code, OPCODE_END_LOOP_THREAD);
-
-            // Cleanup jumps
-            scope_clear_scope_jumps(for_scope);
 
             // Free the scope
             scope_free(for_scope);
