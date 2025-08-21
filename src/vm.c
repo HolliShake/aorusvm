@@ -1395,12 +1395,17 @@ INTERNAL void do_panic(int _argc) {
         object_t* arg = POPP();
         message = string_append(message, object_to_string(arg));
         if (i < _argc - 1) {
-            message = string_append(message, "\n");
+            message = string_append(message, " ");
         }
     }
+    // Print the panic message
     fprintf(stderr, "panic: %s\n", message);
-    free(message);
     vm_load_null();
+
+    // Free the panic message
+    free(message);
+
+    // Cleanup
     gc_collect_all(instance);
     exit(EXIT_FAILURE);
 }
@@ -1813,7 +1818,8 @@ INTERNAL vm_block_signal_t vm_execute(env_t* _env, size_t _ip, code_t* _code) {
             }
             case OPCODE_INCREMENT: {
                 bool is_postfix = bytecode[ip];
-                object_t *obj = POPP();
+                object_t* obj = POPP();
+                printf("Incrementing %s\n", object_to_string(obj));
                 do_increment(is_postfix, obj);
                 FORWARD(1);
                 break;

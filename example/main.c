@@ -76,7 +76,7 @@ void custom_name_resolver(env_t* _env, char* _name) {
 }
 
 int main(int argc, char** argv) {
-    char* fpath = "./example.lang";
+    char* fpath = (argc > 1) ? argv[1] : "./example.lang";
     char* content = file_read(fpath);
     parser_t* parser = parser_new(fpath, content);
     ast_node_t* node = parser_parse(parser);

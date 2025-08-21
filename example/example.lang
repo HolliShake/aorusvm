@@ -1,5 +1,15 @@
 
-var zz = 0;
-zz++ + ++zz * 25 + 2 * 10;
 
-println(zz);
+
+
+const access = {
+    "nest": {
+        "count": 0
+    }
+};
+
+
+access.nest.count++ + ++access.nest.count;
+
+println(access.nest.count);
+

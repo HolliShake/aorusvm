@@ -511,6 +511,28 @@ void _decompile(code_t* _code, size_t _ip) {
                 PRINT_OPCODE("get_next_key_value\n");
                 break;
             }
+            case OPCODE_BEGIN_LOOP_THREAD: {
+                PRINT_OPCODE("begin_loop_thread\n");
+                break;
+            }
+            case OPCODE_END_LOOP_THREAD: {
+                PRINT_OPCODE("end_loop_thread\n");
+                break;
+            }
+            case OPCODE_JUMP_IF_CONTINUE: {
+                PRINT_OPCODE("jump_if_continue:");
+                int jump_offset = decompiler_get_int(bytecode, ip);
+                printf(" (jump_to_offset = %d)\n", jump_offset);
+                FORWARD(4);
+                break;
+            }
+            case OPCODE_JUMP_IF_BREAK: {
+                PRINT_OPCODE("jump_if_break:");
+                int jump_offset = decompiler_get_int(bytecode, ip);
+                printf(" (jump_to_offset = %d)\n", jump_offset);
+                FORWARD(4);
+                break;
+            }
             default:
                 printf("[%zu] Unknown opcode: %d\n", ip-1, opcode);
                 exit(EXIT_FAILURE);

@@ -1,0 +1,141 @@
+"Test unary increment/decrement operators";
+"Variable increment/decrement";
+var counter = 5;
+println("Initial counter:", counter);
+"Expected: 5";
+
+"Pre-increment";
+var pre_inc_result = ++counter;
+println("Pre-increment ++counter:", pre_inc_result);
+"Expected: 6 (increment first, then return)";
+if (pre_inc_result != 6) panic("Pre-increment failed: expected 6, got " + pre_inc_result);
+println("Counter after pre-increment:", counter);
+"Expected: 6";
+if (counter != 6) panic("Counter after pre-increment failed: expected 6, got " + counter);
+
+"Post-increment";
+var post_inc_result = counter++;
+println("Post-increment counter++:", post_inc_result);
+"Expected: 6 (return first, then increment)";
+if (post_inc_result != 6) panic("Post-increment failed: expected 6, got " + post_inc_result);
+println("Counter after post-increment:", counter);
+"Expected: 7";
+if (counter != 7) panic("Counter after post-increment failed: expected 7, got " + counter);
+
+"Pre-decrement";
+var pre_dec_result = --counter;
+println("Pre-decrement --counter:", pre_dec_result);
+"Expected: 6 (decrement first, then return)";
+if (pre_dec_result != 6) panic("Pre-decrement failed: expected 6, got " + pre_dec_result);
+println("Counter after pre-decrement:", counter);
+"Expected: 6";
+if (counter != 6) panic("Counter after pre-decrement failed: expected 6, got " + counter);
+
+"Post-decrement";
+var post_dec_result = counter--;
+println("Post-decrement counter--:", post_dec_result);
+"Expected: 6 (return first, then decrement)";
+if (post_dec_result != 6) panic("Post-decrement failed: expected 6, got " + post_dec_result);
+println("Counter after post-decrement:", counter);
+"Expected: 5";
+if (counter != 5) panic("Counter after post-decrement failed: expected 5, got " + counter);
+
+"Object property increment/decrement";
+var obj = { "value": 10, "nested": { "count": 20 } };
+println("Initial obj.value:", obj.value);
+"Expected: 10";
+if (obj.value != 10) panic("Initial obj.value failed: expected 10, got " + obj.value);
+
+"Property pre-increment";
+var prop_pre_inc_result = ++obj.value;
+println("Pre-increment ++obj.value:", prop_pre_inc_result);
+"Expected: 11";
+if (prop_pre_inc_result != 11) panic("Property pre-increment failed: expected 11, got " + prop_pre_inc_result);
+println("obj.value after pre-increment:", obj.value);
+"Expected: 11";
+if (obj.value != 11) panic("obj.value after pre-increment failed: expected 11, got " + obj.value);
+
+"Property post-increment";
+var prop_post_inc_result = obj.value++;
+println("Post-increment obj.value++:", prop_post_inc_result);
+"Expected: 11";
+if (prop_post_inc_result != 11) panic("Property post-increment failed: expected 11, got ", prop_post_inc_result);
+println("obj.value after post-increment:", obj.value);
+"Expected: 12";
+if (obj.value != 12) panic("obj.value after post-increment failed: expected 12, got " + obj.value);
+
+"Nested property increment";
+println("Initial obj.nested.count:", obj.nested.count);
+"Expected: 20";
+if (obj.nested.count != 20) panic("Initial obj.nested.count failed: expected 20, got " + obj.nested.count);
+++obj.nested.count;
+println("obj.nested.count after ++:", obj.nested.count);
+"Expected: 21";
+if (obj.nested.count != 21) panic("obj.nested.count after ++ failed: expected 21, got " + obj.nested.count);
+
+"Array index increment/decrement";
+var arr = [1, 5, 10, 15, 20];
+var idx = 2;
+println("Initial arr[idx]:", arr[idx]);
+"Expected: 10";
+if (arr[idx] != 10) panic("Initial arr[idx] failed: expected 10, got " + arr[idx]);
+
+"Array element pre-increment";
+var arr_pre_inc_result = ++arr[idx];
+println("Pre-increment ++arr[idx]:", arr_pre_inc_result);
+"Expected: 11";
+if (arr_pre_inc_result != 11) panic("Array element pre-increment failed: expected 11, got " + arr_pre_inc_result);
+println("arr[idx] after pre-increment:", arr[idx]);
+"Expected: 11";
+if (arr[idx] != 11) panic("arr[idx] after pre-increment failed: expected 11, got " + arr[idx]);
+
+"Array element post-decrement";
+var arr_post_dec_result = arr[idx]--;
+println("Post-decrement arr[idx]--:", arr_post_dec_result);
+"Expected: 11";
+if (arr_post_dec_result != 11) panic("Array element post-decrement failed: expected 11, got " + arr_post_dec_result);
+println("arr[idx] after post-decrement:", arr[idx]);
+"Expected: 10";
+if (arr[idx] != 10) panic("arr[idx] after post-decrement failed: expected 10, got " + arr[idx]);
+
+"Dynamic index increment";
+var dynamic_access_result = arr[++idx];
+println("arr[++idx] (increment index then access):", dynamic_access_result);
+"Expected: 15 (idx becomes 3, then arr[3] is accessed)";
+if (dynamic_access_result != 15) panic("Dynamic index increment failed: expected 15, got " + dynamic_access_result);
+println("Current idx:", idx);
+"Expected: 3";
+if (idx != 3) panic("Current idx failed: expected 3, got " + idx);
+
+"Complex expressions with increment/decrement";
+var a = 5;
+var b = ++a + a++;
+"++a makes a=6, returns 6";
+"a++ returns 6, then makes a=7";
+"So b = 6 + 6 = 12";
+println("a after ++a + a++:", a);
+"Expected: 7";
+if (a != 7) panic("a after ++a + a++ failed: expected 7, got " + a);
+println("b = ++a + a++:", b);
+"Expected: 12";
+if (b != 12) panic("b = ++a + a++ failed: expected 12, got " + b);
+
+"Loop with increment operators";
+for (i in 0..5) {
+    local temp = i * 2;
+    local temp_before = temp;
+    local temp_after = ++temp;
+    println("i:", i, "temp before ++:", temp_before, "temp after ++:", temp_after);
+    "Expected for each iteration:";
+    "i=0: temp before=0, temp after=1";
+    "i=1: temp before=2, temp after=3";
+    "i=2: temp before=4, temp after=5";
+    "i=3: temp before=6, temp after=7";
+    "i=4: temp before=8, temp after=9";
+    local expected_before = i * 2;
+    local expected_after = expected_before + 1;
+    if (temp_before != expected_before) panic("Loop iteration " + i + " temp before failed: expected " + expected_before + ", got " + temp_before);
+    if (temp_after != expected_after) panic("Loop iteration " + i + " temp after failed: expected " + expected_after + ", got " + temp_after);
+}
+
+println("Done");
